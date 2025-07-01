@@ -1,0 +1,12 @@
+package com.polytron.auctionapp.di
+
+import com.polytron.auctionapp.data.api.KtorClient
+import com.polytron.auctionapp.viewmodel.ItemsViewModel
+import org.koin.core.module.dsl.viewModel
+import org.koin.dsl.module
+
+val appModule = module {
+//    single { DataStore(androidContext()) }
+    single { KtorClient.httpClient }
+    viewModel { ItemsViewModel() }
+}
