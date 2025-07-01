@@ -42,6 +42,10 @@ import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.view.components.AddItemBottomSheet
 import com.polytron.auctionapp.view.components.ItemCard
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -160,6 +164,7 @@ fun ItemListScreen(
                         val suffix = index + 1
                         val finalName = "$name $suffix"
                         val finalCode = "$code $suffix"
+
                         itemsViewModel.createItem(
                             nameItem = finalName,
                             codeItem = finalCode,
@@ -168,7 +173,10 @@ fun ItemListScreen(
                             time = "10",
                             admin = "admin"
                         )
+
+                        delay(500)
                     }
+
                     itemsViewModel.fetchItems()
                 }
             )

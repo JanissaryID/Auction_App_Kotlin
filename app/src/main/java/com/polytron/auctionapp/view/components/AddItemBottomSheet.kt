@@ -179,9 +179,9 @@ fun AddItemBottomSheet(
                                     cleanMax,
                                     jumlah
                                 )
+                                onDismiss()
                             } finally {
                                 isSubmitting = false
-                                onDismiss()
                             }
                         }
                     },
