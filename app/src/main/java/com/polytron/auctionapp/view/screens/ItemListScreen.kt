@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -36,16 +37,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.view.components.AddOrEditItemBottomSheet
 import com.polytron.auctionapp.view.components.ItemCard
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +70,10 @@ fun ItemListScreen(
     val selectedItems = remember { mutableStateListOf<Item>() }
     val isSelectionMode = selectedItems.isNotEmpty()
 
+    var isDeleting by remember { mutableStateOf(false) }
+
+    val coroutineScope = rememberCoroutineScope()
+
     // Fetch data saat pertama kali ditampilkan
     LaunchedEffect(Unit) {
         itemsViewModel.fetchItems()
@@ -82,13 +91,31 @@ fun ItemListScreen(
             if (isSelectionMode) {
                 FloatingActionButton(
                     onClick = {
-                        selectedItems.forEach { itemsViewModel.deleteItem(it.id!!) }
-                        selectedItems.clear()
-                        itemsViewModel.fetchItems()
+                        if (!isDeleting) {
+                            isDeleting = true
+                            coroutineScope.launch {
+                                selectedItems.forEach {
+                                    itemsViewModel.deleteItem(it.id!!)
+                                    delay(500)
+                                }
+                                selectedItems.clear()
+                                itemsViewModel.fetchItems()
+                                isDeleting = false
+                            }
+                        }
                     },
-                    containerColor = Color.Red
+                    containerColor = if (isDeleting) Color.Gray else Color.Red,
+                    modifier = Modifier.alpha(if (isDeleting) 0.6f else 1f)
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = "Hapus Item", tint = Color.White)
+                    if (isDeleting) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Icon(Icons.Default.Delete, contentDescription = "Hapus Item", tint = Color.White)
+                    }
                 }
             } else {
                 FloatingActionButton(
