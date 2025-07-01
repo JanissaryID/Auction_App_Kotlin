@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -26,16 +27,19 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.view.components.AddOrEditItemBottomSheet
@@ -58,6 +62,9 @@ fun ItemListScreen(
     var selectedItem by remember { mutableStateOf<Item?>(null) }
     var showAddEditBottomSheet by remember { mutableStateOf(false) }
 
+    val selectedItems = remember { mutableStateListOf<Item>() }
+    val isSelectionMode = selectedItems.isNotEmpty()
+
     // Fetch data saat pertama kali ditampilkan
     LaunchedEffect(Unit) {
         itemsViewModel.fetchItems()
@@ -72,14 +79,27 @@ fun ItemListScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    showAddEditBottomSheet = true
-                    selectedItem = null
-                },
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Item")
+            if (isSelectionMode) {
+                FloatingActionButton(
+                    onClick = {
+                        selectedItems.forEach { itemsViewModel.deleteItem(it.id!!) }
+                        selectedItems.clear()
+                        itemsViewModel.fetchItems()
+                    },
+                    containerColor = Color.Red
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Hapus Item", tint = Color.White)
+                }
+            } else {
+                FloatingActionButton(
+                    onClick = {
+                        showAddEditBottomSheet = true
+                        selectedItem = null
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Tambah Item")
+                }
             }
         }
     ) { innerPadding ->
@@ -118,6 +138,15 @@ fun ItemListScreen(
                 singleLine = true
             )
 
+            if (isSelectionMode) {
+                TextButton(
+                    onClick = { selectedItems.clear() },
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Batal Seleksi")
+                }
+            }
+
             if (filteredItems.isEmpty()) {
                 // Empty state
                 Box(
@@ -145,10 +174,28 @@ fun ItemListScreen(
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(filteredItems) { item ->
-                        ItemCard(item){
-                            selectedItem = item
-                            showAddEditBottomSheet = true
-                        }
+                        ItemCard(
+                            item = item,
+                            isSelected = selectedItems.contains(item),
+                            onClick = {
+                                if (isSelectionMode) {
+                                    // toggle select
+                                    if (selectedItems.contains(item)) {
+                                        selectedItems.remove(item)
+                                    } else {
+                                        selectedItems.add(item)
+                                    }
+                                } else {
+                                    selectedItem = item
+                                    showAddEditBottomSheet = true
+                                }
+                            },
+                            onLongClick = {
+                                if (!selectedItems.contains(item)) {
+                                    selectedItems.add(item)
+                                }
+                            }
+                        )
                     }
                 }
             }

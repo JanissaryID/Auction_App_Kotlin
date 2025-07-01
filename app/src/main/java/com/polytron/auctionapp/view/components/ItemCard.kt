@@ -1,6 +1,8 @@
 package com.polytron.auctionapp.view.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,18 +27,30 @@ import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.utils.formatRupiah
 
 @Composable
-fun ItemCard(item: Item, onClick: () -> Unit = {}) {
+fun ItemCard(
+    item: Item,
+    isSelected: Boolean = false,
+    onClick: () -> Unit = {},
+    onLongClick: () -> Unit = {}
+) {
     val formattedPrice = remember(item.basePrice) {
         formatRupiah(item.basePrice)
     }
 
+    val borderColor = if (isSelected) Color(0xFF4CAF50) else Color.Transparent
+    val backgroundColor = if (isSelected) Color(0xFFE8F5E9) else Color(0xFFFDFDFD)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            .border(2.dp, borderColor, shape = RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFDFDFD))
+        colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Nama item
@@ -86,6 +100,7 @@ fun ItemCard(item: Item, onClick: () -> Unit = {}) {
         }
     }
 }
+
 
 
 
