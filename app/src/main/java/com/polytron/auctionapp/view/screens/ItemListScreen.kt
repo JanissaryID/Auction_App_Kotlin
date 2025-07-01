@@ -1,7 +1,5 @@
 package com.polytron.auctionapp.view.screens
 
-import android.util.Log
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,13 +37,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.view.components.AddItemBottomSheet
+import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.view.components.AddOrEditItemBottomSheet
 import com.polytron.auctionapp.view.components.ItemCard
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,7 +53,10 @@ fun ItemListScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     val sheetState = rememberModalBottomSheetState()
-    var showSheet by remember { mutableStateOf(false) }
+//    var showAddBottomSheet by remember { mutableStateOf(false) }
+
+    var selectedItem by remember { mutableStateOf<Item?>(null) }
+    var showAddEditBottomSheet by remember { mutableStateOf(false) }
 
     // Fetch data saat pertama kali ditampilkan
     LaunchedEffect(Unit) {
@@ -75,7 +74,8 @@ fun ItemListScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    showSheet = true
+                    showAddEditBottomSheet = true
+                    selectedItem = null
                 },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
@@ -145,44 +145,63 @@ fun ItemListScreen(
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(filteredItems) { item ->
-                        ItemCard(item)
+                        ItemCard(item){
+                            selectedItem = item
+                            showAddEditBottomSheet = true
+                        }
                     }
                 }
             }
         }
     }
 
-    if (showSheet) {
+    if (showAddEditBottomSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showSheet = false },
+            onDismissRequest = {
+                showAddEditBottomSheet = false
+                selectedItem = null // reset setelah dismiss
+            },
             sheetState = sheetState
         ) {
-            AddItemBottomSheet(
-                onDismiss = { showSheet = false },
+            AddOrEditItemBottomSheet(
+                itemToEdit = selectedItem,
+                onDismiss = {
+                    showAddEditBottomSheet = false
+                    selectedItem = null // reset juga setelah tombol batal
+                },
                 onSubmit = { name, code, base, max, quantity ->
-                    repeat(quantity) { index ->
-                        val suffix = index + 1
-                        val finalName = "$name $suffix"
-                        val finalCode = "$code $suffix"
+                    if (selectedItem != null) {
+                        selectedItem!!.id?.let { id ->
+                            val updatedItem = selectedItem!!.copy(
+                                nameItem = name,
+                                codeItem = code,
+                                basePrice = base,
+                                maxPrice = max
+                            )
+                            // Tunggu patchItem selesai
+                            itemsViewModel.patchItem(id, updatedItem)
+                        }
+                    } else {
+                        // ➕ TAMBAH MODE
+                        repeat(quantity) { index ->
+                            val suffix = index + 1
+                            val finalName = "$name $suffix"
+                            val finalCode = "$code $suffix"
 
-                        itemsViewModel.createItem(
-                            nameItem = finalName,
-                            codeItem = finalCode,
-                            basePrice = base,
-                            maxPrice = max,
-                            time = "10",
-                            admin = "admin"
-                        )
-
-                        delay(500)
+                            itemsViewModel.createItem(
+                                nameItem = finalName,
+                                codeItem = finalCode,
+                                basePrice = base,
+                                maxPrice = max,
+                                time = "10",
+                                admin = "admin"
+                            )
+                            delay(500)
+                        }
                     }
-
                     itemsViewModel.fetchItems()
                 }
             )
         }
     }
-
 }
-
-

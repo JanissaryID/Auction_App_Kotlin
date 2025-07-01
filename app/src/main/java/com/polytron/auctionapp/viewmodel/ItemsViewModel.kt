@@ -1,8 +1,8 @@
 package com.polytron.auctionapp.viewmodel
 
 import android.util.Log
-import com.polytron.auctionapp.data.api.KtorClient
 import com.polytron.auctionapp.data.api.ItemApiService
+import com.polytron.auctionapp.data.api.KtorClient
 import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.repositories.ItemsRepositoryImpl
 import dev.icerock.moko.mvvm.viewmodel.ViewModel
