@@ -1,8 +1,10 @@
 package com.polytron.auctionapp.view.components
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,19 +43,29 @@ fun ItemCard(
     val borderColor = if (isSelected) Color(0xFF4CAF50) else Color.Transparent
     val backgroundColor = if (isSelected) Color(0xFFE8F5E9) else Color(0xFFFDFDFD)
 
+    val shape = RoundedCornerShape(16.dp)
+
+    val interactionSource = remember { MutableInteractionSource() }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
-            .border(2.dp, borderColor, shape = RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
+            .border(2.dp, borderColor, shape = shape),
+        shape = shape,
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .clip(shape) // penting untuk batasi ripple
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = LocalIndication.current,
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                )
+                .padding(16.dp)
+        ) {
             // Nama item
             Text(
                 text = item.nameItem ?: "Tanpa Nama",
@@ -100,6 +113,7 @@ fun ItemCard(
         }
     }
 }
+
 
 
 

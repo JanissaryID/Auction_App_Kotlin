@@ -70,152 +70,147 @@ fun AddOrEditItemBottomSheet(
         }
     }
 
-    Surface(
-        tonalElevation = 4.dp,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 24.dp, bottom = 24.dp )
+            .verticalScroll(rememberScrollState())
     ) {
-        Column(
-            modifier = Modifier
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState())
+        Text(
+            if (isEditMode) "Edit Barang" else "Tambah Barang",
+            style = MaterialTheme.typography.headlineSmall
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = {
+                name = it.lowercase().split(" ")
+                    .joinToString(" ") { word -> word.replaceFirstChar { c -> c.uppercaseChar() } }
+            },
+            label = { Text("Nama Barang") },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isSubmitting
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = code,
+            onValueChange = { code = it.uppercase().trimStart() },
+            label = { Text("Kode Barang") },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isSubmitting
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = basePrice,
+            onValueChange = {
+                rawBasePrice = it.filter { c -> c.isDigit() }
+                basePrice = formatCurrencyInput(rawBasePrice)
+            },
+            label = { Text("Harga Dasar") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isSubmitting
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                if (isEditMode) "Edit Item" else "Tambah Item",
-                style = MaterialTheme.typography.headlineSmall
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = name,
-                onValueChange = {
-                    name = it.lowercase().split(" ")
-                        .joinToString(" ") { word -> word.replaceFirstChar { c -> c.uppercaseChar() } }
-                },
-                label = { Text("Nama Barang") },
-                modifier = Modifier.fillMaxWidth(),
+            Text("Hitung Harga Atas Otomatis (x3)", modifier = Modifier.weight(1f))
+            Switch(
+                checked = useAutoMaxPrice,
+                onCheckedChange = { useAutoMaxPrice = it },
                 enabled = !isSubmitting
             )
+        }
 
-            Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
-            OutlinedTextField(
-                value = code,
-                onValueChange = { code = it.uppercase().trimStart() },
-                label = { Text("Kode Barang") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isSubmitting
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = basePrice,
-                onValueChange = {
-                    rawBasePrice = it.filter { c -> c.isDigit() }
-                    basePrice = formatCurrencyInput(rawBasePrice)
-                },
-                label = { Text("Harga Dasar") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isSubmitting
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Hitung Harga Atas Otomatis (x3)", modifier = Modifier.weight(1f))
-                Switch(
-                    checked = useAutoMaxPrice,
-                    onCheckedChange = { useAutoMaxPrice = it },
-                    enabled = !isSubmitting
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = maxPrice,
-                onValueChange = {
-                    if (!useAutoMaxPrice) {
-                        rawMaxPrice = it.filter { c -> c.isDigit() }
-                        maxPrice = formatCurrencyInput(rawMaxPrice)
-                    }
-                },
-                label = { Text("Harga Maksimal") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !useAutoMaxPrice && !isSubmitting
-            )
-
-            if (!isEditMode) {
-                Spacer(Modifier.height(24.dp))
-                OutlinedTextField(
-                    value = quantity,
-                    onValueChange = { quantity = it.filter { c -> c.isDigit() } },
-                    label = { Text("Jumlah Barang") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isSubmitting
-                )
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                TextButton(onClick = onDismiss, enabled = !isSubmitting) {
-                    Text("Batal")
+        OutlinedTextField(
+            value = maxPrice,
+            onValueChange = {
+                if (!useAutoMaxPrice) {
+                    rawMaxPrice = it.filter { c -> c.isDigit() }
+                    maxPrice = formatCurrencyInput(rawMaxPrice)
                 }
+            },
+            label = { Text("Harga Maksimal") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !useAutoMaxPrice && !isSubmitting
+        )
 
-                Spacer(Modifier.width(8.dp))
+        if (!isEditMode) {
+            Spacer(Modifier.height(24.dp))
+            OutlinedTextField(
+                value = quantity,
+                onValueChange = { quantity = it.filter { c -> c.isDigit() } },
+                label = { Text("Jumlah Barang") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isSubmitting
+            )
+        }
 
-                Button(
-                    onClick = {
-                        val cleanBase = rawBasePrice.toIntOrNull()
-                        val cleanMax = rawMaxPrice.toIntOrNull()
-                        val jumlah = quantity.toIntOrNull() ?: 1
+        Spacer(Modifier.height(24.dp))
 
-                        if (cleanBase == null || cleanMax == null || name.isBlank() || code.isBlank()) return@Button
+        Row(
+            horizontalArrangement = Arrangement.End,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            TextButton(onClick = onDismiss, enabled = !isSubmitting) {
+                Text("Batal")
+            }
 
-                        isSubmitting = true
-                        coroutineScope.launch {
-                            try {
-                                onSubmit(
-                                    name.trim(),
-                                    code.trim(),
-                                    cleanBase.toString(),
-                                    cleanMax.toString(),
-                                    jumlah
-                                )
-                                onDismiss()
-                            } finally {
-                                isSubmitting = false
-                            }
+            Spacer(Modifier.width(8.dp))
+
+            Button(
+                onClick = {
+                    val cleanBase = rawBasePrice.toIntOrNull()
+                    val cleanMax = rawMaxPrice.toIntOrNull()
+                    val jumlah = quantity.toIntOrNull() ?: 1
+
+                    if (cleanBase == null || cleanMax == null || name.isBlank() || code.isBlank()) return@Button
+
+                    isSubmitting = true
+                    coroutineScope.launch {
+                        try {
+                            onSubmit(
+                                name.trim(),
+                                code.trim(),
+                                cleanBase.toString(),
+                                cleanMax.toString(),
+                                jumlah
+                            )
+                            onDismiss()
+                        } finally {
+                            isSubmitting = false
                         }
-                    },
-                    enabled = name.isNotBlank() &&
-                            code.isNotBlank() &&
-                            rawBasePrice.isNotBlank() &&
-                            rawMaxPrice.isNotBlank() &&
-                            (isEditMode || quantity.isNotBlank()) &&
-                            !isSubmitting
-                ) {
-                    if (isSubmitting) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    } else {
-                        Text("Simpan")
                     }
+                },
+                enabled = name.isNotBlank() &&
+                        code.isNotBlank() &&
+                        rawBasePrice.isNotBlank() &&
+                        rawMaxPrice.isNotBlank() &&
+                        (isEditMode || quantity.isNotBlank()) &&
+                        !isSubmitting
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(18.dp)
+                    )
+                } else {
+                    Text("Simpan")
                 }
             }
         }

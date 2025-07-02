@@ -47,15 +47,15 @@ import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.view.components.AddOrEditItemBottomSheet
 import com.polytron.auctionapp.view.components.ItemCard
+import com.polytron.auctionapp.view.components.ItemCardAuction
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemListScreen(
+fun ScreenAuction(
     itemsViewModel: ItemsViewModel = koinInject(),
 ) {
     val items by itemsViewModel.items.collectAsState()
@@ -142,7 +142,7 @@ fun ItemListScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Daftar Barang",
+                    text = "Lelang",
                     style = MaterialTheme.typography.headlineMedium
                 )
                 IconButton(onClick = { itemsViewModel.fetchItems() }) {
@@ -157,7 +157,7 @@ fun ItemListScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Cari berdasarkan nama atau kode") },
+                label = { Text("Harga Lelang") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -179,6 +179,7 @@ fun ItemListScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .weight(1f)
                         .padding(top = 48.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -199,28 +200,19 @@ fun ItemListScreen(
                     }
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                        .weight(1f)) {
                     items(filteredItems) { item ->
-                        ItemCard(
+                        ItemCardAuction(
                             item = item,
-                            isSelected = selectedItems.contains(item),
-                            onClick = {
-                                if (isSelectionMode) {
-                                    // toggle select
-                                    if (selectedItems.contains(item)) {
-                                        selectedItems.remove(item)
-                                    } else {
-                                        selectedItems.add(item)
-                                    }
-                                } else {
-                                    selectedItem = item
-                                    showAddEditBottomSheet = true
-                                }
+                            onNameChanged = {
+
                             },
-                            onLongClick = {
-                                if (!selectedItems.contains(item)) {
-                                    selectedItems.add(item)
-                                }
+                            onPriceChanged = {
+
                             }
                         )
                     }
