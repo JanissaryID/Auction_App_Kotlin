@@ -12,6 +12,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,6 +64,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.view.components.ItemCardAuction
@@ -76,25 +79,19 @@ import org.koin.compose.koinInject
 fun ScreenAuction(
     itemsViewModel: ItemsViewModel = koinInject(),
     navScanBarcode: () -> Unit,
-    navListItems: () -> Unit
+    navListItems: () -> Unit,
 ) {
-    val items by itemsViewModel.items.collectAsState()
 
     var rawAuctionPrice by remember { mutableStateOf("") }
     var auctionPrice by remember { mutableStateOf(formatCurrencyInput(rawAuctionPrice)) }
 
     var isSubmitting by remember { mutableStateOf(false) }
 
-    val selectedItems = remember { mutableStateListOf<Item>() }
-    val isSelectionMode = selectedItems.isNotEmpty()
+    val selectedItems by itemsViewModel.selectedItems.collectAsState()
 
     var isFabExpanded by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(Unit) {
-        itemsViewModel.fetchItems()
-    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -223,20 +220,11 @@ fun ScreenAuction(
                 },
                 label = { Text("Harga Dasar") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 enabled = !isSubmitting
             )
 
-            if (isSelectionMode) {
-                TextButton(
-                    onClick = { selectedItems.clear() },
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text("Batal Seleksi")
-                }
-            }
-
-            if (items.isEmpty()) {
+            if (selectedItems.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -263,12 +251,12 @@ fun ScreenAuction(
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(vertical = 16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp)
                         .weight(1f)
                 ) {
-                    items(items) { item ->
+                    items(selectedItems) { item ->
                         ItemCardAuction(
                             item = item,
                             onNameChanged = {},

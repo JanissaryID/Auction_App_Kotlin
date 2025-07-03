@@ -1,8 +1,11 @@
 package com.polytron.auctionapp.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+@Parcelize
 @Serializable
 data class Item(
 	@SerialName("admin") val admin: String? = null,
@@ -14,4 +17,4 @@ data class Item(
 	@SerialName("basePrice") val basePrice: String? = null,
 	@SerialName("buyer") val buyer: String? = null,
 	@SerialName("status") val status: Boolean? = null
-)
+): Parcelable

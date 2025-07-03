@@ -61,11 +61,13 @@ fun ItemCardAuction(
     var priceInput by remember { mutableStateOf("") }
     var namePerson by remember { mutableStateOf("") }
 
+    val backgroundColor = Color(0xFFFDFDFD)
+
     Card(
         modifier = modifier
             .fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

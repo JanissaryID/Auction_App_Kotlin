@@ -1,5 +1,8 @@
 package com.polytron.auctionapp.view.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,13 +17,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,9 +54,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.view.components.AddOrEditItemBottomSheet
 import com.polytron.auctionapp.view.components.ItemCard
+import com.polytron.auctionapp.view.components.ItemCardSelect
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -55,31 +66,30 @@ import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScreenItemList(
+fun ScreenItemListSelect(
     itemsViewModel: ItemsViewModel = koinInject(),
+    navBack: () -> Unit,
 ) {
     val items by itemsViewModel.items.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
-    val sheetState = rememberModalBottomSheetState()
-//    var showAddBottomSheet by remember { mutableStateOf(false) }
-
-    var selectedItem by remember { mutableStateOf<Item?>(null) }
-    var showAddEditBottomSheet by remember { mutableStateOf(false) }
-
+    val selectedItemsState by itemsViewModel.selectedItems.collectAsState()
     val selectedItems = remember { mutableStateListOf<Item>() }
+    var isInitialized by remember { mutableStateOf(false) }
     val isSelectionMode = selectedItems.isNotEmpty()
 
-    var isDeleting by remember { mutableStateOf(false) }
-
-    val coroutineScope = rememberCoroutineScope()
-
-    // Fetch data saat pertama kali ditampilkan
     LaunchedEffect(Unit) {
         itemsViewModel.fetchItems()
     }
 
-    // Filter list berdasarkan pencarian nama atau kode
+    LaunchedEffect(selectedItemsState) {
+        if (!isInitialized) {
+            selectedItems.clear()
+            selectedItems.addAll(selectedItemsState)
+            isInitialized = true
+        }
+    }
+
     val filteredItems = items.filter {
         it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
                 it.codeItem?.contains(searchQuery, ignoreCase = true) == true
@@ -87,48 +97,46 @@ fun ScreenItemList(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        floatingActionButton = {
-            if (isSelectionMode) {
-                FloatingActionButton(
-                    onClick = {
-                        if (!isDeleting) {
-                            isDeleting = true
-                            coroutineScope.launch {
-                                selectedItems.forEach {
-                                    itemsViewModel.deleteItem(it.id!!)
-                                    delay(500)
-                                }
-                                selectedItems.clear()
-                                itemsViewModel.fetchItems()
-                                isDeleting = false
-                            }
-                        }
-                    },
-                    containerColor = if (isDeleting) Color.Gray else Color.Red,
-                    modifier = Modifier.alpha(if (isDeleting) 0.6f else 1f)
-                ) {
-                    if (isDeleting) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(24.dp)
+        topBar = {
+            TopAppBar(
+                title = { Text(
+                    text = "Daftar Barang",
+                    style = MaterialTheme.typography.headlineMedium)
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navBack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { itemsViewModel.fetchItems() }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                    } else {
-                        Icon(Icons.Default.Delete, contentDescription = "Hapus Item", tint = Color.White)
                     }
                 }
-            } else {
-                FloatingActionButton(
+            )
+        },
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = isSelectionMode,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                ExtendedFloatingActionButton(
                     onClick = {
-                        showAddEditBottomSheet = true
-                        selectedItem = null
+                        itemsViewModel.setSelectedItems(selectedItems.toList())
+                        navBack() // aksi saat selesai memilih
                     },
+                    icon = { Icon(Icons.Default.Check, contentDescription = "Selesai Pilih") },
+                    text = { Text("${selectedItems.size} Barang") },
                     containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Tambah Item")
-                }
+                )
             }
-        }
+        },
+        floatingActionButtonPosition = FabPosition.Center
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -136,24 +144,6 @@ fun ScreenItemList(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Daftar Barang",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                IconButton(onClick = { itemsViewModel.fetchItems() }) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Refresh",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -167,10 +157,13 @@ fun ScreenItemList(
 
             if (isSelectionMode) {
                 TextButton(
-                    onClick = { selectedItems.clear() },
+                    onClick = {
+                        selectedItems.clear()
+                        itemsViewModel.clearSelectedItems()
+                    },
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Batal Seleksi")
+                    Text("Batal Pilih")
                 }
             }
 
@@ -202,28 +195,17 @@ fun ScreenItemList(
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(vertical = 16.dp),
-                        modifier = Modifier
+                    modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)) {
                     items(filteredItems) { item ->
-                        ItemCard(
+                        ItemCardSelect(
                             item = item,
                             isSelected = selectedItems.contains(item),
-                            onClick = {
-                                if (isSelectionMode) {
-                                    // toggle select
-                                    if (selectedItems.contains(item)) {
-                                        selectedItems.remove(item)
-                                    } else {
-                                        selectedItems.add(item)
-                                    }
+                            onSelectToggle = {
+                                if (selectedItems.contains(item)) {
+                                    selectedItems.remove(item)
                                 } else {
-                                    selectedItem = item
-                                    showAddEditBottomSheet = true
-                                }
-                            },
-                            onLongClick = {
-                                if (!selectedItems.contains(item)) {
                                     selectedItems.add(item)
                                 }
                             }
@@ -231,56 +213,6 @@ fun ScreenItemList(
                     }
                 }
             }
-        }
-    }
-
-    if (showAddEditBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = {
-                showAddEditBottomSheet = false
-                selectedItem = null // reset setelah dismiss
-            },
-            sheetState = sheetState
-        ) {
-            AddOrEditItemBottomSheet(
-                itemToEdit = selectedItem,
-                onDismiss = {
-                    showAddEditBottomSheet = false
-                    selectedItem = null // reset juga setelah tombol batal
-                },
-                onSubmit = { name, code, base, max, quantity ->
-                    if (selectedItem != null) {
-                        selectedItem!!.id?.let { id ->
-                            val updatedItem = selectedItem!!.copy(
-                                nameItem = name,
-                                codeItem = code,
-                                basePrice = base,
-                                maxPrice = max
-                            )
-                            // Tunggu patchItem selesai
-                            itemsViewModel.patchItem(id, updatedItem)
-                        }
-                    } else {
-                        // ➕ TAMBAH MODE
-                        repeat(quantity) { index ->
-                            val suffix = index + 1
-                            val finalName = "$name $suffix"
-                            val finalCode = "$code $suffix"
-
-                            itemsViewModel.createItem(
-                                nameItem = finalName,
-                                codeItem = finalCode,
-                                basePrice = base,
-                                maxPrice = max,
-                                time = "10",
-                                admin = "admin"
-                            )
-                            delay(500)
-                        }
-                    }
-                    itemsViewModel.fetchItems()
-                }
-            )
         }
     }
 }

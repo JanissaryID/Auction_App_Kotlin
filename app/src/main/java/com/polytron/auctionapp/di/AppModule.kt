@@ -8,5 +8,5 @@ import org.koin.dsl.module
 val appModule = module {
 //    single { DataStore(androidContext()) }
     single { KtorClient.httpClient }
-    viewModel { ItemsViewModel() }
+    single { ItemsViewModel() }
 }

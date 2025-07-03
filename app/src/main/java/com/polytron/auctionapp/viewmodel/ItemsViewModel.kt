@@ -14,6 +14,11 @@ class ItemsViewModel(): ViewModel() {
     private val _items = MutableStateFlow<List<Item>>(emptyList())
     val items = _items.asStateFlow()
 
+    private val _selectedItems = MutableStateFlow<List<Item>>(emptyList())
+    val selectedItems = _selectedItems.asStateFlow()
+    fun setSelectedItems(items: List<Item>) { _selectedItems.value = items }
+    fun clearSelectedItems() { _selectedItems.value = emptyList() }
+
     private val token = "51772c72ff72e7a142e7aa26a7178c6c"
     private val baseUrl = "https://api.kontenbase.com/query/api/v1/d11e834d-5663-4415-9bee-cfb371e77a2e"
 

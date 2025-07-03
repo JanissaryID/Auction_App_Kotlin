@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.polytron.auctionapp.view.screens.ScreenAuction
 import com.polytron.auctionapp.view.screens.ScreenItemList
+import com.polytron.auctionapp.view.screens.ScreenItemListSelect
 import com.polytron.auctionapp.view.screens.ScreenScanBarcode
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
 import org.koin.compose.koinInject
@@ -17,30 +18,19 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         composable(Screen.Auction.route) {
             ScreenAuction(
                 navScanBarcode = { navController.navigate(Screen.ScanBarcode.route) },
-                navListItems = { navController.navigate(Screen.ListItems.route) }
+                navListItems = { navController.navigate(Screen.ScreenItemListSelect.route) }
             )
         }
         composable(Screen.ScanBarcode.route) {
             ScreenScanBarcode()
-            // Handle navigasi ke halaman ScanBarcode
         }
         composable(Screen.ListItems.route) {
             ScreenItemList()
         }
-
-//        composable(Screen.Home.route) {
-//            val vm: ItemsViewModel = koinViewModel()
-//            HomeScreen(vm) { itemId ->
-//                navController.navigate(Screen.Detail.createRoute(itemId))
-//            }
-//        }
-//        composable(
-//            route = Screen.Detail.route,
-//            arguments = listOf(navArgument("itemId") { type = NavType.StringType })
-//        ) { backStackEntry ->
-//            val itemId = backStackEntry.arguments?.getString("itemId") ?: return@composable
-//            val vm: DetailViewModel = koinViewModel()
-//            DetailScreen(vm, itemId)
-//        }
+        composable(Screen.ScreenItemListSelect.route) {
+            ScreenItemListSelect(
+                navBack = { navController.popBackStack() }
+            )
+        }
     }
 }
