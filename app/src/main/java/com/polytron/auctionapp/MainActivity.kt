@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.polytron.auctionapp.navigation.AppNavHost
 import com.polytron.auctionapp.ui.theme.AuctionAppTheme
 import com.polytron.auctionapp.view.screens.ScreenAuction
 
@@ -13,7 +14,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AuctionAppTheme {
-                ScreenAuction()
+                AppNavHost()
             }
         }
     }

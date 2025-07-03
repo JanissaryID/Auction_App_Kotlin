@@ -1,5 +1,14 @@
 package com.polytron.auctionapp.view.screens
 
+import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,10 +21,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,6 +43,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -43,10 +61,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.Item
-import com.polytron.auctionapp.view.components.AddOrEditItemBottomSheet
-import com.polytron.auctionapp.view.components.ItemCard
+import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.view.components.ItemCardAuction
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
 import kotlinx.coroutines.delay
@@ -57,75 +75,130 @@ import org.koin.compose.koinInject
 @Composable
 fun ScreenAuction(
     itemsViewModel: ItemsViewModel = koinInject(),
+    navScanBarcode: () -> Unit,
+    navListItems: () -> Unit
 ) {
     val items by itemsViewModel.items.collectAsState()
-    var searchQuery by remember { mutableStateOf("") }
 
-    val sheetState = rememberModalBottomSheetState()
-//    var showAddBottomSheet by remember { mutableStateOf(false) }
+    var rawAuctionPrice by remember { mutableStateOf("") }
+    var auctionPrice by remember { mutableStateOf(formatCurrencyInput(rawAuctionPrice)) }
 
-    var selectedItem by remember { mutableStateOf<Item?>(null) }
-    var showAddEditBottomSheet by remember { mutableStateOf(false) }
+    var isSubmitting by remember { mutableStateOf(false) }
 
     val selectedItems = remember { mutableStateListOf<Item>() }
     val isSelectionMode = selectedItems.isNotEmpty()
 
-    var isDeleting by remember { mutableStateOf(false) }
+    var isFabExpanded by remember { mutableStateOf(false) }
 
-    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Fetch data saat pertama kali ditampilkan
     LaunchedEffect(Unit) {
         itemsViewModel.fetchItems()
     }
 
-    // Filter list berdasarkan pencarian nama atau kode
-    val filteredItems = items.filter {
-        it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
-                it.codeItem?.contains(searchQuery, ignoreCase = true) == true
-    }
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (isSelectionMode) {
-                FloatingActionButton(
-                    onClick = {
-                        if (!isDeleting) {
-                            isDeleting = true
-                            coroutineScope.launch {
-                                selectedItems.forEach {
-                                    itemsViewModel.deleteItem(it.id!!)
-                                    delay(500)
-                                }
-                                selectedItems.clear()
-                                itemsViewModel.fetchItems()
-                                isDeleting = false
+            Box(modifier = Modifier
+                .fillMaxSize(),
+//                .padding(16.dp),
+                contentAlignment = Alignment.BottomEnd) {
+
+                // Scrim overlay
+                if (isFabExpanded) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                isFabExpanded = false
+                            }
+                    )
+                }
+
+                // Sub FAB menu
+                AnimatedVisibility(
+                    visible = isFabExpanded,
+                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
+                    exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 })
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.End,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(bottom = 72.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Scan Barcode",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier
+                                    .background(
+                                        MaterialTheme.colorScheme.secondary,
+                                        shape = MaterialTheme.shapes.small
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                            FloatingActionButton(
+                                onClick = {
+                                    isFabExpanded = false
+                                    navScanBarcode()
+                                },
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(Icons.Default.CameraAlt, contentDescription = "Scan Barcode")
                             }
                         }
-                    },
-                    containerColor = if (isDeleting) Color.Gray else Color.Red,
-                    modifier = Modifier.alpha(if (isDeleting) 0.6f else 1f)
-                ) {
-                    if (isDeleting) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else {
-                        Icon(Icons.Default.Delete, contentDescription = "Hapus Item", tint = Color.White)
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Daftar Item",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier
+                                    .background(
+                                        MaterialTheme.colorScheme.secondary,
+                                        shape = MaterialTheme.shapes.small
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                            FloatingActionButton(
+                                onClick = {
+                                    isFabExpanded = false
+                                    navListItems()
+                                },
+                                containerColor = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Daftar Item")
+                            }
+                        }
                     }
                 }
-            } else {
+
+                // Main FAB
                 FloatingActionButton(
                     onClick = {
-                        showAddEditBottomSheet = true
-                        selectedItem = null
+                        isFabExpanded = !isFabExpanded
                     },
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Tambah Item")
+                    Icon(
+                        imageVector = if (isFabExpanded) Icons.Default.Close else Icons.Default.Add,
+                        contentDescription = if (isFabExpanded) "Tutup Menu" else "Buka Menu"
+                    )
                 }
             }
         }
@@ -136,33 +209,22 @@ fun ScreenAuction(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Lelang",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                IconButton(onClick = { itemsViewModel.fetchItems() }) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Refresh",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
+            Text(
+                text = "Lelang",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
 
             OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                label = { Text("Harga Lelang") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                singleLine = true
+                value = auctionPrice,
+                onValueChange = {
+                    rawAuctionPrice = it.filter { c -> c.isDigit() }
+                    auctionPrice = formatCurrencyInput(rawAuctionPrice)
+                },
+                label = { Text("Harga Dasar") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isSubmitting
             )
 
             if (isSelectionMode) {
@@ -174,8 +236,7 @@ fun ScreenAuction(
                 }
             }
 
-            if (filteredItems.isEmpty()) {
-                // Empty state
+            if (items.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -200,74 +261,22 @@ fun ScreenAuction(
                     }
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp),
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp)
-                        .weight(1f)) {
-                    items(filteredItems) { item ->
+                        .weight(1f)
+                ) {
+                    items(items) { item ->
                         ItemCardAuction(
                             item = item,
-                            onNameChanged = {
-
-                            },
-                            onPriceChanged = {
-
-                            }
+                            onNameChanged = {},
+                            onPriceChanged = {}
                         )
                     }
                 }
             }
-        }
-    }
-
-    if (showAddEditBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = {
-                showAddEditBottomSheet = false
-                selectedItem = null // reset setelah dismiss
-            },
-            sheetState = sheetState
-        ) {
-            AddOrEditItemBottomSheet(
-                itemToEdit = selectedItem,
-                onDismiss = {
-                    showAddEditBottomSheet = false
-                    selectedItem = null // reset juga setelah tombol batal
-                },
-                onSubmit = { name, code, base, max, quantity ->
-                    if (selectedItem != null) {
-                        selectedItem!!.id?.let { id ->
-                            val updatedItem = selectedItem!!.copy(
-                                nameItem = name,
-                                codeItem = code,
-                                basePrice = base,
-                                maxPrice = max
-                            )
-                            // Tunggu patchItem selesai
-                            itemsViewModel.patchItem(id, updatedItem)
-                        }
-                    } else {
-                        // ➕ TAMBAH MODE
-                        repeat(quantity) { index ->
-                            val suffix = index + 1
-                            val finalName = "$name $suffix"
-                            val finalCode = "$code $suffix"
-
-                            itemsViewModel.createItem(
-                                nameItem = finalName,
-                                codeItem = finalCode,
-                                basePrice = base,
-                                maxPrice = max,
-                                time = "10",
-                                admin = "admin"
-                            )
-                            delay(500)
-                        }
-                    }
-                    itemsViewModel.fetchItems()
-                }
-            )
         }
     }
 }
