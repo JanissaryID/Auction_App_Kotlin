@@ -6,26 +6,26 @@ import com.polytron.auctionapp.model.Item
 
 class ItemsRepositoryImpl(
     private val service: ItemApiService,
-    private val headers: Map<String, String>
+//    private val headers: Map<String, String>
 ) : ItemsRepository {
 
     override suspend fun fetchItems(): List<Item> {
-        return service.fetchAll(headers)
+        return service.fetchAll()
     }
 
     override suspend fun fetchItemById(id: String): Item {
-        return service.getById(headers, id)
+        return service.getById(id)
     }
 
     override suspend fun createItem(bodyObj: Item): Item {
-        return service.create(headers, bodyObj)
+        return service.create(bodyObj)
     }
 
     override suspend fun updateItem(id: String, bodyObj: Item): Item {
-        return service.update(headers, id, bodyObj)
+        return service.update(id, bodyObj)
     }
 
     override suspend fun deleteItem(id: String): Item {
-        return service.delete(headers, id)
+        return service.delete(id)
     }
 }

@@ -11,10 +11,11 @@ data class Item(
 	@SerialName("admin") val admin: String? = null,
 	@SerialName("_id") val id: String? = null,
 	@SerialName("maxPrice") val maxPrice: String? = null,
-	@SerialName("time") val time: String? = null,
+	@SerialName("orderID") val orderID: String? = null,
 	@SerialName("codeItem") val codeItem: String? = null,
 	@SerialName("nameItem") val nameItem: String? = null,
 	@SerialName("basePrice") val basePrice: String? = null,
+	@SerialName("price") val price: String? = null,
 	@SerialName("buyer") val buyer: String? = null,
-	@SerialName("status") val status: Boolean? = null
+	@SerialName("status") val status: Int? = null
 ): Parcelable

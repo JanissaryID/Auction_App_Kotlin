@@ -10,36 +10,64 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ItemsViewModel(): ViewModel() {
+class ItemsViewModel() : ViewModel() {
+
+    private val baseUrl = "https://api.kontenbase.com/query/api/v1/a61eb959-29ce-4c54-b5ed-72c525faf455"
     private val _items = MutableStateFlow<List<Item>>(emptyList())
     val items = _items.asStateFlow()
 
     private val _selectedItems = MutableStateFlow<List<Item>>(emptyList())
     val selectedItems = _selectedItems.asStateFlow()
     fun setSelectedItems(items: List<Item>) { _selectedItems.value = items }
-    fun clearSelectedItems() { _selectedItems.value = emptyList() }
+    fun clearSelectedItems() {
+        _selectedItems.value = emptyList()
+        _editingBuyers.value = emptyMap()
+        _editingPrices.value = emptyMap()
+    }
 
-    private val token = "51772c72ff72e7a142e7aa26a7178c6c"
-    private val baseUrl = "https://api.kontenbase.com/query/api/v1/d11e834d-5663-4415-9bee-cfb371e77a2e"
+    private val _editingBuyers = MutableStateFlow<Map<String, String>>(emptyMap())
+    val editingBuyers = _editingBuyers.asStateFlow()
 
-    private val headers = mapOf("Authorization" to "Bearer $token")
+    private val _editingPrices = MutableStateFlow<Map<String, String>>(emptyMap())
+    val editingPrices = _editingPrices.asStateFlow()
+
+    fun updateEditingBuyer(itemId: String, name: String) {
+        _editingBuyers.value = _editingBuyers.value.toMutableMap().apply {
+            put(itemId, name)
+        }
+    }
+
+    fun clearEditingForItem(itemId: String) {
+        _editingBuyers.value = _editingBuyers.value.toMutableMap().apply { remove(itemId) }
+        _editingPrices.value = _editingPrices.value.toMutableMap().apply { remove(itemId) }
+    }
+
+    fun updateEditingPrice(itemId: String, price: String) {
+        val clean = price.filter { it.isDigit() }
+        _editingPrices.value = _editingPrices.value.toMutableMap().apply {
+            put(itemId, clean)
+        }
+    }
+
+    fun updateSelectedItem(updatedItem: Item) {
+        _selectedItems.value = _selectedItems.value.map {
+            if (it.id == updatedItem.id) updatedItem else it
+        }
+    }
 
     private val service = ItemApiService(
         client = KtorClient.httpClient,
         baseUrl = baseUrl
     )
 
-    private val repository = ItemsRepositoryImpl(
-        service = service,
-        headers = headers
-    )
+    private val repository = ItemsRepositoryImpl(service = service)
 
     fun fetchItems() {
         viewModelScope.launch {
             try {
                 val fetched = repository.fetchItems().reversed()
                 _items.value = fetched
-                Log.i("ViewModel", "fetchItems: ${_items.value} items loaded")
+                Log.i("ViewModel", "fetchItems: ${_items.value.size} items loaded")
             } catch (e: Exception) {
                 Log.e("ViewModel", "fetchItems error", e)
             }
@@ -51,7 +79,7 @@ class ItemsViewModel(): ViewModel() {
         codeItem: String,
         basePrice: String,
         maxPrice: String,
-        time: String,
+        orderID: String,
         admin: String,
     ) {
         viewModelScope.launch {
@@ -61,10 +89,11 @@ class ItemsViewModel(): ViewModel() {
                     codeItem = codeItem,
                     basePrice = basePrice,
                     maxPrice = maxPrice,
-                    time = time,
+                    orderID = orderID,
                     admin = admin,
-                    status = false,
-                    buyer = ""
+                    status = 0,
+                    buyer = "",
+                    price = ""
                 )
                 val created = repository.createItem(item)
                 Log.i("ViewModel", "Success create item: $created")
@@ -74,16 +103,13 @@ class ItemsViewModel(): ViewModel() {
         }
     }
 
-    fun patchItem(
-        id: String,
-        item: Item
-    ){
+    fun patchItem(id: String, item: Item) {
         viewModelScope.launch {
             try {
-                val patched = repository.updateItem(id, item)
-                Log.i("ViewModel", "Success patch item: $patched")
+                repository.updateItem(id, item)
+                Log.i("ViewModel", "Success patch item: $item")
             } catch (e: Exception) {
-                Log.e("ViewModel", "create item error", e)
+                Log.e("ViewModel", "patchItem error", e)
             }
         }
     }
@@ -110,7 +136,7 @@ class ItemsViewModel(): ViewModel() {
                 }
                 fetchItems()
             } catch (e: Exception) {
-                Log.e("ViewModel", "delete item error", e)
+                Log.e("ViewModel", "delete all items error", e)
             }
         }
     }

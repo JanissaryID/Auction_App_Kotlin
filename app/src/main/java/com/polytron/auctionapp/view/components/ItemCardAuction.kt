@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,24 +49,35 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.utils.formatRupiah
 
 @Composable
 fun ItemCardAuction(
     modifier: Modifier = Modifier,
     item: Item,
+    currentBuyer: String,
+    currentPrice: String,
     onNameChanged: (String) -> Unit,
-    onPriceChanged: (String) -> Unit
+    onPriceChanged: (String) -> Unit,
+    onCancelPriceInput: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    var priceInput by remember { mutableStateOf("") }
-    var namePerson by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(currentPrice.isNotBlank()) }
 
     val backgroundColor = Color(0xFFFDFDFD)
+    val formattedPrice = remember(item.basePrice) { formatRupiah(item.basePrice) }
+
+    var rawPrice by remember { mutableStateOf("") }
+    var formattedInput by remember { mutableStateOf("") }
+
+    // Sinkronisasi saat currentPrice berubah dari luar
+    LaunchedEffect(currentPrice) {
+        rawPrice = currentPrice
+        formattedInput = formatCurrencyInput(currentPrice)
+    }
 
     Card(
-        modifier = modifier
-            .fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -74,19 +86,26 @@ fun ItemCardAuction(
 
             // Nama Item
             Text(text = item.nameItem ?: "Nama Item", style = MaterialTheme.typography.titleMedium)
-
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Informasi kode dan harga dalam kolom (lebih terbaca)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column() {
+            // Info kode dan harga awal
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
                     Text("Kode Item", style = MaterialTheme.typography.labelSmall)
                     Text(item.codeItem ?: "-", style = MaterialTheme.typography.bodyLarge)
                 }
 
-                Column() {
+                Column {
                     Text("Harga Awal", style = MaterialTheme.typography.labelSmall)
-                    Text("Rp ${item.basePrice}", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = formattedPrice,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF4CAF50)
+                    )
                 }
             }
 
@@ -98,10 +117,12 @@ fun ItemCardAuction(
 
             // Input Nama Pemenang
             OutlinedTextField(
-                value = namePerson,
-                onValueChange = {
-                    namePerson = it
-                    onNameChanged(it)
+                value = currentBuyer,
+                onValueChange = { input ->
+                    val capitalized = input
+                        .split(" ")
+                        .joinToString(" ") { it.lowercase().replaceFirstChar { c -> c.titlecase() } }
+                    onNameChanged(capitalized)
                 },
                 label = { Text("Nama Pemenang") },
                 singleLine = true,
@@ -110,7 +131,7 @@ fun ItemCardAuction(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Interaksi natural tanpa Button
+            // Tombol buka input harga
             if (!expanded) {
                 Row(
                     modifier = Modifier
@@ -122,22 +143,19 @@ fun ItemCardAuction(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        "Input Harga Baru",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
-                    )
+                    Text("Input Harga Baru", style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
-            // Expand TextField + Batal
+            // Input harga baru
             AnimatedVisibility(visible = expanded) {
                 Column {
                     OutlinedTextField(
-                        value = priceInput,
+                        value = formattedInput,
                         onValueChange = {
-                            priceInput = it
-                            onPriceChanged(it)
+                            rawPrice = it.filter(Char::isDigit)
+                            formattedInput = formatCurrencyInput(rawPrice)
+                            onPriceChanged(rawPrice)
                         },
                         label = { Text("Harga Baru") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -147,12 +165,16 @@ fun ItemCardAuction(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // Batal input harga
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
                                 expanded = false
-                                priceInput = ""
+                                rawPrice = ""
+                                formattedInput = ""
+                                onPriceChanged("")
+                                onCancelPriceInput()
                             }
                             .padding(vertical = 8.dp),
                         horizontalArrangement = Arrangement.Center,
@@ -160,18 +182,12 @@ fun ItemCardAuction(
                     ) {
                         Icon(Icons.Default.Close, contentDescription = null)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            "Batal Input Harga",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Text("Batal Input Harga", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
         }
     }
 }
-
-
-
 
 

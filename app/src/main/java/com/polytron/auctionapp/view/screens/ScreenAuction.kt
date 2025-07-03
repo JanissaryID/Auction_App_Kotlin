@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,8 +25,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -35,6 +38,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -46,8 +51,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,8 +76,11 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.utils.formatCurrencyInput
+import com.polytron.auctionapp.view.components.EmptyItemState
+import com.polytron.auctionapp.view.components.FloatingFabWithLabel
 import com.polytron.auctionapp.view.components.ItemCardAuction
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -80,43 +91,106 @@ fun ScreenAuction(
     itemsViewModel: ItemsViewModel = koinInject(),
     navScanBarcode: () -> Unit,
     navListItems: () -> Unit,
+    onBack: () -> Unit,
 ) {
-
     var rawAuctionPrice by remember { mutableStateOf("") }
     var auctionPrice by remember { mutableStateOf(formatCurrencyInput(rawAuctionPrice)) }
-
     var isSubmitting by remember { mutableStateOf(false) }
-
-    val selectedItems by itemsViewModel.selectedItems.collectAsState()
-
     var isFabExpanded by remember { mutableStateOf(false) }
 
+    val selectedItems by itemsViewModel.selectedItems.collectAsState()
+    val editingBuyers by itemsViewModel.editingBuyers.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    val editingPrices by itemsViewModel.editingPrices.collectAsState()
+
+    val isAuctionPriceValid = rawAuctionPrice.isNotBlank()
+    val isAllBuyerFilled = selectedItems.all {
+        val edited = editingBuyers[it.id]
+        !edited.isNullOrBlank()
+    }
+    val isSimpanEnabled = selectedItems.isNotEmpty() && isAuctionPriceValid && isAllBuyerFilled
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            Box(modifier = Modifier
-                .fillMaxSize(),
-//                .padding(16.dp),
-                contentAlignment = Alignment.BottomEnd) {
+        topBar = {
+            TopAppBar(
+                title = { Text("Lelang") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.primary
+                )
+            )
+        },
+        bottomBar = {
+            if (selectedItems.isNotEmpty()) {
+                BottomAppBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "${selectedItems.size} item dipilih",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(
+                        onClick = {
+                            isSubmitting = true
+                            coroutineScope.launch {
+                                val fallbackPrice = rawAuctionPrice.toIntOrNull()?.toString()
 
-                // Scrim overlay
+                                selectedItems.forEach { item ->
+                                    val finalBuyer = editingBuyers[item.id].orEmpty().ifBlank { item.buyer.orEmpty() }
+                                    val finalPrice = editingPrices[item.id].orEmpty().ifBlank { fallbackPrice.orEmpty() }
+
+                                    val updatedItem = item.copy(
+                                        buyer = finalBuyer,
+                                        price = finalPrice,
+                                        status = 1
+                                    )
+                                    itemsViewModel.patchItem(item.id!!, updatedItem)
+                                    delay(300) // opsional agar smooth
+                                }
+
+                                isSubmitting = false
+                                itemsViewModel.clearSelectedItems()
+                                rawAuctionPrice = ""
+                                auctionPrice = ""
+                            }
+                        },
+                        enabled = !isSubmitting && isSimpanEnabled,
+                        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                    ) {
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Simpan")
+                        }
+                    }
+                }
+            }
+        },
+        floatingActionButton = {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
                 if (isFabExpanded) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                isFabExpanded = false
-                            }
+                        modifier = Modifier.fillMaxSize().clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { isFabExpanded = false }
                     )
                 }
-
-                // Sub FAB menu
                 AnimatedVisibility(
                     visible = isFabExpanded,
                     enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
@@ -125,142 +199,62 @@ fun ScreenAuction(
                     Column(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         horizontalAlignment = Alignment.End,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(bottom = 72.dp)
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 72.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = "Scan Barcode",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.surface,
-                                modifier = Modifier
-                                    .background(
-                                        MaterialTheme.colorScheme.secondary,
-                                        shape = MaterialTheme.shapes.small
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                            FloatingActionButton(
-                                onClick = {
-                                    isFabExpanded = false
-                                    navScanBarcode()
-                                },
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                modifier = Modifier.size(48.dp)
-                            ) {
-                                Icon(Icons.Default.CameraAlt, contentDescription = "Scan Barcode")
-                            }
+                        FloatingFabWithLabel("Scan Barcode", Icons.Default.CameraAlt) {
+                            isFabExpanded = false; navScanBarcode()
                         }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = "Daftar Item",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.surface,
-                                modifier = Modifier
-                                    .background(
-                                        MaterialTheme.colorScheme.secondary,
-                                        shape = MaterialTheme.shapes.small
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                            FloatingActionButton(
-                                onClick = {
-                                    isFabExpanded = false
-                                    navListItems()
-                                },
-                                containerColor = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(48.dp)
-                            ) {
-                                Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Daftar Item")
-                            }
+                        FloatingFabWithLabel("Daftar Item", Icons.AutoMirrored.Filled.List) {
+                            isFabExpanded = false; navListItems()
                         }
                     }
                 }
-
-                // Main FAB
                 FloatingActionButton(
-                    onClick = {
-                        isFabExpanded = !isFabExpanded
-                    },
+                    onClick = { isFabExpanded = !isFabExpanded },
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
-                    Icon(
-                        imageVector = if (isFabExpanded) Icons.Default.Close else Icons.Default.Add,
-                        contentDescription = if (isFabExpanded) "Tutup Menu" else "Buka Menu"
-                    )
+                    Icon(if (isFabExpanded) Icons.Default.Close else Icons.Default.Add, null)
                 }
             }
         }
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)
         ) {
-            Text(
-                text = "Lelang",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-
             OutlinedTextField(
                 value = auctionPrice,
                 onValueChange = {
-                    rawAuctionPrice = it.filter { c -> c.isDigit() }
+                    rawAuctionPrice = it.filter(Char::isDigit)
                     auctionPrice = formatCurrencyInput(rawAuctionPrice)
                 },
-                label = { Text("Harga Dasar") },
+                label = { Text("Harga Lelang") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 enabled = !isSubmitting
             )
 
             if (selectedItems.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f)
-                        .padding(top = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Inventory2,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Tidak ada item yang ditemukan",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
-                    }
-                }
+                EmptyItemState()
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(vertical = 16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
+                    modifier = Modifier.fillMaxWidth().weight(1f)
                 ) {
                     items(selectedItems) { item ->
                         ItemCardAuction(
                             item = item,
-                            onNameChanged = {},
-                            onPriceChanged = {}
+                            currentBuyer = editingBuyers[item.id].orEmpty(),
+                            currentPrice = editingPrices[item.id].orEmpty(),
+                            onNameChanged = { newName ->
+                                itemsViewModel.updateEditingBuyer(item.id!!, newName)
+                            },
+                            onPriceChanged = { newPrice ->
+                                itemsViewModel.updateEditingPrice(item.id!!, newPrice)
+                            },
+                            onCancelPriceInput = {
+                                itemsViewModel.clearEditingForItem(item.id!!)
+                            }
                         )
                     }
                 }
