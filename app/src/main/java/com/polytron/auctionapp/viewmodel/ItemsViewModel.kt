@@ -93,7 +93,8 @@ class ItemsViewModel() : ViewModel() {
                     admin = admin,
                     status = 0,
                     buyer = "",
-                    price = ""
+                    price = "",
+                    typePayment = ""
                 )
                 val created = repository.createItem(item)
                 Log.i("ViewModel", "Success create item: $created")

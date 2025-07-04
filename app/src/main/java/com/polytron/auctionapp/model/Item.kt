@@ -16,6 +16,7 @@ data class Item(
 	@SerialName("nameItem") val nameItem: String? = null,
 	@SerialName("basePrice") val basePrice: String? = null,
 	@SerialName("price") val price: String? = null,
+	@SerialName("typePayment") val typePayment: String? = null,
 	@SerialName("buyer") val buyer: String? = null,
 	@SerialName("status") val status: Int? = null
 ): Parcelable

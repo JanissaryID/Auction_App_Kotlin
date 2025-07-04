@@ -179,11 +179,13 @@ fun ScreenPayment(
                 onDismiss = { showSheet = false },
                 onPay = {
                     // proses bayar dengan selectedMethod
+                    val orderID = "Order-${generateRandomAlphanumeric()}"
                     coroutineScope.launch {
                         selectedItems.forEach { item ->
                             val updatedItem = item.copy(
                                 status = 2,
-                                orderID = "Order-${generateRandomAlphanumeric()}"
+                                orderID = orderID,
+                                typePayment = it.label
                             )
                             itemsViewModel.patchItem(item.id!!, updatedItem)
                             delay(300) // opsional agar smooth
