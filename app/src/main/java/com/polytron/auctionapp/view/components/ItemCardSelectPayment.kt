@@ -2,7 +2,7 @@ package com.polytron.auctionapp.view.components
 
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,21 +29,19 @@ import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.utils.formatRupiah
 
 @Composable
-fun ItemCard(
+fun ItemCardSelectPayment(
     item: Item,
     isSelected: Boolean = false,
-    onClick: () -> Unit = {},
-    onLongClick: () -> Unit = {}
+    onSelectToggle: () -> Unit = {} // rename onClick untuk makna lebih jelas
 ) {
-    val formattedPrice = remember(item.basePrice) {
-        formatRupiah(item.basePrice)
+    val formattedPrice = remember(item.price) {
+        formatRupiah(item.price)
     }
 
     val borderColor = if (isSelected) Color(0xFF4CAF50) else Color.Transparent
     val backgroundColor = if (isSelected) Color(0xFFE8F5E9) else Color(0xFFFDFDFD)
 
     val shape = RoundedCornerShape(16.dp)
-
     val interactionSource = remember { MutableInteractionSource() }
 
     Card(
@@ -56,16 +54,14 @@ fun ItemCard(
     ) {
         Column(
             modifier = Modifier
-                .clip(shape) // penting untuk batasi ripple
-                .combinedClickable(
+                .clip(shape)
+                .clickable(
                     interactionSource = interactionSource,
                     indication = LocalIndication.current,
-                    onClick = onClick,
-                    onLongClick = onLongClick
+                    onClick = onSelectToggle // sekarang hanya click, tanpa longClick
                 )
                 .padding(16.dp)
         ) {
-            // Nama item
             Text(
                 text = item.nameItem ?: "Tanpa Nama",
                 style = MaterialTheme.typography.titleMedium,
@@ -77,7 +73,21 @@ fun ItemCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Kode + Harga
+            Column {
+                Text(
+                    text = "Pembeli",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray
+                )
+                Text(
+                    text = item.buyer ?: "-",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -97,7 +107,7 @@ fun ItemCard(
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "Harga Awal",
+                        text = "Harga Lelang",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray
                     )

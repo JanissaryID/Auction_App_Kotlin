@@ -8,10 +8,10 @@ import androidx.navigation.compose.rememberNavController
 import com.polytron.auctionapp.view.screens.ScreenAuction
 import com.polytron.auctionapp.view.screens.ScreenHome
 import com.polytron.auctionapp.view.screens.ScreenItemList
-import com.polytron.auctionapp.view.screens.ScreenItemListSelect
+import com.polytron.auctionapp.view.screens.ScreenItemListSelectAuction
+import com.polytron.auctionapp.view.screens.ScreenItemListSelectPayment
+import com.polytron.auctionapp.view.screens.ScreenPayment
 import com.polytron.auctionapp.view.screens.ScreenScanBarcode
-import com.polytron.auctionapp.viewmodel.ItemsViewModel
-import org.koin.compose.koinInject
 
 @Composable
 fun AppNavHost(navController: NavHostController = rememberNavController()) {
@@ -22,7 +22,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         composable(Screen.Auction.route) {
             ScreenAuction(
                 navScanBarcode = { navController.navigate(Screen.ScanBarcode.route) },
-                navListItems = { navController.navigate(Screen.ScreenItemListSelect.route) },
+                navListItems = { navController.navigate(Screen.ScreenItemListSelectAuction.route) },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -34,8 +34,20 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 onBack = { navController.popBackStack() }
             )
         }
-        composable(Screen.ScreenItemListSelect.route) {
-            ScreenItemListSelect(
+        composable(Screen.ScreenItemListSelectAuction.route) {
+            ScreenItemListSelectAuction(
+                navBack = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.Payment.route) {
+            ScreenPayment(
+                navScanBarcode = { navController.navigate(Screen.ScanBarcode.route) },
+                navListItems = { navController.navigate(Screen.ScreenItemListSelectPayment.route) },
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.ScreenItemListSelectPayment.route) {
+            ScreenItemListSelectPayment(
                 navBack = { navController.popBackStack() }
             )
         }

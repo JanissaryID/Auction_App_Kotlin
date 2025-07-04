@@ -6,7 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.polytron.auctionapp.navigation.AppNavHost
 import com.polytron.auctionapp.ui.theme.AuctionAppTheme
-import com.polytron.auctionapp.view.screens.ScreenAuction
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -3,7 +3,6 @@ package com.polytron.auctionapp.view.components
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,7 +29,7 @@ import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.utils.formatRupiah
 
 @Composable
-fun ItemCardSelect(
+fun ItemCardSelectAuction(
     item: Item,
     isSelected: Boolean = false,
     onSelectToggle: () -> Unit = {} // rename onClick untuk makna lebih jelas
