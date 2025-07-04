@@ -1,6 +1,7 @@
 package com.polytron.auctionapp.view.components
 
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -60,7 +61,7 @@ fun ItemCardSelectAuction(
                     indication = LocalIndication.current,
                     onClick = onSelectToggle // sekarang hanya click, tanpa longClick
                 )
-                .padding(16.dp)
+//                .padding(16.dp)
         ) {
             Text(
                 text = item.nameItem ?: "Tanpa Nama",
@@ -68,17 +69,22 @@ fun ItemCardSelectAuction(
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().background(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(
+                    modifier = Modifier.padding(start = 16.dp, bottom = 16.dp, top = 8.dp)
+                ) {
                     Text(
                         text = "Kode",
                         style = MaterialTheme.typography.labelSmall,
@@ -90,7 +96,10 @@ fun ItemCardSelectAuction(
                     )
                 }
 
-                Column(horizontalAlignment = Alignment.End) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    modifier = Modifier.padding(end = 16.dp, bottom = 16.dp, top = 8.dp)
+                ) {
                     Text(
                         text = "Harga Awal",
                         style = MaterialTheme.typography.labelSmall,

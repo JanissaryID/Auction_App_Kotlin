@@ -10,6 +10,7 @@ import com.polytron.auctionapp.view.screens.ScreenHome
 import com.polytron.auctionapp.view.screens.ScreenItemList
 import com.polytron.auctionapp.view.screens.ScreenItemListSelectAuction
 import com.polytron.auctionapp.view.screens.ScreenItemListSelectPayment
+import com.polytron.auctionapp.view.screens.ScreenListPayment
 import com.polytron.auctionapp.view.screens.ScreenPayment
 import com.polytron.auctionapp.view.screens.ScreenScanBarcode
 
@@ -43,11 +44,17 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             ScreenPayment(
                 navScanBarcode = { navController.navigate(Screen.ScanBarcode.route) },
                 navListItems = { navController.navigate(Screen.ScreenItemListSelectPayment.route) },
+                navListPayment = { navController.navigate(Screen.ScreenListPayment.route) },
                 onBack = { navController.popBackStack() }
             )
         }
         composable(Screen.ScreenItemListSelectPayment.route) {
             ScreenItemListSelectPayment(
+                navBack = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.ScreenListPayment.route) {
+            ScreenListPayment(
                 navBack = { navController.popBackStack() }
             )
         }

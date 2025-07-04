@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -27,6 +28,9 @@ import com.polytron.auctionapp.utils.formatRupiah
 
 @Composable
 fun ReceiptCard(modifier: Modifier = Modifier, selectedItems: List<Item>) {
+
+    val backgroundColor = Color(0xFFFDFDFD)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -34,7 +38,7 @@ fun ReceiptCard(modifier: Modifier = Modifier, selectedItems: List<Item>) {
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = backgroundColor
         )
     ) {
         LazyColumn(
