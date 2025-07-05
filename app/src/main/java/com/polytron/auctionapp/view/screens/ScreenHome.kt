@@ -22,8 +22,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.view.components.HomeMenu
-import com.polytron.auctionapp.view.components.MenuCard
+import com.polytron.auctionapp.view.components.itemcard.HomeMenu
+import com.polytron.auctionapp.view.components.itemcard.MenuCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +34,7 @@ fun ScreenHome(
         HomeMenu("Daftar Barang", Icons.AutoMirrored.Filled.List, "list_items"),
         HomeMenu("Lelang", Icons.Default.Gavel, "auction"),
         HomeMenu("Pembayaran", Icons.Default.Payments, "payment"),
-        HomeMenu("Ambil Barang", Icons.Default.Inventory2, "pickup"),
+        HomeMenu("Ambil Barang", Icons.Default.Inventory2, "take_items"),
         HomeMenu("Transaksi", Icons.Default.Receipt, "transactions")
     )
 

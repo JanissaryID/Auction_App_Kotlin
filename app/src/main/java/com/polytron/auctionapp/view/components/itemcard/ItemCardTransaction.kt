@@ -1,4 +1,4 @@
-package com.polytron.auctionapp.view.components
+package com.polytron.auctionapp.view.components.itemcard
 
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
@@ -30,12 +30,16 @@ import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.utils.formatRupiah
 
 @Composable
-fun ItemCardSelectPayment(
+fun ItemCardTransaction(
     item: Item,
     isSelected: Boolean = false,
-    onSelectToggle: () -> Unit = {} // rename onClick untuk makna lebih jelas
+    onClicked: () -> Unit = {} // rename onClick untuk makna lebih jelas
 ) {
-    val formattedPrice = remember(item.price) {
+    val formattedPriceBase = remember(item.basePrice) {
+        formatRupiah(item.basePrice)
+    }
+
+    val formattedPriceAuction = remember(item.price) {
         formatRupiah(item.price)
     }
 
@@ -59,7 +63,7 @@ fun ItemCardSelectPayment(
                 .clickable(
                     interactionSource = interactionSource,
                     indication = LocalIndication.current,
-                    onClick = onSelectToggle // sekarang hanya click, tanpa longClick
+                    onClick = onClicked // sekarang hanya click, tanpa longClick
                 )
 //                .padding(16.dp)
         ) {
@@ -67,7 +71,6 @@ fun ItemCardSelectPayment(
                 text = item.nameItem ?: "Tanpa Nama",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)
@@ -95,22 +98,25 @@ fun ItemCardSelectPayment(
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-                ),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                    ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
+                    horizontalAlignment = Alignment.Start,
                     modifier = Modifier.padding(start = 16.dp, bottom = 16.dp, top = 8.dp)
                 ) {
                     Text(
-                        text = "Kode",
+                        text = "Harga Awal",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray
                     )
                     Text(
-                        text = item.codeItem ?: "-",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = formattedPriceBase,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF4CAF50)
                     )
                 }
 
@@ -124,7 +130,7 @@ fun ItemCardSelectPayment(
                         color = Color.Gray
                     )
                     Text(
-                        text = formattedPrice,
+                        text = formattedPriceAuction,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF4CAF50)
@@ -134,9 +140,3 @@ fun ItemCardSelectPayment(
         }
     }
 }
-
-
-
-
-
-

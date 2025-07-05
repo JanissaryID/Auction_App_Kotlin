@@ -10,16 +10,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +30,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,36 +37,32 @@ import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
 import com.polytron.auctionapp.view.components.TopAppBarCustom
-import com.polytron.auctionapp.view.components.bottomsheet.AddOrEditItemBottomSheet
-import com.polytron.auctionapp.view.components.fab.FabWithDelete
-import com.polytron.auctionapp.view.components.itemcard.ItemCard
+import com.polytron.auctionapp.view.components.bottomsheet.ItemDetailBottomSheet
+import com.polytron.auctionapp.view.components.itemcard.ItemCardTransaction
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
-import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScreenItemList(
+fun ScreenTransactions(
     itemsViewModel: ItemsViewModel = koinInject(),
     navBack: () -> Unit
 ) {
     val items by itemsViewModel.items.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
-    val sheetState = rememberModalBottomSheetState()
     var selectedItem by remember { mutableStateOf<Item?>(null) }
-    var showAddEditBottomSheet by remember { mutableStateOf(false) }
+    var showDetailSheet by remember { mutableStateOf(false) }
 
     val selectedItems = remember { mutableStateListOf<Item>() }
-    val isSelectionMode = selectedItems.isNotEmpty()
 
-    var isDeleting by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val totalBase = items.sumOf {
         it.basePrice?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L
     }.toString()
-    val totalMax = items.sumOf {
-        it.maxPrice?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L
+    val totalPrice = items.sumOf {
+        it.price?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L
     }.toString()
 
     // Fetch data saat pertama kali ditampilkan
@@ -117,10 +113,10 @@ fun ScreenItemList(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Total Maksimal", style = MaterialTheme.typography.bodyMedium,
+                            Text("Total Lelang", style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium)
                             Text(
-                                formatRupiah(totalMax),
+                                formatRupiah(totalPrice),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
@@ -130,24 +126,14 @@ fun ScreenItemList(
             }
         },
         floatingActionButton = {
-            FabWithDelete(
-                isSelectionMode = isSelectionMode,
-                isDeleting = isDeleting,
-                onDelete = {
-                    isDeleting = true
-                    selectedItems.forEach {
-                        itemsViewModel.deleteItem(it.id!!)
-                        delay(500)
-                    }
-                    selectedItems.clear()
-                    itemsViewModel.fetchItems()
-                    isDeleting = false
+            FloatingActionButton(
+                onClick = {
+                    // Download To Excel
                 },
-                onAddClick = {
-                    showAddEditBottomSheet = true
-                    selectedItem = null
-                }
-            )
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.Download, "Convert to Excel")
+            }
         }
     ) { innerPadding ->
         Column(
@@ -167,15 +153,6 @@ fun ScreenItemList(
                 singleLine = true
             )
 
-            if (isSelectionMode) {
-                TextButton(
-                    onClick = { selectedItems.clear() },
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text("Batal Seleksi")
-                }
-            }
-
             if (filteredItems.isEmpty()) {
                 EmptyItemState()
             } else {
@@ -187,28 +164,12 @@ fun ScreenItemList(
                         .weight(1f)
                 ) {
                     items(filteredItems) { item ->
-                        ItemCard(
+                        ItemCardTransaction(
                             item = item,
                             isSelected = selectedItems.contains(item),
-                            onClick = {
-                                if (isSelectionMode) {
-                                    if (selectedItems.contains(item)) {
-                                        selectedItems.remove(item)
-                                    } else {
-                                        selectedItems.add(item)
-                                    }
-                                } else {
-                                    selectedItem = item
-                                    showAddEditBottomSheet = true
-                                }
-                            },
-                            onLongClick = {
-                                if (!selectedItems.contains(item)) {
-                                    selectedItems.add(item)
-                                }
-                            },
-                            onPrintClick = {
-//                                printerViewModel.printItem(item)
+                            onClicked = {
+                                selectedItem = item // ✅ Atur selectedItem sebelum buka sheet
+                                showDetailSheet = true
                             }
                         )
                     }
@@ -217,48 +178,19 @@ fun ScreenItemList(
         }
     }
 
-    if (showAddEditBottomSheet) {
+    if (showDetailSheet && selectedItem != null) {
         ModalBottomSheet(
             onDismissRequest = {
-                showAddEditBottomSheet = false
+                showDetailSheet = false
                 selectedItem = null
             },
             sheetState = sheetState
         ) {
-            AddOrEditItemBottomSheet(
-                itemToEdit = selectedItem,
-                onDismiss = {
-                    showAddEditBottomSheet = false
+            ItemDetailBottomSheet(
+                item = selectedItem!!,
+                onDismissRequest = {
+                    showDetailSheet = false
                     selectedItem = null
-                },
-                onSubmit = { name, code, base, max, quantity ->
-                    if (selectedItem != null) {
-                        selectedItem!!.id?.let { id ->
-                            val updatedItem = selectedItem!!.copy(
-                                nameItem = name,
-                                codeItem = code,
-                                basePrice = base,
-                                maxPrice = max
-                            )
-                            itemsViewModel.patchItem(id, updatedItem)
-                        }
-                    } else {
-                        repeat(quantity) { index ->
-                            val suffix = index + 1
-                            val finalName = "$name $suffix"
-                            val finalCode = "$code $suffix"
-                            itemsViewModel.createItem(
-                                nameItem = finalName,
-                                codeItem = finalCode,
-                                basePrice = base,
-                                maxPrice = max,
-                                orderID = "",
-                                admin = "admin"
-                            )
-                            delay(500)
-                        }
-                    }
-                    itemsViewModel.fetchItems()
                 }
             )
         }

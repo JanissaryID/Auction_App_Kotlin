@@ -1,4 +1,4 @@
-package com.polytron.auctionapp.view.components
+package com.polytron.auctionapp.view.components.bottomsheet
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable

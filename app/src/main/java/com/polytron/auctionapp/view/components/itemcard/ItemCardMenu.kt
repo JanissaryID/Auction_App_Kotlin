@@ -1,4 +1,4 @@
-package com.polytron.auctionapp.view.components
+package com.polytron.auctionapp.view.components.itemcard
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

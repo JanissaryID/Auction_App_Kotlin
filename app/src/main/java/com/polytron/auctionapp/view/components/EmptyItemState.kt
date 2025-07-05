@@ -32,7 +32,7 @@ fun EmptyItemState() {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Tidak ada item yang ditemukan",
+                text = "Tidak ada barang yang ditemukan",
                 style = MaterialTheme.typography.bodyLarge.copy(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

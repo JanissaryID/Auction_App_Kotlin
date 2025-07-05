@@ -1,4 +1,4 @@
-package com.polytron.auctionapp.view.components
+package com.polytron.auctionapp.view.components.itemcard
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
@@ -15,11 +15,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -47,7 +49,8 @@ fun ItemCardAuction(
     currentPrice: String,
     onNameChanged: (String) -> Unit,
     onPriceChanged: (String) -> Unit,
-    onCancelPriceInput: () -> Unit
+    onCancelPriceInput: () -> Unit,
+    onClickDelete: () -> Unit = {}
 ) {
     var expanded by remember { mutableStateOf(currentPrice.isNotBlank()) }
 
@@ -71,8 +74,19 @@ fun ItemCardAuction(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // Nama Item
-            Text(text = item.nameItem ?: "Nama Item", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = item.nameItem ?: "Nama Item", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = onClickDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Hapus",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
 
             // Info kode dan harga awal

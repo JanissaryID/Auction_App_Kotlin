@@ -1,5 +1,9 @@
-package com.polytron.auctionapp.view.components
+package com.polytron.auctionapp.view.components.fab
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -24,7 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.polytron.auctionapp.view.components.camera.CameraPermissionHandler
 
 @Composable
 fun FabWithSubmenu(
@@ -35,6 +41,22 @@ fun FabWithSubmenu(
     navScanBarcode: () -> Unit,
     navListItems: () -> Unit,
 ) {
+    val context = LocalContext.current
+
+    val requestCameraPermission = CameraPermissionHandler(
+        onGranted = {
+            onDismissRequest()
+            navScanBarcode()
+        },
+        onDenied = {
+            Toast.makeText(context, "Izin kamera ditolak.", Toast.LENGTH_SHORT).show()
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+            }
+            context.startActivity(intent)
+        }
+    )
+
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
         if (isFabExpanded) {
             Box(
@@ -56,11 +78,10 @@ fun FabWithSubmenu(
                     .align(Alignment.BottomEnd)
                     .padding(bottom = 72.dp)
             ) {
-                FloatingFabWithLabel("Scan Barcode", Icons.Default.CameraAlt) {
-                    onDismissRequest()
-                    navScanBarcode()
+                FabWithLabel("Scan Barcode", Icons.Default.CameraAlt) {
+                    requestCameraPermission()
                 }
-                FloatingFabWithLabel("Daftar Item", Icons.AutoMirrored.Filled.List) {
+                FabWithLabel("Daftar Item", Icons.AutoMirrored.Filled.List) {
                     onDismissRequest()
                     navListItems()
                 }

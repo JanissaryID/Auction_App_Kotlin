@@ -19,6 +19,10 @@ class ItemsViewModel() : ViewModel() {
     private val _selectedItems = MutableStateFlow<List<Item>>(emptyList())
     val selectedItems = _selectedItems.asStateFlow()
     fun setSelectedItems(items: List<Item>) { _selectedItems.value = items }
+
+    fun removeSelectedItem(item: Item) {
+        _selectedItems.value = _selectedItems.value.filterNot { it.id == item.id }
+    }
     fun clearSelectedItems() {
         _selectedItems.value = emptyList()
         _editingBuyers.value = emptyMap()

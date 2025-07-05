@@ -1,4 +1,4 @@
-package com.polytron.auctionapp.view.components
+package com.polytron.auctionapp.view.components.bottomsheet
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

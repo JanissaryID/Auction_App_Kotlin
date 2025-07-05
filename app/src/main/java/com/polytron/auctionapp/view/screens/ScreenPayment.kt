@@ -1,27 +1,19 @@
 package com.polytron.auctionapp.view.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Receipt
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,9 +26,11 @@ import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.utils.generateRandomAlphanumeric
 import com.polytron.auctionapp.view.components.EmptyItemState
-import com.polytron.auctionapp.view.components.FabWithSubmenu
-import com.polytron.auctionapp.view.components.PaymentBottomSheet
 import com.polytron.auctionapp.view.components.ReceiptCard
+import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
+import com.polytron.auctionapp.view.components.TopAppBarCustom
+import com.polytron.auctionapp.view.components.bottomsheet.PaymentBottomSheet
+import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -49,9 +43,8 @@ fun ScreenPayment(
     navScanBarcode: () -> Unit,
     navListItems: () -> Unit,
     navListPayment: () -> Unit,
-    onBack: () -> Unit,
+    navBack: () -> Unit,
 ) {
-    var isSubmitting by remember { mutableStateOf(false) }
     var isFabExpanded by remember { mutableStateOf(false) }
 
     val selectedItems by itemsViewModel.selectedItems.collectAsState()
@@ -60,54 +53,39 @@ fun ScreenPayment(
 
     var showSheet by remember { mutableStateOf(false) }
 
+    BackHandler {
+        navBack()
+        itemsViewModel.clearSelectedItems()
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text("Pembayaran") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                    }
+            TopAppBarCustom(
+                title = "Pembayaran",
+                onBack = {
+                    navBack()
+                    itemsViewModel.clearSelectedItems()
                 },
-                actions = {
+                additionalActions = {
                     IconButton(onClick = { navListPayment() }) {
                         Icon(
                             imageVector = Icons.Default.Receipt,
                             contentDescription = "List Payment"
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    titleContentColor = MaterialTheme.colorScheme.primary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.primary
-                )
+                }
             )
         },
         bottomBar = {
-            if (selectedItems.isNotEmpty()) {
-                BottomAppBar(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = "${selectedItems.size} barang dipilih",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Button(
-                        onClick = {
-                            showSheet = true
-                        },
-                        enabled = true,
-                        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
-                    ) {
-                        Text("Proses")
-                    }
+            SelectedItemsBottomBar(
+                selectedCount = selectedItems.size,
+                buttonText = "Proses",
+                onClick = {
+                    showSheet = true
                 }
-            }
+            )
         },
         floatingActionButton = {
             FabWithSubmenu(
@@ -131,7 +109,6 @@ fun ScreenPayment(
     }
 
     if (showSheet) {
-
         val total = selectedItems.sumOf { item ->
             item.price
                 ?.replace(Regex("\\D"), "") // hapus semua non-digit (misalnya titik)

@@ -1,4 +1,4 @@
-package com.polytron.auctionapp.view.components
+package com.polytron.auctionapp.view.components.itemcard
 
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
@@ -67,7 +67,6 @@ fun ItemCardSelectAuction(
                 text = item.nameItem ?: "Tanpa Nama",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)

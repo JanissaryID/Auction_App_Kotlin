@@ -1,32 +1,21 @@
 package com.polytron.auctionapp.view.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,13 +24,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.view.components.EmptyItemState
-import com.polytron.auctionapp.view.components.FabWithSubmenu
-import com.polytron.auctionapp.view.components.ItemCardAuction
+import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
+import com.polytron.auctionapp.view.components.TopAppBarCustom
+import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
+import com.polytron.auctionapp.view.components.itemcard.ItemCardAuction
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -53,7 +43,7 @@ fun ScreenAuction(
     itemsViewModel: ItemsViewModel = koinInject(),
     navScanBarcode: () -> Unit,
     navListItems: () -> Unit,
-    onBack: () -> Unit,
+    navBack: () -> Unit,
 ) {
     var rawAuctionPrice by remember { mutableStateOf("") }
     var auctionPrice by remember { mutableStateOf(formatCurrencyInput(rawAuctionPrice)) }
@@ -74,75 +64,54 @@ fun ScreenAuction(
     }
     val isSimpanEnabled = selectedItems.isNotEmpty() && isAuctionPriceValid && isAllBuyerFilled
 
+    BackHandler {
+        navBack()
+        itemsViewModel.clearSelectedItems()
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text("Lelang") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    titleContentColor = MaterialTheme.colorScheme.primary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.primary
-                )
+            TopAppBarCustom(
+                title = "Lelang",
+                onBack = {
+                    navBack()
+                    itemsViewModel.clearSelectedItems()
+                }
             )
         },
         bottomBar = {
-            if (selectedItems.isNotEmpty()) {
-                BottomAppBar(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = "${selectedItems.size} barang dipilih",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Button(
-                        onClick = {
-                            isSubmitting = true
-                            coroutineScope.launch {
-                                val fallbackPrice = rawAuctionPrice.toIntOrNull()?.toString()
+            SelectedItemsBottomBar(
+                selectedCount = selectedItems.size,
+                buttonText = "Simpan",
+                isSubmitting = isSubmitting,
+                enabled = isSimpanEnabled,
+                onClick = {
+                    isSubmitting = true
+                    coroutineScope.launch {
+                        val fallbackPrice = rawAuctionPrice.toIntOrNull()?.toString()
 
-                                selectedItems.forEach { item ->
-                                    val finalBuyer = editingBuyers[item.id].orEmpty().ifBlank { item.buyer.orEmpty() }
-                                    val finalPrice = editingPrices[item.id].orEmpty().ifBlank { fallbackPrice.orEmpty() }
+                        selectedItems.forEach { item ->
+                            val finalBuyer = editingBuyers[item.id].orEmpty().ifBlank { item.buyer.orEmpty() }
+                            val finalPrice = editingPrices[item.id].orEmpty().ifBlank { fallbackPrice.orEmpty() }
 
-                                    val updatedItem = item.copy(
-                                        buyer = finalBuyer,
-                                        price = finalPrice,
-                                        status = 1
-                                    )
-                                    itemsViewModel.patchItem(item.id!!, updatedItem)
-                                    delay(300) // opsional agar smooth
-                                }
-
-                                isSubmitting = false
-                                itemsViewModel.clearSelectedItems()
-                                rawAuctionPrice = ""
-                                auctionPrice = ""
-                            }
-                        },
-                        enabled = !isSubmitting && isSimpanEnabled,
-                        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
-                    ) {
-                        if (isSubmitting) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp
+                            val updatedItem = item.copy(
+                                buyer = finalBuyer,
+                                price = finalPrice,
+                                status = 1
                             )
-                        } else {
-                            Text("Simpan")
+                            itemsViewModel.patchItem(item.id!!, updatedItem)
+                            delay(300)
                         }
+
+                        isSubmitting = false
+                        itemsViewModel.clearSelectedItems()
+                        rawAuctionPrice = ""
+                        auctionPrice = ""
                     }
                 }
-            }
+            )
         },
         floatingActionButton = {
             FabWithSubmenu(
@@ -190,6 +159,9 @@ fun ScreenAuction(
                             },
                             onCancelPriceInput = {
                                 itemsViewModel.clearEditingForItem(item.id!!)
+                            },
+                            onClickDelete = {
+                                itemsViewModel.removeSelectedItem(item)
                             }
                         )
                     }

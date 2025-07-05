@@ -16,23 +16,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Inventory2
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,7 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.Item
-import com.polytron.auctionapp.view.components.ItemCardSelectPayment
+import com.polytron.auctionapp.view.components.TopAppBarCustom
+import com.polytron.auctionapp.view.components.itemcard.ItemCardSelectPayment
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
 import org.koin.compose.koinInject
 
@@ -56,6 +52,7 @@ fun ScreenItemListSelectPayment(
     navBack: () -> Unit,
 ) {
     val items by itemsViewModel.items.collectAsState()
+    val filteredItemsStatOne = items.filter { it.status == 1 }
     var searchQuery by remember { mutableStateOf("") }
 
     val selectedItemsState by itemsViewModel.selectedItems.collectAsState()
@@ -75,7 +72,7 @@ fun ScreenItemListSelectPayment(
         }
     }
 
-    val filteredItems = items.filter {
+    val filteredItems = filteredItemsStatOne.filter {
         it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
                 it.codeItem?.contains(searchQuery, ignoreCase = true) == true
     }
@@ -83,30 +80,11 @@ fun ScreenItemListSelectPayment(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    titleContentColor = MaterialTheme.colorScheme.primary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.primary,
-                    actionIconContentColor = MaterialTheme.colorScheme.primary
-                ),
-                title = { Text(
-                    text = "Daftar Barang Lelang",
-                    style = MaterialTheme.typography.headlineMedium)
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { itemsViewModel.fetchItems() }) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+            TopAppBarCustom(
+                title = "Daftar Barang Lelang",
+                onBack = { navBack() },
+                showRefresh = true,
+                onRefresh = { itemsViewModel.fetchItems() },
             )
         },
         floatingActionButton = {

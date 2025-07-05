@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -25,8 +27,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,13 +39,16 @@ import com.polytron.auctionapp.model.Item
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardPayment
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScreenListPayment(
+fun ScreenTakeItems(
     itemsViewModel: ItemsViewModel = koinInject(),
     navBack: () -> Unit,
+    navScanBarcode: () -> Unit,
 ) {
     val items by itemsViewModel.items.collectAsState()
     val filteredItemsStatTwo = items.filter { it.status == 2 }
@@ -51,6 +58,8 @@ fun ScreenListPayment(
     val selectedItemsState by itemsViewModel.selectedItems.collectAsState()
     val selectedItems = remember { mutableStateListOf<Item>() }
     var isInitialized by remember { mutableStateOf(false) }
+    val isSubmittingMap = remember { mutableStateMapOf<String, Boolean>() }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         itemsViewModel.fetchItems()
@@ -76,12 +85,20 @@ fun ScreenListPayment(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBarCustom(
-                title = "Daftar Pembayaran",
+                title = "Ambil Barang",
                 onBack = { navBack() },
                 showRefresh = true,
                 onRefresh = { itemsViewModel.fetchItems() },
             )
         },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { navScanBarcode() },
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.QrCodeScanner, "Scan Barcode")
+            }
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -111,14 +128,14 @@ fun ScreenListPayment(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = Icons.Default.Inventory2,
+                            imageVector = Icons.Default.Receipt,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Tidak ada item yang ditemukan",
+                            text = "Tidak ada nota yang ditemukan",
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -138,8 +155,20 @@ fun ScreenListPayment(
                             ItemCardPayment(
                                 orderId = orderId,
                                 items = itemList,
-                                takeItemScreen = false,
-                                onClick = {}
+                                takeItemScreen = true,
+                                isSubmitting = isSubmittingMap[orderId] == true,
+                                onClick = {
+                                    isSubmittingMap[orderId] = true
+                                    coroutineScope.launch {
+                                        itemList.forEach { item ->
+                                            val updatedItem = item.copy(status = 3)
+                                            itemsViewModel.patchItem(item.id!!, updatedItem)
+                                            delay(300)
+                                        }
+                                        isSubmittingMap[orderId] = false
+                                        itemsViewModel.fetchItems()
+                                    }
+                                }
                             )
                         }
                     }
