@@ -30,7 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.view.components.camera.CameraPermissionHandler
+import com.polytron.auctionapp.view.components.camera.cameraPermissionHandler
 
 @Composable
 fun FabWithSubmenu(
@@ -43,7 +43,7 @@ fun FabWithSubmenu(
 ) {
     val context = LocalContext.current
 
-    val requestCameraPermission = CameraPermissionHandler(
+    val requestCameraPermission = cameraPermissionHandler(
         onGranted = {
             onDismissRequest()
             navScanBarcode()

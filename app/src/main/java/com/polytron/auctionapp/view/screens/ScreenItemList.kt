@@ -84,7 +84,7 @@ fun ScreenItemList(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBarCustom(
-                title = "Daftar Barang Lelang",
+                title = "${items.size} Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
                 onRefresh = { itemsViewModel.fetchItems() },

@@ -1,5 +1,7 @@
 package com.polytron.auctionapp.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -21,6 +23,7 @@ import com.polytron.auctionapp.view.screens.ScreenTransactions
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
 import org.koin.compose.koinInject
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
@@ -85,7 +88,7 @@ fun AppNavHost(
         composable(Screen.TakeItems.route) {
             ScreenTakeItems(
                 navBack = { navController.popBackStack() },
-                navScanBarcode = { navController.navigate(Screen.ScanBarcode.route) }
+//                navScanBarcode = { navController.navigate(Screen.ScanBarcode.route) }
             )
         }
         composable(Screen.Transactions.route) {

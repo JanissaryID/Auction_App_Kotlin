@@ -93,4 +93,6 @@ dependencies {
 
     // ML Kit Barcode Scanning
     implementation(libs.barcode.scanning)
+
+    implementation(libs.poi.ooxml)
 }

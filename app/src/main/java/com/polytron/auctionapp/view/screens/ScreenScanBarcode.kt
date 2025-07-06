@@ -38,7 +38,6 @@ import org.koin.compose.koinInject
 @Composable
 fun ScreenScanBarcode(
     itemsViewModel: ItemsViewModel = koinInject(),
-    modifier: Modifier = Modifier,
     navBack: () -> Unit,
     typeScreen: String?
 ) {

@@ -12,11 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -48,7 +46,7 @@ import org.koin.compose.koinInject
 fun ScreenTakeItems(
     itemsViewModel: ItemsViewModel = koinInject(),
     navBack: () -> Unit,
-    navScanBarcode: () -> Unit,
+//    navScanBarcode: () -> Unit,
 ) {
     val items by itemsViewModel.items.collectAsState()
     val filteredItemsStatTwo = items.filter { it.status == 2 }
@@ -91,14 +89,14 @@ fun ScreenTakeItems(
                 onRefresh = { itemsViewModel.fetchItems() },
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navScanBarcode() },
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.QrCodeScanner, "Scan Barcode")
-            }
-        }
+//        floatingActionButton = {
+//            FloatingActionButton(
+//                onClick = { navScanBarcode() },
+//                containerColor = MaterialTheme.colorScheme.primary
+//            ) {
+//                Icon(Icons.Default.QrCodeScanner, "Scan Barcode")
+//            }
+//        }
     ) { innerPadding ->
         Column(
             modifier = Modifier

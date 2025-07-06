@@ -41,7 +41,7 @@ fun ScreenHome(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Menu Utama") },
+                title = { Text("Unduh-Unduh GKJ") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     titleContentColor = MaterialTheme.colorScheme.primary
                 )

@@ -1,5 +1,7 @@
 package com.polytron.auctionapp.view.screens
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,9 +33,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.utils.exportItemsToExcel
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
 import com.polytron.auctionapp.view.components.TopAppBarCustom
@@ -42,6 +46,7 @@ import com.polytron.auctionapp.view.components.itemcard.ItemCardTransaction
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
 import org.koin.compose.koinInject
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenTransactions(
@@ -64,6 +69,8 @@ fun ScreenTransactions(
     val totalPrice = items.sumOf {
         it.price?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L
     }.toString()
+
+    val context = LocalContext.current
 
     // Fetch data saat pertama kali ditampilkan
     LaunchedEffect(Unit) {
@@ -129,6 +136,7 @@ fun ScreenTransactions(
             FloatingActionButton(
                 onClick = {
                     // Download To Excel
+                    exportItemsToExcel(context = context, items = items)
                 },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {

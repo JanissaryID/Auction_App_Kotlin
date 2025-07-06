@@ -7,6 +7,7 @@ coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
+#noinspection NewerVersionAvailable
 ktorClientLogging = "2.3.7"
 lifecycleRuntimeKtx = "2.9.1"
 activityCompose = "1.10.1"
@@ -18,7 +19,9 @@ moko = "0.16.1"
 nav = "2.9.1"
 navigationRuntimeKtx = "2.9.1"
 datastore = "1.1.7"
+#noinspection NewerVersionAvailable
 ktor = "2.3.7"
+poiOoxml = "5.4.1"
 serialization = "1.9.0"
 
 [libraries]
@@ -69,6 +72,7 @@ androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", versi
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraCamera2" }
 
 barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcodeScanning" }
+poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poiOoxml" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

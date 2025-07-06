@@ -1,18 +1,23 @@
 package com.polytron.auctionapp
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import com.polytron.auctionapp.navigation.AppNavHost
 import com.polytron.auctionapp.ui.theme.AuctionAppTheme
 
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            AuctionAppTheme {
+            AuctionAppTheme(
+                darkTheme = false
+            ) {
                 AppNavHost()
             }
         }
