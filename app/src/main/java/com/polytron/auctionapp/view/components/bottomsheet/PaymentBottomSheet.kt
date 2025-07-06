@@ -75,6 +75,7 @@ fun PaymentBottomSheet(
                 val isSelected = selectedMethod == method.name
 
                 Card(
+                    onClick = { selectedMethod = method.name },
                     modifier = Modifier
                         .weight(1f)
                         .height(96.dp) // biar seragam dan stabil
@@ -85,8 +86,7 @@ fun PaymentBottomSheet(
                             else
                                 MaterialTheme.colorScheme.outline,
                             shape = RoundedCornerShape(16.dp)
-                        )
-                        .clickable { selectedMethod = method.name },
+                        ),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (isSelected)

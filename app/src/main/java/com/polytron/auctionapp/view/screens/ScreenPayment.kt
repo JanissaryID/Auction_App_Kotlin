@@ -103,7 +103,9 @@ fun ScreenPayment(
             if (selectedItems.isEmpty()) {
                 EmptyItemState()
             } else {
-                ReceiptCard(selectedItems = selectedItems)
+                ReceiptCard(selectedItems = selectedItems){
+                        item -> itemsViewModel.removeSelectedItem(item)
+                }
             }
         }
     }

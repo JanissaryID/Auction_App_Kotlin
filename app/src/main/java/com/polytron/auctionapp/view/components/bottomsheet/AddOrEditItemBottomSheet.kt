@@ -96,7 +96,11 @@ fun AddOrEditItemBottomSheet(
 
         OutlinedTextField(
             value = code,
-            onValueChange = { code = it.uppercase().trimStart() },
+            onValueChange = {
+                code = it.uppercase()
+                    .trimStart()
+                    .replace(Regex("\\s+"), "-") // ganti semua spasi jadi "-"
+            },
             label = { Text("Kode Barang") },
             modifier = Modifier.fillMaxWidth(),
             enabled = !isSubmitting
