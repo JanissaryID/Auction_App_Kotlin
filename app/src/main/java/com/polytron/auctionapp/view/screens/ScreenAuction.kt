@@ -32,7 +32,7 @@ import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
 import com.polytron.auctionapp.view.components.itemcard.ItemCardAuction
-import com.polytron.auctionapp.viewmodel.ItemsViewModel
+import com.polytron.auctionapp.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -40,7 +40,7 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenAuction(
-    itemsViewModel: ItemsViewModel = koinInject(),
+    mainViewModel: MainViewModel = koinInject(),
     navScanBarcode: () -> Unit,
     navListItems: () -> Unit,
     navBack: () -> Unit,
@@ -50,12 +50,12 @@ fun ScreenAuction(
     var isSubmitting by remember { mutableStateOf(false) }
     var isFabExpanded by remember { mutableStateOf(false) }
 
-    val selectedItems by itemsViewModel.selectedItems.collectAsState()
-    val editingBuyers by itemsViewModel.editingBuyers.collectAsState()
+    val selectedItems by mainViewModel.selectedItems.collectAsState()
+    val editingBuyers by mainViewModel.editingBuyers.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    val editingPrices by itemsViewModel.editingPrices.collectAsState()
+    val editingPrices by mainViewModel.editingPrices.collectAsState()
 
     val isAuctionPriceValid = rawAuctionPrice.isNotBlank()
     val isAllBuyerFilled = selectedItems.all {
@@ -66,7 +66,7 @@ fun ScreenAuction(
 
     BackHandler {
         navBack()
-        itemsViewModel.clearSelectedItems()
+        mainViewModel.clearSelectedItems()
     }
 
     Scaffold(
@@ -77,7 +77,7 @@ fun ScreenAuction(
                 title = "Lelang",
                 onBack = {
                     navBack()
-                    itemsViewModel.clearSelectedItems()
+                    mainViewModel.clearSelectedItems()
                 }
             )
         },
@@ -101,12 +101,12 @@ fun ScreenAuction(
                                 price = finalPrice,
                                 status = 1
                             )
-                            itemsViewModel.patchItem(item.id!!, updatedItem)
+                            mainViewModel.patchItem(item.id!!, updatedItem)
                             delay(300)
                         }
 
                         isSubmitting = false
-                        itemsViewModel.clearSelectedItems()
+                        mainViewModel.clearSelectedItems()
                         rawAuctionPrice = ""
                         auctionPrice = ""
                     }
@@ -152,16 +152,16 @@ fun ScreenAuction(
                             currentBuyer = editingBuyers[item.id].orEmpty(),
                             currentPrice = editingPrices[item.id].orEmpty(),
                             onNameChanged = { newName ->
-                                itemsViewModel.updateEditingBuyer(item.id!!, newName)
+                                mainViewModel.updateEditingBuyer(item.id!!, newName)
                             },
                             onPriceChanged = { newPrice ->
-                                itemsViewModel.updateEditingPrice(item.id!!, newPrice)
+                                mainViewModel.updateEditingPrice(item.id!!, newPrice)
                             },
                             onCancelPriceInput = {
-                                itemsViewModel.clearEditingForItem(item.id!!)
+                                mainViewModel.clearEditingForItem(item.id!!)
                             },
                             onClickDelete = {
-                                itemsViewModel.removeSelectedItem(item)
+                                mainViewModel.removeSelectedItem(item)
                             }
                         )
                     }

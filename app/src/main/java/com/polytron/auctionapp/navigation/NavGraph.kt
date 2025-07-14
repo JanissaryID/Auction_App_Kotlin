@@ -18,20 +18,21 @@ import com.polytron.auctionapp.view.screens.ScreenItemListSelectPayment
 import com.polytron.auctionapp.view.screens.ScreenListPayment
 import com.polytron.auctionapp.view.screens.ScreenPayment
 import com.polytron.auctionapp.view.screens.ScreenScanBarcode
+import com.polytron.auctionapp.view.screens.ScreenSettings
 import com.polytron.auctionapp.view.screens.ScreenTakeItems
 import com.polytron.auctionapp.view.screens.ScreenTransactions
-import com.polytron.auctionapp.viewmodel.ItemsViewModel
+import com.polytron.auctionapp.viewmodel.MainViewModel
 import org.koin.compose.koinInject
 
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
-    itemsViewModel: ItemsViewModel = koinInject()
+    mainViewModel: MainViewModel = koinInject()
 ) {
     NavHost(navController = navController, startDestination = Screen.Home.route) {
 
-        itemsViewModel.fetchItems()
+        mainViewModel.fetchItems()
 
         composable(Screen.Home.route) {
             ScreenHome(onNavigate = { navController.navigate(it) })
@@ -96,5 +97,11 @@ fun AppNavHost(
                 navBack = { navController.popBackStack() }
             )
         }
+        composable(Screen.Settings.route) {
+            ScreenSettings(
+                navBack = { navController.popBackStack() }
+            )
+        }
+
     }
 }

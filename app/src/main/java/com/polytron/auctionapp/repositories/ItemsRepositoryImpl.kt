@@ -3,30 +3,35 @@ package com.polytron.auctionapp.repositories
 import com.polytron.auctionapp.data.api.ItemApiService
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.Items
+import com.polytron.auctionapp.model.UserRequest
+import com.polytron.auctionapp.model.UserResponse
 
 
 class ItemsRepositoryImpl(
-    private val service: ItemApiService,
-    private val headers: Map<String, String>
+    private val service: ItemApiService
 ) : ItemsRepository {
 
-    override suspend fun fetchItems(): Items {
-        return service.fetchAll(headers = headers)
+    override suspend fun fetchItems(token: String): Items {
+        return service.fetchAll(token)
     }
 
-    override suspend fun fetchItemById(id: String): ItemResponse {
-        return service.getById(headers = headers, id = id)
+    override suspend fun fetchItemById(id: String, token: String): ItemResponse {
+        return service.getById(token, id)
     }
 
-    override suspend fun createItem(bodyObj: ItemResponse): ItemResponse {
-        return service.create(headers = headers, bodyObj = bodyObj)
+    override suspend fun createItem(bodyObj: ItemResponse, token: String): ItemResponse {
+        return service.create(token, bodyObj)
     }
 
-    override suspend fun updateItem(id: String, bodyObj: ItemResponse): ItemResponse {
-        return service.update(headers = headers, id = id, bodyObj = bodyObj)
+    override suspend fun updateItem(id: String, bodyObj: ItemResponse, token: String): ItemResponse {
+        return service.update(token, id, bodyObj)
     }
 
-    override suspend fun deleteItem(id: String): ItemResponse {
-        return service.delete(headers = headers, id = id)
+    override suspend fun deleteItem(id: String, token: String): ItemResponse {
+        return service.delete(token, id)
+    }
+
+    override suspend fun login(bodyObj: UserRequest): UserResponse {
+        return service.login(bodyObj)
     }
 }

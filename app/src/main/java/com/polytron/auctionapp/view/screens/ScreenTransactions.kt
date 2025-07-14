@@ -43,17 +43,17 @@ import com.polytron.auctionapp.view.components.EmptyItemState
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.bottomsheet.ItemDetailBottomSheet
 import com.polytron.auctionapp.view.components.itemcard.ItemCardTransaction
-import com.polytron.auctionapp.viewmodel.ItemsViewModel
+import com.polytron.auctionapp.viewmodel.MainViewModel
 import org.koin.compose.koinInject
 
 @RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenTransactions(
-    itemsViewModel: ItemsViewModel = koinInject(),
+    mainViewModel: MainViewModel = koinInject(),
     navBack: () -> Unit
 ) {
-    val items by itemsViewModel.items.collectAsState()
+    val items by mainViewModel.items.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
     var selectedItem by remember { mutableStateOf<ItemResponse?>(null) }
@@ -74,7 +74,7 @@ fun ScreenTransactions(
 
     // Fetch data saat pertama kali ditampilkan
     LaunchedEffect(Unit) {
-        itemsViewModel.fetchItems()
+        mainViewModel.fetchItems()
     }
 
     // Filter berdasarkan pencarian nama/kode
@@ -90,7 +90,7 @@ fun ScreenTransactions(
                 title = "Daftar Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { itemsViewModel.fetchItems() },
+                onRefresh = { mainViewModel.fetchItems() },
             )
         },
         bottomBar = {

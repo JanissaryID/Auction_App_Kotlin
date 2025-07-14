@@ -31,7 +31,7 @@ import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.bottomsheet.PaymentBottomSheet
 import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
-import com.polytron.auctionapp.viewmodel.ItemsViewModel
+import com.polytron.auctionapp.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -39,7 +39,7 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenPayment(
-    itemsViewModel: ItemsViewModel = koinInject(),
+    mainViewModel: MainViewModel = koinInject(),
     navScanBarcode: () -> Unit,
     navListItems: () -> Unit,
     navListPayment: () -> Unit,
@@ -47,7 +47,7 @@ fun ScreenPayment(
 ) {
     var isFabExpanded by remember { mutableStateOf(false) }
 
-    val selectedItems by itemsViewModel.selectedItems.collectAsState()
+    val selectedItems by mainViewModel.selectedItems.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -55,7 +55,7 @@ fun ScreenPayment(
 
     BackHandler {
         navBack()
-        itemsViewModel.clearSelectedItems()
+        mainViewModel.clearSelectedItems()
     }
 
     Scaffold(
@@ -66,7 +66,7 @@ fun ScreenPayment(
                 title = "Pembayaran",
                 onBack = {
                     navBack()
-                    itemsViewModel.clearSelectedItems()
+                    mainViewModel.clearSelectedItems()
                 },
                 additionalActions = {
                     IconButton(onClick = { navListPayment() }) {
@@ -104,7 +104,7 @@ fun ScreenPayment(
                 EmptyItemState()
             } else {
                 ReceiptCard(selectedItems = selectedItems){
-                        item -> itemsViewModel.removeSelectedItem(item)
+                        item -> mainViewModel.removeSelectedItem(item)
                 }
             }
         }
@@ -139,10 +139,10 @@ fun ScreenPayment(
                                 orderID = orderID,
                                 typePayment = it.label
                             )
-                            itemsViewModel.patchItem(item.id!!, updatedItem)
+                            mainViewModel.patchItem(item.id!!, updatedItem)
                             delay(300) // opsional agar smooth
                         }
-                        itemsViewModel.clearSelectedItems()
+                        mainViewModel.clearSelectedItems()
                         showSheet = false
                     }
                 }

@@ -40,17 +40,17 @@ import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.bottomsheet.AddOrEditItemBottomSheet
 import com.polytron.auctionapp.view.components.fab.FabWithDelete
 import com.polytron.auctionapp.view.components.itemcard.ItemCard
-import com.polytron.auctionapp.viewmodel.ItemsViewModel
+import com.polytron.auctionapp.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenItemList(
-    itemsViewModel: ItemsViewModel = koinInject(),
+    mainViewModel: MainViewModel = koinInject(),
     navBack: () -> Unit
 ) {
-    val items by itemsViewModel.items.collectAsState()
+    val items by mainViewModel.items.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
     val sheetState = rememberModalBottomSheetState()
@@ -71,7 +71,7 @@ fun ScreenItemList(
 
     // Fetch data saat pertama kali ditampilkan
     LaunchedEffect(Unit) {
-        itemsViewModel.fetchItems()
+        mainViewModel.fetchItems()
     }
 
     // Filter berdasarkan pencarian nama/kode
@@ -87,7 +87,7 @@ fun ScreenItemList(
                 title = "${items.size} Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { itemsViewModel.fetchItems() },
+                onRefresh = { mainViewModel.fetchItems() },
             )
         },
         bottomBar = {
@@ -136,11 +136,11 @@ fun ScreenItemList(
                 onDelete = {
                     isDeleting = true
                     selectedItems.forEach {
-                        itemsViewModel.deleteItem(it.id!!)
+                        mainViewModel.deleteItem(it.id!!)
                         delay(500)
                     }
                     selectedItems.clear()
-                    itemsViewModel.fetchItems()
+                    mainViewModel.fetchItems()
                     isDeleting = false
                 },
                 onAddClick = {
@@ -240,25 +240,27 @@ fun ScreenItemList(
                                 basePrice = base,
                                 maxPrice = max
                             )
-                            itemsViewModel.patchItem(id, updatedItem)
+                            mainViewModel.patchItem(id, updatedItem)
                         }
                     } else {
                         repeat(quantity) { index ->
                             val suffix = index + 1
                             val finalName = "$name $suffix"
                             val finalCode = "$code $suffix"
-                            itemsViewModel.createItem(
+                            val item = ItemResponse(
                                 nameItem = finalName,
                                 codeItem = finalCode,
                                 basePrice = base,
                                 maxPrice = max,
-                                orderID = "",
                                 admin = "admin"
+                            )
+                            mainViewModel.createItem(
+                                item = item
                             )
                             delay(500)
                         }
                     }
-                    itemsViewModel.fetchItems()
+                    mainViewModel.fetchItems()
                 }
             )
         }

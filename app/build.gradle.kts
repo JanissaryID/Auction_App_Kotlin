@@ -95,4 +95,5 @@ dependencies {
     implementation(libs.barcode.scanning)
 
     implementation(libs.poi.ooxml)
+    implementation(libs.datastore.preferences)
 }

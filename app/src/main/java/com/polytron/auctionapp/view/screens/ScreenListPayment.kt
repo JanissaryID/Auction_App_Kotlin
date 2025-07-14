@@ -34,26 +34,26 @@ import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardPayment
-import com.polytron.auctionapp.viewmodel.ItemsViewModel
+import com.polytron.auctionapp.viewmodel.MainViewModel
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenListPayment(
-    itemsViewModel: ItemsViewModel = koinInject(),
+    mainViewModel: MainViewModel = koinInject(),
     navBack: () -> Unit,
 ) {
-    val items by itemsViewModel.items.collectAsState()
+    val items by mainViewModel.items.collectAsState()
     val filteredItemsStatTwo = items.filter { it.status == 2 }
 
     var searchQuery by remember { mutableStateOf("") }
 
-    val selectedItemsState by itemsViewModel.selectedItems.collectAsState()
+    val selectedItemsState by mainViewModel.selectedItems.collectAsState()
     val selectedItems = remember { mutableStateListOf<ItemResponse>() }
     var isInitialized by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        itemsViewModel.fetchItems()
+        mainViewModel.fetchItems()
     }
 
     LaunchedEffect(selectedItemsState) {
@@ -79,7 +79,7 @@ fun ScreenListPayment(
                 title = "Daftar Pembayaran",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { itemsViewModel.fetchItems() },
+                onRefresh = { mainViewModel.fetchItems() },
             )
         },
     ) { innerPadding ->

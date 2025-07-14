@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -20,14 +21,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.polytron.auctionapp.data.datastore.UserPreferences
 import com.polytron.auctionapp.view.components.itemcard.HomeMenu
 import com.polytron.auctionapp.view.components.itemcard.MenuCard
+import com.polytron.auctionapp.viewmodel.MainViewModel
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenHome(
+    mainViewModel: MainViewModel = koinInject(),
     onNavigate: (String) -> Unit
 ) {
     val items = listOf(
@@ -35,7 +42,8 @@ fun ScreenHome(
         HomeMenu("Lelang", Icons.Default.Gavel, "auction"),
         HomeMenu("Pembayaran", Icons.Default.Payments, "payment"),
         HomeMenu("Ambil Barang", Icons.Default.Inventory2, "take_items"),
-        HomeMenu("Transaksi", Icons.Default.Receipt, "transactions")
+        HomeMenu("Transaksi", Icons.Default.Receipt, "transactions"),
+        HomeMenu("Pengaturan", Icons.Default.Settings, "settings")
     )
 
     Scaffold(
