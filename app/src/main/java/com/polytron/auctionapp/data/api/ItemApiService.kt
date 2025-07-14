@@ -31,45 +31,46 @@ class ItemApiService(
         }
     }
 
-//    suspend fun fetchAll(
-//        token: String,
-//        perPage: Int = 100,
-//        page: Int = 1
-//    ): Items {
-//        return client.get("$baseUrl/Items/records") {
-//            url.parameters.append("perPage", perPage.toString())
-//            url.parameters.append("page", page.toString())
-//            authHeader(token)
-//        }.body()
-//    }
-
     suspend fun fetchAll(
         token: String,
         perPage: Int = 100,
         page: Int = 1
     ): Items {
-        val response = client.get("$baseUrl/Items/records") {
-            url {
-                parameters.append("perPage", perPage.toString())
-                parameters.append("page", page.toString())
-            }
+        return client.get("$baseUrl/Items/records") {
+            url.parameters.append("perPage", perPage.toString())
+            url.parameters.append("page", page.toString())
             authHeader(token)
-            accept(ContentType.Application.Json)
-        }
-
-        val status = response.status
-        val bodyText = response.bodyAsText()
-
-        Log.d("API_FETCH", "Status Code: $status")
-        Log.d("API_FETCH", "Raw Response Body: $bodyText")
-
-        if (status != HttpStatusCode.OK) {
-            throw IllegalStateException("Unexpected status: $status")
-        }
-
-        // Parse manual pakai kotlinx.serialization
-        return Json.decodeFromString(bodyText)
+        }.body()
     }
+
+//    suspend fun fetchAll(
+//        token: String,
+//        perPage: Int = 100,
+//        page: Int = 1
+//    ): Items {
+//        val response = client.get("$baseUrl/Items/records") {
+//            url {
+//                parameters.append("perPage", perPage.toString())
+//                parameters.append("page", page.toString())
+//            }
+//            Log.e("MainViewModel", "token: ${token}")
+//            authHeader(token)
+//            accept(ContentType.Application.Json)
+//        }
+//
+//        val status = response.status
+//        val bodyText = response.bodyAsText()
+//
+//        Log.d("API_FETCH", "Status Code: $status")
+//        Log.d("API_FETCH", "Raw Response Body: $bodyText")
+//
+//        if (status != HttpStatusCode.OK) {
+//            throw IllegalStateException("Unexpected status: $status")
+//        }
+//
+//        // Parse manual pakai kotlinx.serialization
+//        return Json.decodeFromString(bodyText)
+//    }
 
     suspend fun getById(token: String, id: String): ItemResponse {
         return client.get("$baseUrl/Items/records/$id") {

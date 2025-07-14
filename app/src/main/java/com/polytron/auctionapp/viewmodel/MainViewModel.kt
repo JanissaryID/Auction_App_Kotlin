@@ -98,6 +98,7 @@ class MainViewModel(
     fun fetchItems() {
         viewModelScope.launch {
             try {
+                Log.e("MainViewModel", "token: ${_token.value}")
                 val fetched = repository.fetchItems(_token.value.orEmpty()).items?.reversed()
                 _items.value = fetched ?: emptyList()
             } catch (e: Exception) {

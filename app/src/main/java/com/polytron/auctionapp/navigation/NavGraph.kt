@@ -31,7 +31,6 @@ fun AppNavHost(
     mainViewModel: MainViewModel = koinInject()
 ) {
     NavHost(navController = navController, startDestination = Screen.Home.route) {
-
         mainViewModel.fetchItems()
 
         composable(Screen.Home.route) {
