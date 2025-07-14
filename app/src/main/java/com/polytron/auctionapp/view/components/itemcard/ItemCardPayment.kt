@@ -46,14 +46,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun ItemCardPayment(
     orderId: String,
-    items: List<Item>,
+    items: List<ItemResponse>,
     takeItemScreen: Boolean,
     modifier: Modifier = Modifier,
     isSubmitting: Boolean = false,

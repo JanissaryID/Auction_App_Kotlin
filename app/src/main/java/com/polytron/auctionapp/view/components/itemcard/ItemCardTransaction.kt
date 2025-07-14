@@ -26,12 +26,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
 
 @Composable
 fun ItemCardTransaction(
-    item: Item,
+    item: ItemResponse,
     isSelected: Boolean = false,
     onClicked: () -> Unit = {} // rename onClick untuk makna lebih jelas
 ) {

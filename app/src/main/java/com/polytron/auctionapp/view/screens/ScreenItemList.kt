@@ -33,7 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
 import com.polytron.auctionapp.view.components.TopAppBarCustom
@@ -54,10 +54,10 @@ fun ScreenItemList(
     var searchQuery by remember { mutableStateOf("") }
 
     val sheetState = rememberModalBottomSheetState()
-    var selectedItem by remember { mutableStateOf<Item?>(null) }
+    var selectedItem by remember { mutableStateOf<ItemResponse?>(null) }
     var showAddEditBottomSheet by remember { mutableStateOf(false) }
 
-    val selectedItems = remember { mutableStateListOf<Item>() }
+    val selectedItems = remember { mutableStateListOf<ItemResponse>() }
     val isSelectionMode = selectedItems.isNotEmpty()
 
     var isDeleting by remember { mutableStateOf(false) }

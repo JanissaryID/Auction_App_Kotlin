@@ -31,13 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import kotlinx.coroutines.launch
 
 @Composable
 fun AddOrEditItemBottomSheet(
-    itemToEdit: Item? = null,
+    itemToEdit: ItemResponse? = null,
     onDismiss: () -> Unit,
     onSubmit: suspend (name: String, code: String, basePrice: String, maxPrice: String, jumlah: Int) -> Unit
 ) {

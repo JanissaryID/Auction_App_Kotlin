@@ -1,7 +1,6 @@
 package com.polytron.auctionapp.repositories
 
 import com.polytron.auctionapp.data.api.ItemApiService
-import com.polytron.auctionapp.model.ItemRequest
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.Items
 
@@ -19,11 +18,11 @@ class ItemsRepositoryImpl(
         return service.getById(headers = headers, id = id)
     }
 
-    override suspend fun createItem(bodyObj: ItemRequest): ItemResponse {
+    override suspend fun createItem(bodyObj: ItemResponse): ItemResponse {
         return service.create(headers = headers, bodyObj = bodyObj)
     }
 
-    override suspend fun updateItem(id: String, bodyObj: ItemRequest): ItemResponse {
+    override suspend fun updateItem(id: String, bodyObj: ItemResponse): ItemResponse {
         return service.update(headers = headers, id = id, bodyObj = bodyObj)
     }
 

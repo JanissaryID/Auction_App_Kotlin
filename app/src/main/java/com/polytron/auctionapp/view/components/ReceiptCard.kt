@@ -26,14 +26,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
 
 @Composable
 fun ReceiptCard(
     modifier: Modifier = Modifier,
-    selectedItems: List<Item>,
-    onDeleteItem: (Item) -> Unit
+    selectedItems: List<ItemResponse>,
+    onDeleteItem: (ItemResponse) -> Unit
 ) {
     val backgroundColor = Color(0xFFFDFDFD)
 

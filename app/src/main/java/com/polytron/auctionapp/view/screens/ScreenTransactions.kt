@@ -36,7 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.utils.exportItemsToExcel
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
@@ -56,10 +56,10 @@ fun ScreenTransactions(
     val items by itemsViewModel.items.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
-    var selectedItem by remember { mutableStateOf<Item?>(null) }
+    var selectedItem by remember { mutableStateOf<ItemResponse?>(null) }
     var showDetailSheet by remember { mutableStateOf(false) }
 
-    val selectedItems = remember { mutableStateListOf<Item>() }
+    val selectedItems = remember { mutableStateListOf<ItemResponse>() }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 

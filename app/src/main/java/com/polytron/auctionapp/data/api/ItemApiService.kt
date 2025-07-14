@@ -1,6 +1,5 @@
 package com.polytron.auctionapp.data.api
 
-import com.polytron.auctionapp.model.ItemRequest
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.Items
 import io.ktor.client.HttpClient
@@ -23,9 +22,14 @@ class ItemApiService(
         headers.forEach { (key, value) -> header(key, value) }
     }
 
-    suspend fun fetchAll(headers: Map<String, String>, limit: Int = 500): Items {
+    suspend fun fetchAll(
+        headers: Map<String, String>,
+        perPage: Int = 100,
+        page: Int = 1
+    ): Items {
         return client.get("$baseUrl/Items/records") {
-            url.parameters.append("\$limit", limit.toString())
+            url.parameters.append("perPage", perPage.toString())
+            url.parameters.append("page", page.toString())
             addHeaders(headers)
         }.body()
     }
@@ -36,7 +40,7 @@ class ItemApiService(
         }.body()
     }
 
-    suspend fun create(headers: Map<String, String>, bodyObj: ItemRequest): ItemResponse {
+    suspend fun create(headers: Map<String, String>, bodyObj: ItemResponse): ItemResponse {
         return client.post("$baseUrl/Items/records") {
             contentType(ContentType.Application.Json)
             setBody(bodyObj)
@@ -44,7 +48,7 @@ class ItemApiService(
         }.body()
     }
 
-    suspend fun update(headers: Map<String, String>, id: String, bodyObj: ItemRequest): ItemResponse {
+    suspend fun update(headers: Map<String, String>, id: String, bodyObj: ItemResponse): ItemResponse {
         return client.patch("$baseUrl/Items/records/$id") {
             contentType(ContentType.Application.Json)
             setBody(bodyObj)

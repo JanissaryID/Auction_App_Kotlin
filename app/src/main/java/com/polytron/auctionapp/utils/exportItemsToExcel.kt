@@ -8,14 +8,14 @@ import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.PaymentMethod
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
 @RequiresApi(Build.VERSION_CODES.Q)
-fun exportItemsToExcel(context: Context, items: List<Item>): Boolean {
+fun exportItemsToExcel(context: Context, items: List<ItemResponse>): Boolean {
     val fileName = "Laporan Unduh-Unduh.xlsx"
 
     return try {

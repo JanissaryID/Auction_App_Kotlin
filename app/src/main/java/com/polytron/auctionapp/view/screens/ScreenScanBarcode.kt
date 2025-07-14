@@ -27,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.camera.CameraPreviewView
@@ -48,7 +48,7 @@ fun ScreenScanBarcode(
         items.filter { it.status == 0 }
     }
 
-    val selectedItems = remember { mutableStateListOf<Item>() }
+    val selectedItems = remember { mutableStateListOf<ItemResponse>() }
 
     var result by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }

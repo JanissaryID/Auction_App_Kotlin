@@ -33,7 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardPayment
 import com.polytron.auctionapp.viewmodel.ItemsViewModel
@@ -54,7 +54,7 @@ fun ScreenTakeItems(
     var searchQuery by remember { mutableStateOf("") }
 
     val selectedItemsState by itemsViewModel.selectedItems.collectAsState()
-    val selectedItems = remember { mutableStateListOf<Item>() }
+    val selectedItems = remember { mutableStateListOf<ItemResponse>() }
     var isInitialized by remember { mutableStateOf(false) }
     val isSubmittingMap = remember { mutableStateMapOf<String, Boolean>() }
     val coroutineScope = rememberCoroutineScope()

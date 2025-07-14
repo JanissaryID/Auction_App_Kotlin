@@ -3,7 +3,7 @@ package com.polytron.auctionapp.viewmodel
 import android.util.Log
 import com.polytron.auctionapp.data.api.ItemApiService
 import com.polytron.auctionapp.data.api.KtorClient
-import com.polytron.auctionapp.model.Item
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.repositories.ItemsRepositoryImpl
 import dev.icerock.moko.mvvm.viewmodel.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,15 +12,18 @@ import kotlinx.coroutines.launch
 
 class ItemsViewModel() : ViewModel() {
 
-    private val baseUrl = "https://api.kontenbase.com/query/api/v1/a61eb959-29ce-4c54-b5ed-72c525faf455"
-    private val _items = MutableStateFlow<List<Item>>(emptyList())
+    private val token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2xsZWN0aW9uSWQiOiJwYmNfMzE0MjYzNTgyMyIsImV4cCI6MTc1MjU2NzY4MSwiaWQiOiJjOGljanlnNGJja3E3aGgiLCJyZWZyZXNoYWJsZSI6ZmFsc2UsInR5cGUiOiJhdXRoIn0.QUdPV-WDASNYn7GsTnflApliXvhugEsvc_MVH8A4EbM"
+    private val baseUrl = "https://mono-mac-terminology-ridge.trycloudflare.com/api/collections"
+
+    private val headers = mapOf("Authorization" to "Bearer $token")
+    private val _items = MutableStateFlow<List<ItemResponse>>(emptyList())
     val items = _items.asStateFlow()
 
-    private val _selectedItems = MutableStateFlow<List<Item>>(emptyList())
+    private val _selectedItems = MutableStateFlow<List<ItemResponse>>(emptyList())
     val selectedItems = _selectedItems.asStateFlow()
-    fun setSelectedItems(items: List<Item>) { _selectedItems.value = items }
+    fun setSelectedItems(items: List<ItemResponse>) { _selectedItems.value = items }
 
-    fun removeSelectedItem(item: Item) {
+    fun removeSelectedItem(item: ItemResponse) {
         _selectedItems.value = _selectedItems.value.filterNot { it.id == item.id }
     }
     fun clearSelectedItems() {
@@ -53,7 +56,7 @@ class ItemsViewModel() : ViewModel() {
         }
     }
 
-    fun updateSelectedItem(updatedItem: Item) {
+    fun updateSelectedItem(updatedItem: ItemResponse) {
         _selectedItems.value = _selectedItems.value.map {
             if (it.id == updatedItem.id) updatedItem else it
         }
@@ -64,13 +67,15 @@ class ItemsViewModel() : ViewModel() {
         baseUrl = baseUrl
     )
 
-    private val repository = ItemsRepositoryImpl(service = service)
+    private val repository = ItemsRepositoryImpl(service = service, headers = headers)
 
     fun fetchItems() {
         viewModelScope.launch {
             try {
-                val fetched = repository.fetchItems().reversed()
-                _items.value = fetched
+                val fetched = repository.fetchItems().items?.reversed()
+                if (fetched != null) {
+                    _items.value = fetched
+                }
                 Log.i("ViewModel", "fetchItems: ${_items.value.size} items loaded")
             } catch (e: Exception) {
                 Log.e("ViewModel", "fetchItems error", e)
@@ -88,7 +93,7 @@ class ItemsViewModel() : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                val item = Item(
+                val item = ItemResponse(
                     nameItem = nameItem,
                     codeItem = codeItem,
                     basePrice = basePrice,
@@ -108,7 +113,7 @@ class ItemsViewModel() : ViewModel() {
         }
     }
 
-    fun patchItem(id: String, item: Item) {
+    fun patchItem(id: String, item: ItemResponse) {
         viewModelScope.launch {
             try {
                 repository.updateItem(id, item)
@@ -134,8 +139,8 @@ class ItemsViewModel() : ViewModel() {
     fun deleteAllItems() {
         viewModelScope.launch {
             try {
-                val fetched = repository.fetchItems()
-                fetched.forEach {
+                val fetched = repository.fetchItems().items
+                fetched?.forEach {
                     repository.deleteItem(it.id!!)
                     Log.i("ViewModel", "Success delete item: $it")
                 }
