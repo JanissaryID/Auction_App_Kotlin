@@ -60,9 +60,14 @@ class MainViewModel(
         viewModelScope.launch {
             userPreferences.userToken.collectLatest {
                 _token.value = it
-                val isLogged = !it.isNullOrEmpty()
-                _isLoggedIn.value = isLogged
-                _showSuccessLogin.value = isLogged
+                val loggedIn = !it.isNullOrEmpty()
+                _isLoggedIn.value = loggedIn
+                _showSuccessLogin.value = loggedIn
+
+                // ✅ Jika token valid, fetch items
+                if (loggedIn) {
+                    fetchItems()
+                }
             }
         }
     }
@@ -97,9 +102,15 @@ class MainViewModel(
 
     fun fetchItems() {
         viewModelScope.launch {
+            val token = _token.value
+            if (token.isNullOrBlank()) {
+                Log.w("MainViewModel", "fetchItems skipped: token is null or blank")
+                return@launch
+            }
+
             try {
-                Log.e("MainViewModel", "token: ${_token.value}")
-                val fetched = repository.fetchItems(_token.value.orEmpty()).items?.reversed()
+//                Log.d("MainViewModel", "Fetching items with token: $token")
+                val fetched = repository.fetchItems(token).items?.reversed()
                 _items.value = fetched ?: emptyList()
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Fetch items failed", e)
