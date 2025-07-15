@@ -1,6 +1,5 @@
 package com.polytron.auctionapp.data.api
 
-import android.util.Log
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.Items
 import com.polytron.auctionapp.model.UserRequest
@@ -8,7 +7,6 @@ import com.polytron.auctionapp.model.UserResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
-import io.ktor.client.request.accept
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -18,7 +16,6 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.serialization.json.Json
 

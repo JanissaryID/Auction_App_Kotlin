@@ -1,7 +1,7 @@
 package com.polytron.auctionapp.model
 
-import kotlinx.parcelize.Parcelize
 import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
 
 @Parcelize

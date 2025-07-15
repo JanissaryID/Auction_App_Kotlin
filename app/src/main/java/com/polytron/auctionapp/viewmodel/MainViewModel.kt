@@ -1,17 +1,13 @@
 package com.polytron.auctionapp.viewmodel
 
 import android.util.Log
-import com.polytron.auctionapp.data.api.ItemApiService
-import com.polytron.auctionapp.data.api.KtorClient
 import com.polytron.auctionapp.data.datastore.UserPreferences
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.UserRequest
 import com.polytron.auctionapp.repositories.ItemsRepository
-import com.polytron.auctionapp.repositories.ItemsRepositoryImpl
 import dev.icerock.moko.mvvm.viewmodel.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 

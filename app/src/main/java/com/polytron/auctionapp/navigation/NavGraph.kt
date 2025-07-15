@@ -21,8 +21,6 @@ import com.polytron.auctionapp.view.screens.ScreenScanBarcode
 import com.polytron.auctionapp.view.screens.ScreenSettings
 import com.polytron.auctionapp.view.screens.ScreenTakeItems
 import com.polytron.auctionapp.view.screens.ScreenTransactions
-import com.polytron.auctionapp.viewmodel.MainViewModel
-import org.koin.compose.koinInject
 
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
