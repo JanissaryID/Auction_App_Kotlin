@@ -13,7 +13,7 @@ import org.koin.dsl.module
 val appModule = module {
     single { KtorClient.httpClient }
     single { UserPreferences(androidContext()) }
-    single { ItemApiService(client = get(), baseUrl = "https://weed-sunshine-recommends-coordinated.trycloudflare.com/api/collections") }
+    single { ItemApiService(client = get(), baseUrl = "https://mpeg-labour-initiative-aid.trycloudflare.com/api/collections") }
     single<ItemsRepository> { ItemsRepositoryImpl(service = get()) }
     viewModel { MainViewModel(userPreferences = get(), repository = get()) }
 }

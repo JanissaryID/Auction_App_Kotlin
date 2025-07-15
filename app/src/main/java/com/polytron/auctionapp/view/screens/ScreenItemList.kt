@@ -50,6 +50,7 @@ fun ScreenItemList(
     mainViewModel: MainViewModel = koinInject(),
     navBack: () -> Unit
 ) {
+    val idUser by mainViewModel.idUser.collectAsState()
     val items by mainViewModel.items.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
@@ -252,7 +253,8 @@ fun ScreenItemList(
                                 codeItem = finalCode,
                                 basePrice = base,
                                 maxPrice = max,
-                                admin = "admin"
+                                admin = "admin",
+                                user = idUser
                             )
                             mainViewModel.createItem(
                                 item = item

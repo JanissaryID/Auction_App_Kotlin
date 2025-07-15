@@ -28,11 +28,8 @@ import org.koin.compose.koinInject
 @Composable
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
-    mainViewModel: MainViewModel = koinInject()
 ) {
     NavHost(navController = navController, startDestination = Screen.Home.route) {
-        mainViewModel.fetchItems()
-
         composable(Screen.Home.route) {
             ScreenHome(onNavigate = { navController.navigate(it) })
         }
@@ -101,6 +98,5 @@ fun AppNavHost(
                 navBack = { navController.popBackStack() }
             )
         }
-
     }
 }

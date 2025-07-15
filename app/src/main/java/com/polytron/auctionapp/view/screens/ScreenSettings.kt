@@ -7,18 +7,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.BluetoothDisabled
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,13 +24,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +47,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
@@ -56,8 +60,22 @@ fun ScreenSettings(
     val password by mainViewModel.password.collectAsState()
     val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
     val isBluetoothConnected by mainViewModel.isBluetoothConnected.collectAsState()
-    val showSuccessLogin by mainViewModel.showSuccessLogin.collectAsState()
+
     var passwordVisible by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var showSnackbar by remember { mutableStateOf(false) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    // Tampilkan snackbar jika login sukses
+    LaunchedEffect(showSnackbar) {
+        if (showSnackbar) {
+            snackbarHostState.showSnackbar("Login berhasil", duration = SnackbarDuration.Short)
+            showSnackbar = false
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -66,7 +84,8 @@ fun ScreenSettings(
                 title = "Pengaturan",
                 onBack = navBack
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -75,21 +94,6 @@ fun ScreenSettings(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (showSuccessLogin) {
-                AssistChip(
-                    onClick = {},
-                    label = { Text("Sudah Login") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Check, contentDescription = "Success")
-                    },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = Color(0xFFE8F5E9),
-                        labelColor = Color(0xFF388E3C)
-                    )
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-
             OutlinedTextField(
                 value = email,
                 onValueChange = mainViewModel::onEmailChange,
@@ -116,14 +120,11 @@ fun ScreenSettings(
                 ),
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    val image = if (passwordVisible)
-                        Icons.Default.Visibility
-                    else Icons.Default.VisibilityOff
-
-                    val description = if (passwordVisible) "Hide password" else "Show password"
-
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(imageVector = image, contentDescription = description)
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Sembunyikan" else "Tampilkan"
+                        )
                     }
                 }
             )
@@ -131,24 +132,43 @@ fun ScreenSettings(
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = mainViewModel::login,
+                onClick = {
+                    isLoading = true
+                    mainViewModel.login(
+                        onSuccess = {
+                            isLoading = false
+                            showSnackbar = true
+                        },
+                        onError = {
+                            isLoading = false
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Login gagal", duration = SnackbarDuration.Short)
+                            }
+                        }
+                    )
+                },
+                enabled = !isLoading && email.isNotBlank() && password.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                shape = MaterialTheme.shapes.medium,
-                enabled = true
-//                enabled = !isLoggedIn
+                shape = MaterialTheme.shapes.medium
             ) {
-                Text("Login")
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Login")
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
             HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
             Spacer(modifier = Modifier.height(24.dp))
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = if (isBluetoothConnected) Icons.Default.BluetoothConnected else Icons.Default.BluetoothDisabled,
                     contentDescription = null,
@@ -156,15 +176,15 @@ fun ScreenSettings(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (isBluetoothConnected) "Printer connected" else "Printer not connected",
+                    text = if (isBluetoothConnected) "Printer tersambung" else "Printer tidak tersambung",
                     color = if (isBluetoothConnected) Color(0xFF4CAF50) else Color(0xFFF44336)
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             TextButton(onClick = mainViewModel::toggleBluetooth) {
-                Text("Simulate Bluetooth Toggle")
+                Text("Simulasi Toggle Bluetooth")
             }
         }
     }

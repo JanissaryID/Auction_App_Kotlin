@@ -21,7 +21,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -29,6 +34,9 @@ import com.polytron.auctionapp.data.datastore.UserPreferences
 import com.polytron.auctionapp.view.components.itemcard.HomeMenu
 import com.polytron.auctionapp.view.components.itemcard.MenuCard
 import com.polytron.auctionapp.viewmodel.MainViewModel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,6 +53,9 @@ fun ScreenHome(
         HomeMenu("Transaksi", Icons.Default.Receipt, "transactions"),
         HomeMenu("Pengaturan", Icons.Default.Settings, "settings")
     )
+
+    val coroutineScope = rememberCoroutineScope()
+    var isNavigating by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -69,7 +80,19 @@ fun ScreenHome(
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(items) { menu ->
-                    MenuCard(menu = menu, onClick = { onNavigate(menu.route) })
+                    MenuCard(
+                        menu = menu,
+                        onClick = {
+                            if (!isNavigating) {
+                                isNavigating = true
+                                onNavigate(menu.route)
+                                coroutineScope.launch {
+                                    delay(500)
+                                    isNavigating = false
+                                }
+                            }
+                        }
+                    )
                 }
             }
         }

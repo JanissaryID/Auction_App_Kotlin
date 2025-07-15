@@ -15,15 +15,17 @@ class UserPreferences(private val context: Context) {
         val KEY_EMAIL = stringPreferencesKey("email")
         val KEY_PASSWORD = stringPreferencesKey("password")
         val KEY_TOKEN = stringPreferencesKey("token")
+        val KEY_ID_USER = stringPreferencesKey("id_user")
         val KEY_IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
     }
 
     // ✅ Simpan data login
-    suspend fun saveLogin(email: String, password: String, token: String) {
+    suspend fun saveLogin(email: String, password: String, token: String, idUser: String) {
         context.dataStore.edit { prefs ->
             prefs[KEY_EMAIL] = email
             prefs[KEY_PASSWORD] = password
             prefs[KEY_TOKEN] = token
+            prefs[KEY_ID_USER] = idUser
             prefs[KEY_IS_LOGGED_IN] = true
         }
     }
@@ -39,5 +41,6 @@ class UserPreferences(private val context: Context) {
     val userEmail: Flow<String?> = context.dataStore.data.map { it[KEY_EMAIL] }
     val userPassword: Flow<String?> = context.dataStore.data.map { it[KEY_PASSWORD] }
     val userToken: Flow<String?> = context.dataStore.data.map { it[KEY_TOKEN] }
+    val userIdUser: Flow<String?> = context.dataStore.data.map { it[KEY_ID_USER] }
     val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { it[KEY_IS_LOGGED_IN] ?: false }
 }

@@ -29,6 +29,9 @@ class MainViewModel(
     private val _token = MutableStateFlow<String?>(null)
     val token: StateFlow<String?> = _token
 
+    private val _id_user = MutableStateFlow<String?>(null)
+    val idUser: StateFlow<String?> = _id_user
+
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn
 
@@ -50,12 +53,18 @@ class MainViewModel(
     private val _editingPrices = MutableStateFlow<Map<String, String>>(emptyMap())
     val editingPrices: StateFlow<Map<String, String>> = _editingPrices
 
+    val isLoading = MutableStateFlow(false)
+    val errorMessage = MutableStateFlow<String?>(null)
+
     init {
         viewModelScope.launch {
             userPreferences.userEmail.collectLatest { _email.value = it.orEmpty() }
         }
         viewModelScope.launch {
             userPreferences.userPassword.collectLatest { _password.value = it.orEmpty() }
+        }
+        viewModelScope.launch {
+            userPreferences.userIdUser.collectLatest { _id_user.value = it.orEmpty() }
         }
         viewModelScope.launch {
             userPreferences.userToken.collectLatest {
@@ -84,18 +93,47 @@ class MainViewModel(
         _isBluetoothConnected.value = !_isBluetoothConnected.value
     }
 
-    fun login() {
+    fun login(
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             try {
+                // Set loading state to true
+                isLoading.value = true
+                errorMessage.value = null
+
+                // Login request
                 val user = UserRequest(_email.value, _password.value)
                 val login = repository.login(user)
+
                 val tokenValue = login.token.orEmpty()
+                val idUser = login.record?.id.orEmpty()
+
+                // Update state setelah berhasil login
                 _token.value = tokenValue
                 _isLoggedIn.value = true
                 _showSuccessLogin.value = true
-                userPreferences.saveLogin(_email.value, _password.value, tokenValue)
+                _id_user.value = idUser
+
+                // Save to preferences
+                userPreferences.saveLogin(_email.value, _password.value, tokenValue, idUser)
+
+                // Call onSuccess callback
+                onSuccess()
+
             } catch (e: Exception) {
+                // Handle error
                 Log.e("MainViewModel", "Login failed", e)
+
+                // Set error state
+                errorMessage.value = "Login failed: ${e.localizedMessage}"
+
+                // Call onError callback with error message
+                onError(errorMessage.value ?: "Unknown error")
+            } finally {
+                // Set loading state to false after login attempt
+                isLoading.value = false
             }
         }
     }
@@ -121,6 +159,7 @@ class MainViewModel(
     fun createItem(item: ItemResponse) {
         viewModelScope.launch {
             try {
+                Log.e("MainViewModel", "Item = $item")
                 repository.createItem(item, _token.value.orEmpty())
                 fetchItems()
             } catch (e: Exception) {

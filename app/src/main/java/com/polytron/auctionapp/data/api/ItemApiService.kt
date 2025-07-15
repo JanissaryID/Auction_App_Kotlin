@@ -15,6 +15,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
@@ -43,48 +44,38 @@ class ItemApiService(
         }.body()
     }
 
-//    suspend fun fetchAll(
-//        token: String,
-//        perPage: Int = 100,
-//        page: Int = 1
-//    ): Items {
-//        val response = client.get("$baseUrl/Items/records") {
-//            url {
-//                parameters.append("perPage", perPage.toString())
-//                parameters.append("page", page.toString())
-//            }
-//            Log.e("MainViewModel", "token: ${token}")
-//            authHeader(token)
-//            accept(ContentType.Application.Json)
-//        }
-//
-//        val status = response.status
-//        val bodyText = response.bodyAsText()
-//
-//        Log.d("API_FETCH", "Status Code: $status")
-//        Log.d("API_FETCH", "Raw Response Body: $bodyText")
-//
-//        if (status != HttpStatusCode.OK) {
-//            throw IllegalStateException("Unexpected status: $status")
-//        }
-//
-//        // Parse manual pakai kotlinx.serialization
-//        return Json.decodeFromString(bodyText)
-//    }
-
     suspend fun getById(token: String, id: String): ItemResponse {
         return client.get("$baseUrl/Items/records/$id") {
             authHeader(token)
         }.body()
     }
 
+//    suspend fun create(token: String, bodyObj: ItemResponse): ItemResponse {
+//        return client.post("$baseUrl/Items/records") {
+//            contentType(ContentType.Application.Json)
+//            setBody(bodyObj)
+//            authHeader(token)
+//        }.body()
+//    }
+
     suspend fun create(token: String, bodyObj: ItemResponse): ItemResponse {
-        return client.post("$baseUrl/Items/records") {
+        val response: HttpResponse = client.post("$baseUrl/Items/records") {
             contentType(ContentType.Application.Json)
             setBody(bodyObj)
             authHeader(token)
-        }.body()
+        }
+
+        // Logging status code
+        println("Status Code: ${response.status.value}")
+
+        // Logging response body as string (raw)
+        val responseBodyText = response.bodyAsText()
+        println("Response Body: $responseBodyText")
+
+        // Deserialize response
+        return Json.decodeFromString<ItemResponse>(responseBodyText)
     }
+
 
     suspend fun update(token: String, id: String, bodyObj: ItemResponse): ItemResponse {
         return client.patch("$baseUrl/Items/records/$id") {
@@ -101,7 +92,7 @@ class ItemApiService(
     }
 
     suspend fun login(bodyObj: UserRequest): UserResponse {
-        return client.post("$baseUrl/_superusers/auth-with-password") {
+        return client.post("$baseUrl/users/auth-with-password") {
             contentType(ContentType.Application.Json)
             setBody(bodyObj)
         }.body()

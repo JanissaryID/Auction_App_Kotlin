@@ -22,6 +22,7 @@ data class ItemResponse(
     @SerialName("updated") val updated: String? = null,
     @SerialName("codeItem") val codeItem: String? = null,
     @SerialName("basePrice") val basePrice: String? = null,
+    @SerialName("user") val user: String? = null,
     @SerialName("status") val status: Int? = null,
     @SerialName("typePayment") val typePayment: String? = null
 ) : Parcelable

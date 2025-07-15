@@ -26,7 +26,10 @@ import androidx.compose.ui.unit.dp
 data class HomeMenu(val title: String, val icon: ImageVector, val route: String)
 
 @Composable
-fun MenuCard(menu: HomeMenu, onClick: () -> Unit) {
+fun MenuCard(
+    menu: HomeMenu,
+    onClick: () -> Unit // BUKAN @Composable
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
