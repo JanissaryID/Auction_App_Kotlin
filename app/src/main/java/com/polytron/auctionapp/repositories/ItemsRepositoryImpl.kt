@@ -27,7 +27,7 @@ class ItemsRepositoryImpl(
         return service.update(token, id, bodyObj)
     }
 
-    override suspend fun deleteItem(id: String, token: String): ItemResponse {
+    override suspend fun deleteItem(id: String, token: String): Boolean {
         return service.delete(token, id)
     }
 

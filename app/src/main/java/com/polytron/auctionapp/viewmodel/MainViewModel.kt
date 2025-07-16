@@ -59,7 +59,7 @@ class MainViewModel(
     val isLoading = MutableStateFlow(false)
     val errorMessage = MutableStateFlow<String?>(null)
 
-    private val pb = PocketBaseClient("http://192.168.1.81:8090")
+    private val pb = PocketBaseClient("https://gospel-medium-continually-cases.trycloudflare.com")
     private val itemCollection = pb.collection("Items")
 
     private var sseJob: Job? = null
@@ -82,7 +82,7 @@ class MainViewModel(
                 _showSuccessLogin.value = loggedIn
 
                 // ✅ Jika token valid, fetch items
-                Log.i("MainViewModel", "Token: $it")
+//                Log.i("MainViewModel", "Token: $it")
                 if (loggedIn) {
                     fetchItems()
                     subscribeRealtimeItems(_token.value.orEmpty())
@@ -134,7 +134,7 @@ class MainViewModel(
 
             } catch (e: Exception) {
                 // Handle error
-                Log.e("MainViewModel", "Login failed", e)
+//                Log.e("MainViewModel", "Login failed", e)
 
                 // Set error state
                 errorMessage.value = "Login failed: ${e.localizedMessage}"
@@ -169,7 +169,7 @@ class MainViewModel(
     fun createItem(item: ItemResponse) {
         viewModelScope.launch {
             try {
-                Log.e("MainViewModel", "Item = $item")
+//                Log.e("MainViewModel", "Item = $item")
                 repository.createItem(item, _token.value.orEmpty())
                 fetchItems()
             } catch (e: Exception) {
@@ -250,21 +250,40 @@ class MainViewModel(
 
     fun subscribeRealtimeItems(token: String) {
         itemCollection.subscribe(token, viewModelScope) { event ->
+            val record = event.record ?: return@subscribe
+
             when (event.action) {
-                "create" -> _items.update { listOf(decodeItem(event.record)) + it }
-                "update" -> _items.update {
-                    it.map { old -> if (old.id == event.record["id"]?.jsonPrimitive?.content) decodeItem(event.record) else old }
+                "create" -> decodeItem(record)?.let { item ->
+                    _items.update { listOf(item) + it }
                 }
-                "delete" -> _items.update {
-                    it.filterNot { old -> old.id == event.record["id"]?.jsonPrimitive?.content }
+
+                "update" -> decodeItem(record)?.let { updatedItem ->
+                    _items.update {
+                        it.map { old ->
+                            if (old.id == record["id"]?.jsonPrimitive?.content)
+                                updatedItem
+                            else old
+                        }
+                    }
+                }
+
+                "delete" -> {
+                    val deletedId = record["id"]?.jsonPrimitive?.content
+                    if (deletedId != null) {
+                        _items.update {
+                            it.filterNot { old -> old.id == deletedId }
+                        }
+                    }
                 }
             }
         }
     }
 
-    private fun decodeItem(json: JsonObject): ItemResponse {
-        return Json.decodeFromJsonElement(json)
+    fun decodeItem(json: JsonObject?): ItemResponse? {
+        return json?.let { Json.decodeFromJsonElement(it) }
     }
+
+
 
     override fun onCleared() {
         super.onCleared()

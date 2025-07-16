@@ -10,6 +10,6 @@ interface ItemsRepository {
     suspend fun fetchItemById(id: String, token: String): ItemResponse
     suspend fun createItem(bodyObj: ItemResponse, token: String): ItemResponse
     suspend fun updateItem(id: String, bodyObj: ItemResponse, token: String): ItemResponse
-    suspend fun deleteItem(id: String, token: String): ItemResponse
+    suspend fun deleteItem(id: String, token: String): Boolean
     suspend fun login(bodyObj: UserRequest): UserResponse
 }

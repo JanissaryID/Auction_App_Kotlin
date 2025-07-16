@@ -1,5 +1,6 @@
 package com.yourapp.pocketbase
 
+import com.polytron.auctionapp.model.RealtimeEvent
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
@@ -10,32 +11,29 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import java.io.Closeable
 
-data class RealtimeEvent(
-    val action: String,
-    val record: JsonObject
-)
-
 class PocketBaseCollection(
     private val baseUrl: String,
-    private val name: String
+    private val name: String,
+    client: HttpClient // gunakan parameter
 ) : Closeable {
     private var sseJob: Job? = null
-    private val client = HttpClient(CIO)
+    private val client = client // ✅ gunakan client yang dikirim dari PocketBaseClient
 
     fun subscribe(
         token: String,
         scope: CoroutineScope = CoroutineScope(Dispatchers.IO),
         onEvent: (RealtimeEvent) -> Unit
     ) {
-        sseJob?.cancel() // pastikan tidak ganda
+        sseJob?.cancel()
 
-        val realtimeUrl = "$baseUrl/api/realtime"
+        val realtimeUrl = "$baseUrl/api/realtime?channel=collections/$name"
 
         sseJob = scope.launch {
             try {
                 println("🔌 Connecting to PocketBase SSE...")
                 val response: HttpResponse = client.get(realtimeUrl) {
                     header(HttpHeaders.Authorization, "Bearer $token")
+                    header(HttpHeaders.Accept, "text/event-stream")
                 }
 
                 val channel = response.bodyAsChannel()
@@ -45,7 +43,6 @@ class PocketBaseCollection(
                     val line = channel.readUTF8Line() ?: continue
 
                     if (line.isBlank()) {
-                        // selesai satu event
                         val lines = buffer.lines()
                         val action = lines.firstOrNull { it.startsWith("event:") }
                             ?.removePrefix("event:")?.trim() ?: "message"
@@ -54,8 +51,11 @@ class PocketBaseCollection(
 
                         if (dataLine != null) {
                             val json = Json.parseToJsonElement(dataLine).jsonObject
-                            val event = RealtimeEvent(action, json["record"]!!.jsonObject)
-                            onEvent(event)
+                            val record = json["record"]?.jsonObject
+                            if (record != null) {
+                                val event = RealtimeEvent(action, record)
+                                onEvent(event)
+                            }
                         }
                         buffer.clear()
                     } else {
@@ -77,6 +77,7 @@ class PocketBaseCollection(
 
     override fun close() {
         unsubscribe()
-        client.close()
+        // ❗Jangan close client di sini, karena client dimiliki oleh PocketBaseClient
     }
 }
+

@@ -16,6 +16,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.serialization.json.Json
 
@@ -63,10 +64,12 @@ class ItemApiService(
         }.body()
     }
 
-    suspend fun delete(token: String, id: String): ItemResponse {
-        return client.delete("$baseUrl/Items/records/$id") {
+    suspend fun delete(token: String, id: String): Boolean {
+        val response = client.delete("$baseUrl/Items/records/$id") {
             authHeader(token)
-        }.body()
+        }
+
+        return response.status == HttpStatusCode.NoContent // 204
     }
 
     suspend fun login(bodyObj: UserRequest): UserResponse {
