@@ -47,7 +47,6 @@ koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = 
 koin-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin" }
 koin-android-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel", version.ref = "koin" }
 
-ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktorClientLogging" }
 moko-core = { group = "dev.icerock.moko", name = "mvvm-core", version.ref = "moko" }
 moko-compose = { group = "dev.icerock.moko", name = "mvvm-compose", version.ref = "moko" }
 moko-flow = { group = "dev.icerock.moko", name = "mvvm-flow", version.ref = "moko" }
@@ -57,6 +56,7 @@ moko-compose-livedata = { group = "dev.icerock.moko", name = "mvvm-livedata-comp
 navigation = { group = "androidx.navigation", name = "navigation-compose", version.ref = "nav" }
 androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
 
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktorClientLogging" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }

@@ -5,11 +5,18 @@ import com.polytron.auctionapp.data.datastore.UserPreferences
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.UserRequest
 import com.polytron.auctionapp.repositories.ItemsRepository
+import com.yourapp.pocketbase.PocketBaseClient
 import dev.icerock.moko.mvvm.viewmodel.ViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonPrimitive
 
 class MainViewModel(
     private val userPreferences: UserPreferences,
@@ -52,6 +59,11 @@ class MainViewModel(
     val isLoading = MutableStateFlow(false)
     val errorMessage = MutableStateFlow<String?>(null)
 
+    private val pb = PocketBaseClient("http://192.168.1.81:8090")
+    private val itemCollection = pb.collection("Items")
+
+    private var sseJob: Job? = null
+
     init {
         viewModelScope.launch {
             userPreferences.userEmail.collectLatest { _email.value = it.orEmpty() }
@@ -70,8 +82,10 @@ class MainViewModel(
                 _showSuccessLogin.value = loggedIn
 
                 // ✅ Jika token valid, fetch items
+                Log.i("MainViewModel", "Token: $it")
                 if (loggedIn) {
                     fetchItems()
+                    subscribeRealtimeItems(_token.value.orEmpty())
                 }
             }
         }
@@ -232,5 +246,28 @@ class MainViewModel(
         _selectedItems.value = _selectedItems.value.map {
             if (it.id == updatedItem.id) updatedItem else it
         }
+    }
+
+    fun subscribeRealtimeItems(token: String) {
+        itemCollection.subscribe(token, viewModelScope) { event ->
+            when (event.action) {
+                "create" -> _items.update { listOf(decodeItem(event.record)) + it }
+                "update" -> _items.update {
+                    it.map { old -> if (old.id == event.record["id"]?.jsonPrimitive?.content) decodeItem(event.record) else old }
+                }
+                "delete" -> _items.update {
+                    it.filterNot { old -> old.id == event.record["id"]?.jsonPrimitive?.content }
+                }
+            }
+        }
+    }
+
+    private fun decodeItem(json: JsonObject): ItemResponse {
+        return Json.decodeFromJsonElement(json)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        itemCollection.unsubscribe()
     }
 }

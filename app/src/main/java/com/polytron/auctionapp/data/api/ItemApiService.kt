@@ -47,32 +47,13 @@ class ItemApiService(
         }.body()
     }
 
-//    suspend fun create(token: String, bodyObj: ItemResponse): ItemResponse {
-//        return client.post("$baseUrl/Items/records") {
-//            contentType(ContentType.Application.Json)
-//            setBody(bodyObj)
-//            authHeader(token)
-//        }.body()
-//    }
-
     suspend fun create(token: String, bodyObj: ItemResponse): ItemResponse {
-        val response: HttpResponse = client.post("$baseUrl/Items/records") {
+        return client.post("$baseUrl/Items/records") {
             contentType(ContentType.Application.Json)
             setBody(bodyObj)
             authHeader(token)
-        }
-
-        // Logging status code
-        println("Status Code: ${response.status.value}")
-
-        // Logging response body as string (raw)
-        val responseBodyText = response.bodyAsText()
-        println("Response Body: $responseBodyText")
-
-        // Deserialize response
-        return Json.decodeFromString<ItemResponse>(responseBodyText)
+        }.body()
     }
-
 
     suspend fun update(token: String, id: String, bodyObj: ItemResponse): ItemResponse {
         return client.patch("$baseUrl/Items/records/$id") {
@@ -94,4 +75,22 @@ class ItemApiService(
             setBody(bodyObj)
         }.body()
     }
+
+//    suspend fun login(bodyObj: UserRequest): UserResponse {
+//        val response = client.post("$baseUrl/users/auth-with-password") {
+//            contentType(ContentType.Application.Json)
+//            setBody(bodyObj)
+//        }
+//
+//        // Log kode HTTP
+//        println("🔎 Response Code: ${response.status}")
+//
+//        // Log body mentah (string dulu)
+//        val rawBody = response.bodyAsText()
+//        println("📦 Raw Body: $rawBody")
+//
+//        // Parse ke UserResponse (pastikan cocok)
+//        return Json.decodeFromString<UserResponse>(rawBody)
+//    }
+
 }

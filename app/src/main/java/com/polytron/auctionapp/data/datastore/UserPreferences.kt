@@ -1,6 +1,7 @@
 package com.polytron.auctionapp.data.datastore
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -23,6 +24,7 @@ class UserPreferences(private val context: Context) {
 
     // ✅ Simpan data login
     suspend fun saveLogin(email: String, password: String, token: String, idUser: String) {
+        Log.i("DataStore", "Token: $token")
         context.dataStore.edit { prefs ->
             prefs[KEY_EMAIL] = email
             prefs[KEY_PASSWORD] = password
