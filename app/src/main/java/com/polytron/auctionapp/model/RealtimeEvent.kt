@@ -1,11 +1,13 @@
 package com.polytron.auctionapp.model
 
-import kotlinx.serialization.SerialName
+import android.os.Build
+import androidx.annotation.RequiresApi
+import io.github.agrevster.pocketbaseKotlin.models.Record
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 @Serializable
-data class RealtimeEvent(
-    @SerialName("action") val action: String? = null,
-    @SerialName("record") val record: JsonObject? = null,
-)
+data class ItemRecord(
+    val name: String,
+    val quantity: Int,
+) : Record()

@@ -59,9 +59,9 @@ fun ScreenTakeItems(
     val isSubmittingMap = remember { mutableStateMapOf<String, Boolean>() }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        mainViewModel.fetchItems()
-    }
+//    LaunchedEffect(Unit) {
+//        mainViewModel.fetchItems()
+//    }
 
     LaunchedEffect(selectedItemsState) {
         if (!isInitialized) {

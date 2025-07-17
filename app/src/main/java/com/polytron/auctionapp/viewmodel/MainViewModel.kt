@@ -3,9 +3,6 @@ package com.polytron.auctionapp.viewmodel
 import android.util.Log
 import com.polytron.auctionapp.data.datastore.UserPreferences
 import com.polytron.auctionapp.model.ItemResponse
-import com.polytron.auctionapp.model.UserRequest
-import com.polytron.auctionapp.repositories.ItemsRepository
-import com.yourapp.pocketbase.PocketBaseClient
 import dev.icerock.moko.mvvm.viewmodel.ViewModel
 import io.github.agrevster.pocketbaseKotlin.PocketbaseClient
 import io.github.agrevster.pocketbaseKotlin.dsl.login
@@ -16,13 +13,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.plus
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.jsonPrimitive
 
 class MainViewModel(
     private val userPreferences: UserPreferences
@@ -91,7 +85,7 @@ class MainViewModel(
                 _isLoggedIn.value = loggedIn
                 _showSuccessLogin.value = loggedIn
                 if (loggedIn) {
-                    client.login(it!!)
+                    client.login(it)
                     fetchItems()
                     subscribeRealtimeItems(it)
                 }
@@ -225,30 +219,20 @@ class MainViewModel(
     }
 
     fun subscribeRealtimeItems(token: String) {
-//        val streamScope = viewModelScope + Dispatchers.IO
-//        itemCollection.subscribe(token, streamScope) { event ->
-//            val record = event.record
-//            val id = record?.get("id")?.jsonPrimitive?.content ?: return@subscribe
-//            when (event.action) {
-//                "create" -> decodeItem(record)?.let { newItem ->
-//                    _items.update { current ->
-//                        if (current.any { it.id == id })
-//                            current.map { if (it.id == id) newItem else it }
-//                        else
-//                            current + newItem
-//                    }
-//                }
-//                "update" -> decodeItem(record)?.let { updatedItem ->
-//                    _items.update { current ->
-//                        current.map { if (it.id == id) updatedItem else it }
-//                    }
-//                }
-//                "delete" -> {
-//                    _items.update { current -> current.filterNot { it.id == id } }
-//                }
-//                else -> Unit
-//            }
-//        }
+        sseJob = viewModelScope.launch(Dispatchers.IO) {
+            try {
+                client.realtime.connect()
+                client.realtime.subscribe(
+                    subscription = "*",
+                )
+                client.realtime.listen {
+                    println("Action = $action")
+                    println("Record = $record")
+                }
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Realtime subscription failed", e)
+            }
+        }
     }
 
     private fun decodeItem(json: JsonObject?): ItemResponse? {

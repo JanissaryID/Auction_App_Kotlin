@@ -60,9 +60,9 @@ fun ScreenItemListSelectAuction(
     var isInitialized by remember { mutableStateOf(false) }
     val isSelectionMode = selectedItems.isNotEmpty()
 
-    LaunchedEffect(Unit) {
-        mainViewModel.fetchItems()
-    }
+//    LaunchedEffect(Unit) {
+//        mainViewModel.fetchItems()
+//    }
 
     LaunchedEffect(selectedItemsState) {
         if (!isInitialized) {

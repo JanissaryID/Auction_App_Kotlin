@@ -25,7 +25,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -73,9 +72,9 @@ fun ScreenTransactions(
     val context = LocalContext.current
 
     // Fetch data saat pertama kali ditampilkan
-    LaunchedEffect(Unit) {
-        mainViewModel.fetchItems()
-    }
+//    LaunchedEffect(Unit) {
+//        mainViewModel.fetchItems()
+//    }
 
     // Filter berdasarkan pencarian nama/kode
     val filteredItems = items.filter {

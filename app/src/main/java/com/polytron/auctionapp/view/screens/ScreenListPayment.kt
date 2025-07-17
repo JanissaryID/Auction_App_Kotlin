@@ -52,9 +52,9 @@ fun ScreenListPayment(
     val selectedItems = remember { mutableStateListOf<ItemResponse>() }
     var isInitialized by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        mainViewModel.fetchItems()
-    }
+//    LaunchedEffect(Unit) {
+//        mainViewModel.fetchItems()
+//    }
 
     LaunchedEffect(selectedItemsState) {
         if (!isInitialized) {
