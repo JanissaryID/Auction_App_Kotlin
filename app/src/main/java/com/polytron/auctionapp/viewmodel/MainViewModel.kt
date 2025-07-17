@@ -7,6 +7,10 @@ import com.polytron.auctionapp.model.UserRequest
 import com.polytron.auctionapp.repositories.ItemsRepository
 import com.yourapp.pocketbase.PocketBaseClient
 import dev.icerock.moko.mvvm.viewmodel.ViewModel
+import io.github.agrevster.pocketbaseKotlin.PocketbaseClient
+import io.github.agrevster.pocketbaseKotlin.dsl.login
+import io.github.agrevster.pocketbaseKotlin.models.AuthRecord
+import io.ktor.http.URLProtocol
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +25,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonPrimitive
 
 class MainViewModel(
-    private val userPreferences: UserPreferences,
-    private val repository: ItemsRepository
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
 
     private val _email = MutableStateFlow("")
@@ -34,8 +37,8 @@ class MainViewModel(
     private val _token = MutableStateFlow<String?>(null)
     val token: StateFlow<String?> = _token
 
-    private val _id_user = MutableStateFlow<String?>(null)
-    val idUser: StateFlow<String?> = _id_user
+    private val _idUser = MutableStateFlow<String?>(null)
+    val idUser: StateFlow<String?> = _idUser
 
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn
@@ -61,9 +64,14 @@ class MainViewModel(
     val isLoading = MutableStateFlow(false)
     val errorMessage = MutableStateFlow<String?>(null)
 
-    private val pb = PocketBaseClient("https://gzip-hanging-immigration-prospect.trycloudflare.com")
-    private val itemCollection = pb.collection("Items")
+    private val client = PocketbaseClient(
+        baseUrl = {
+            protocol = URLProtocol.HTTPS
+            host = "gerald-system-sons-winners.trycloudflare.com"
+        }
+    )
 
+    private val collection = "Items"
     private var sseJob: Job? = null
 
     init {
@@ -74,7 +82,7 @@ class MainViewModel(
             userPreferences.userPassword.collectLatest { _password.value = it.orEmpty() }
         }
         viewModelScope.launch {
-            userPreferences.userIdUser.collectLatest { _id_user.value = it.orEmpty() }
+            userPreferences.userIdUser.collectLatest { _idUser.value = it.orEmpty() }
         }
         viewModelScope.launch {
             userPreferences.userToken.collectLatest {
@@ -82,69 +90,51 @@ class MainViewModel(
                 val loggedIn = !it.isNullOrEmpty()
                 _isLoggedIn.value = loggedIn
                 _showSuccessLogin.value = loggedIn
-
-                // ✅ Jika token valid, fetch items
-//                Log.i("MainViewModel", "Token: $it")
                 if (loggedIn) {
+                    client.login(it!!)
                     fetchItems()
-                    subscribeRealtimeItems(_token.value.orEmpty())
+                    subscribeRealtimeItems(it)
                 }
             }
         }
     }
 
-    fun onEmailChange(value: String) {
-        _email.value = value
-    }
+    fun onEmailChange(value: String) { _email.value = value }
+    fun onPasswordChange(value: String) { _password.value = value }
+    fun toggleBluetooth() { _isBluetoothConnected.value = !_isBluetoothConnected.value }
 
-    fun onPasswordChange(value: String) {
-        _password.value = value
-    }
-
-    fun toggleBluetooth() {
-        _isBluetoothConnected.value = !_isBluetoothConnected.value
-    }
-
-    fun login(
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
+    fun login(onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
+            isLoading.value = true
+            errorMessage.value = null
             try {
-                // Set loading state to true
-                isLoading.value = true
-                errorMessage.value = null
+                if (_email.value.isBlank() || _password.value.isBlank()) {
+                    errorMessage.value = "Email atau password tidak boleh kosong"
+                    onError(errorMessage.value!!)
+                    return@launch
+                }
 
-                // Login request
-                val user = UserRequest(_email.value, _password.value)
-                val login = repository.login(user)
+                val loginResult = client.records.authWithPassword<AuthRecord>(
+                    collection = "users",
+                    email = _email.value,
+                    password = _password.value
+                )
 
-                val tokenValue = login.token.orEmpty()
-                val idUser = login.record?.id.orEmpty()
+                val token = loginResult.token
+                val userId = loginResult.record.id.orEmpty()
 
-                // Update state setelah berhasil login
-                _token.value = tokenValue
+                _token.value = token
+                _idUser.value = userId
                 _isLoggedIn.value = true
                 _showSuccessLogin.value = true
-                _id_user.value = idUser
 
-                // Save to preferences
-                userPreferences.saveLogin(_email.value, _password.value, tokenValue, idUser)
-
-                // Call onSuccess callback
+                userPreferences.saveLogin(_email.value, _password.value, token, userId)
+                client.login(token)
                 onSuccess()
-
             } catch (e: Exception) {
-                // Handle error
-//                Log.e("MainViewModel", "Login failed", e)
-
-                // Set error state
-                errorMessage.value = "Login failed: ${e.localizedMessage}"
-
-                // Call onError callback with error message
-                onError(errorMessage.value ?: "Unknown error")
+                errorMessage.value = "Login gagal: ${e.localizedMessage ?: "Unknown error"}"
+                onError(errorMessage.value!!)
             } finally {
-                // Set loading state to false after login attempt
                 isLoading.value = false
             }
         }
@@ -152,16 +142,9 @@ class MainViewModel(
 
     fun fetchItems() {
         viewModelScope.launch {
-            val token = _token.value
-            if (token.isNullOrBlank()) {
-                Log.w("MainViewModel", "fetchItems skipped: token is null or blank")
-                return@launch
-            }
-
             try {
-//                Log.d("MainViewModel", "Fetching items with token: $token")
-                val fetched = repository.fetchItems(token).items?.reversed()
-                _items.value = fetched ?: emptyList()
+                val fetched = client.records.getList<ItemResponse>(collection, page = 1, perPage = 100)
+                _items.value = fetched.items.reversed()
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Fetch items failed", e)
             }
@@ -171,8 +154,8 @@ class MainViewModel(
     fun createItem(item: ItemResponse) {
         viewModelScope.launch {
             try {
-//                Log.e("MainViewModel", "Item = $item")
-                repository.createItem(item, _token.value.orEmpty())
+                val created = client.records.create<ItemResponse>(collection, Json.encodeToString(item))
+                Log.d("MainViewModel", "Item created: $created")
                 fetchItems()
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Create item failed", e)
@@ -183,7 +166,12 @@ class MainViewModel(
     fun patchItem(id: String, item: ItemResponse) {
         viewModelScope.launch {
             try {
-                repository.updateItem(id, item, _token.value.orEmpty())
+                val updated = client.records.update<ItemResponse>(
+                    id = id,
+                    sub = collection,
+                    body = Json.encodeToString(item)
+                )
+                Log.d("MainViewModel", "Item updated: $updated")
                 fetchItems()
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Patch item failed", e)
@@ -194,24 +182,10 @@ class MainViewModel(
     fun deleteItem(id: String) {
         viewModelScope.launch {
             try {
-                repository.deleteItem(id, _token.value.orEmpty())
+                client.records.delete(id = id, sub = collection)
                 fetchItems()
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Delete item failed", e)
-            }
-        }
-    }
-
-    fun deleteAllItems() {
-        viewModelScope.launch {
-            try {
-                val allItems = repository.fetchItems(_token.value.orEmpty()).items
-                allItems?.forEach {
-                    repository.deleteItem(it.id!!, _token.value.orEmpty())
-                }
-                fetchItems()
-            } catch (e: Exception) {
-                Log.e("MainViewModel", "Delete all items failed", e)
             }
         }
     }
@@ -251,58 +225,38 @@ class MainViewModel(
     }
 
     fun subscribeRealtimeItems(token: String) {
-        // Pastikan streaming berjalan di IO
-        val streamScope = viewModelScope + Dispatchers.IO
-
-        itemCollection.subscribe(
-            token = token,
-            scope = streamScope
-        ) { event ->
-            // event.record bertipe JsonObject (non-null) di versi lib kita
-            val record = event.record
-            val id = record?.get("id")?.jsonPrimitive?.content ?: return@subscribe
-
-            println("Realtime event: ${event.action} (id=$id)")
-
-            when (event.action) {
-                "create" -> decodeItem(record)?.let { newItem ->
-                    _items.update { old ->
-                        if (old.any { it.id == id }) {
-                            // Upsert jika sudah ada (mis. reconnect)
-                            old.map { if (it.id == id) newItem else it }
-                        } else {
-                            // Append di akhir; ganti ke `listOf(newItem) + old` jika mau muncul di atas
-                            old + newItem
-                        }
-                    }
-                }
-
-                "update" -> decodeItem(record)?.let { updatedItem ->
-                    _items.update { old ->
-                        old.map { if (it.id == id) updatedItem else it }
-                    }
-                }
-
-                "delete" -> {
-                    _items.update { old -> old.filterNot { it.id == id } }
-                }
-
-                else -> {
-//                    println("Else")
-                    // Event lain (PB_CONNECT, custom, dsb) diabaikan
-                     println("Ignored event: ${event.action}")
-                }
-            }
-        }
+//        val streamScope = viewModelScope + Dispatchers.IO
+//        itemCollection.subscribe(token, streamScope) { event ->
+//            val record = event.record
+//            val id = record?.get("id")?.jsonPrimitive?.content ?: return@subscribe
+//            when (event.action) {
+//                "create" -> decodeItem(record)?.let { newItem ->
+//                    _items.update { current ->
+//                        if (current.any { it.id == id })
+//                            current.map { if (it.id == id) newItem else it }
+//                        else
+//                            current + newItem
+//                    }
+//                }
+//                "update" -> decodeItem(record)?.let { updatedItem ->
+//                    _items.update { current ->
+//                        current.map { if (it.id == id) updatedItem else it }
+//                    }
+//                }
+//                "delete" -> {
+//                    _items.update { current -> current.filterNot { it.id == id } }
+//                }
+//                else -> Unit
+//            }
+//        }
     }
 
-
-    fun decodeItem(json: JsonObject?): ItemResponse? {
+    private fun decodeItem(json: JsonObject?): ItemResponse? {
         return json?.let { Json.decodeFromJsonElement(it) }
     }
 
     override fun onCleared() {
         super.onCleared()
-        itemCollection.unsubscribe()
+//        itemCollection.unsubscribe()
     }
 }

@@ -12,5 +12,5 @@ data class Items(
     @SerialName("perPage") val perPage: Int? = null,
     @SerialName("totalPages") val totalPages: Int? = null,
     @SerialName("page") val page: Int? = null,
-    @SerialName("items") val items: List<ItemResponse>? = null
+//    @SerialName("items") val items: List<ItemResponse>? = null
 ): Parcelable

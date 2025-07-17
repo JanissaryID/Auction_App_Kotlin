@@ -3,7 +3,7 @@ package com.polytron.auctionapp.data.api
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.Items
 import com.polytron.auctionapp.model.UserRequest
-import com.polytron.auctionapp.model.UserResponse
+//import com.polytron.auctionapp.model.UserResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
@@ -72,12 +72,12 @@ class ItemApiService(
         return response.status == HttpStatusCode.NoContent // 204
     }
 
-    suspend fun login(bodyObj: UserRequest): UserResponse {
-        return client.post("$baseUrl/users/auth-with-password") {
-            contentType(ContentType.Application.Json)
-            setBody(bodyObj)
-        }.body()
-    }
+//    suspend fun login(bodyObj: UserRequest): UserResponse {
+//        return client.post("$baseUrl/users/auth-with-password") {
+//            contentType(ContentType.Application.Json)
+//            setBody(bodyObj)
+//        }.body()
+//    }
 
 //    suspend fun login(bodyObj: UserRequest): UserResponse {
 //        val response = client.post("$baseUrl/users/auth-with-password") {
