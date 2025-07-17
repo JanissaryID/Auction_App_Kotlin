@@ -7,12 +7,14 @@ import com.polytron.auctionapp.model.UserRequest
 import com.polytron.auctionapp.repositories.ItemsRepository
 import com.yourapp.pocketbase.PocketBaseClient
 import dev.icerock.moko.mvvm.viewmodel.ViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -59,7 +61,7 @@ class MainViewModel(
     val isLoading = MutableStateFlow(false)
     val errorMessage = MutableStateFlow<String?>(null)
 
-    private val pb = PocketBaseClient("https://gospel-medium-continually-cases.trycloudflare.com")
+    private val pb = PocketBaseClient("https://gzip-hanging-immigration-prospect.trycloudflare.com")
     private val itemCollection = pb.collection("Items")
 
     private var sseJob: Job? = null
@@ -249,41 +251,55 @@ class MainViewModel(
     }
 
     fun subscribeRealtimeItems(token: String) {
-        itemCollection.subscribe(token, viewModelScope) { event ->
-            val record = event.record ?: return@subscribe
+        // Pastikan streaming berjalan di IO
+        val streamScope = viewModelScope + Dispatchers.IO
+
+        itemCollection.subscribe(
+            token = token,
+            scope = streamScope
+        ) { event ->
+            // event.record bertipe JsonObject (non-null) di versi lib kita
+            val record = event.record
+            val id = record?.get("id")?.jsonPrimitive?.content ?: return@subscribe
+
+            println("Realtime event: ${event.action} (id=$id)")
 
             when (event.action) {
-                "create" -> decodeItem(record)?.let { item ->
-                    _items.update { listOf(item) + it }
+                "create" -> decodeItem(record)?.let { newItem ->
+                    _items.update { old ->
+                        if (old.any { it.id == id }) {
+                            // Upsert jika sudah ada (mis. reconnect)
+                            old.map { if (it.id == id) newItem else it }
+                        } else {
+                            // Append di akhir; ganti ke `listOf(newItem) + old` jika mau muncul di atas
+                            old + newItem
+                        }
+                    }
                 }
 
                 "update" -> decodeItem(record)?.let { updatedItem ->
-                    _items.update {
-                        it.map { old ->
-                            if (old.id == record["id"]?.jsonPrimitive?.content)
-                                updatedItem
-                            else old
-                        }
+                    _items.update { old ->
+                        old.map { if (it.id == id) updatedItem else it }
                     }
                 }
 
                 "delete" -> {
-                    val deletedId = record["id"]?.jsonPrimitive?.content
-                    if (deletedId != null) {
-                        _items.update {
-                            it.filterNot { old -> old.id == deletedId }
-                        }
-                    }
+                    _items.update { old -> old.filterNot { it.id == id } }
+                }
+
+                else -> {
+//                    println("Else")
+                    // Event lain (PB_CONNECT, custom, dsb) diabaikan
+                     println("Ignored event: ${event.action}")
                 }
             }
         }
     }
 
+
     fun decodeItem(json: JsonObject?): ItemResponse? {
         return json?.let { Json.decodeFromJsonElement(it) }
     }
-
-
 
     override fun onCleared() {
         super.onCleared()
