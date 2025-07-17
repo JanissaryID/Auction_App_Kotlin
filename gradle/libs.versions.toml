@@ -21,6 +21,7 @@ navigationRuntimeKtx = "2.9.2"
 datastore = "1.1.7"
 #noinspection NewerVersionAvailable
 ktor = "3.2.2"
+pocketbaseKotlin = "2.7.1"
 poiOoxml = "5.4.1"
 serialization = "1.9.0"
 
@@ -72,6 +73,7 @@ androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", versi
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraCamera2" }
 
 barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcodeScanning" }
+pocketbase-kotlin = { module = "io.github.agrevster:pocketbase-kotlin", version.ref = "pocketbaseKotlin" }
 poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poiOoxml" }
 
 [plugins]
