@@ -64,7 +64,7 @@ class MainViewModel(
     private val client = PocketbaseClient(
         baseUrl = {
             protocol = URLProtocol.HTTPS
-            host = "reconstruction-pour-partition-july.trycloudflare.com"
+            host = "counter-mine-cart-echo.trycloudflare.com"
         }
     )
 
