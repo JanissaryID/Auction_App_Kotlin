@@ -84,6 +84,10 @@ dependencies {
 
     implementation(libs.datastore.preferences)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.poi.ooxml)
+    implementation(libs.datastore.preferences)
+
+    implementation(libs.pocketbase.kotlin)
 
     // CameraX
     implementation(libs.androidx.camera.camera2)
@@ -93,12 +97,4 @@ dependencies {
 
     // ML Kit Barcode Scanning
     implementation(libs.barcode.scanning)
-
-    implementation(libs.poi.ooxml)
-    implementation(libs.datastore.preferences)
-
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.cio)
-    implementation(libs.ktor.client.websockets)
-    implementation(libs.pocketbase.kotlin)
 }
