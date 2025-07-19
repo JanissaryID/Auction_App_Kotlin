@@ -1,9 +1,10 @@
 package com.polytron.auctionapp.viewmodel
 
-import android.util.Log
+import android.bluetooth.BluetoothDevice
 import com.polytron.auctionapp.data.datastore.UserPreferences
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.RealtimeEvent
+import com.polytron.auctionapp.utils.BluetoothHelper
 import dev.icerock.moko.mvvm.viewmodel.ViewModel
 import io.github.agrevster.pocketbaseKotlin.PocketbaseClient
 import io.github.agrevster.pocketbaseKotlin.dsl.login
@@ -30,7 +31,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 
 class MainViewModel(
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
 ) : ViewModel() {
 
     private val _email = MutableStateFlow("")
@@ -72,12 +73,31 @@ class MainViewModel(
     val sseIsConencted = MutableStateFlow(false)
     val sseId = MutableStateFlow<String?>(null)
 
+    private val _showBluetoothDevice = MutableStateFlow(false)
+    val showBluetoothDevice: StateFlow<Boolean> = _showBluetoothDevice
+
+    private val _selectedPrinter = MutableStateFlow<BluetoothDevice?>(null)
+    val selectedPrinter: StateFlow<BluetoothDevice?> = _selectedPrinter
+
+    fun setSelectedPrinter(device: BluetoothDevice) {
+        _selectedPrinter.value = device
+        _isBluetoothConnected.value = true // anggap sudah tersambung
+    }
+
+    fun showBluetoothDevice(stat: Boolean) {
+        _showBluetoothDevice.value = stat
+    }
+
+    fun updateBluetoothStatus(helper: BluetoothHelper) {
+        _isBluetoothConnected.value = helper.isBluetoothEnabled()
+    }
+
     private val client = PocketbaseClient(
         baseUrl = {
-            protocol = URLProtocol.HTTP
-//            host = "gerald-system-sons-winners.trycloudflare.com"
-            host = "192.168.1.12"
-            port = 8090
+            protocol = URLProtocol.HTTPS
+            host = "17f4c36f2413.ngrok-free.app"
+//            host = "192.168.1.12"
+//            port = 8090
         }
     )
 
@@ -156,7 +176,7 @@ class MainViewModel(
                 val fetched = client.records.getList<ItemResponse>(collection, page = 1, perPage = 500)
                 _items.value = fetched.items.reversed()
             } catch (e: Exception) {
-                Log.e("MainViewModel", "Fetch items failed", e)
+//                Log.e("MainViewModel", "Fetch items failed", e)
             }
         }
     }
@@ -165,10 +185,10 @@ class MainViewModel(
         viewModelScope.launch {
             try {
                 val created = client.records.create<ItemResponse>(collection, Json.encodeToString(item))
-                Log.d("MainViewModel", "Item created: $created")
+//                Log.d("MainViewModel", "Item created: $created")
 //                fetchItems()
             } catch (e: Exception) {
-                Log.e("MainViewModel", "Create item failed", e)
+//                Log.e("MainViewModel", "Create item failed", e)
             }
         }
     }
@@ -181,10 +201,10 @@ class MainViewModel(
                     sub = collection,
                     body = Json.encodeToString(item)
                 )
-                Log.d("MainViewModel", "Item updated: $updated")
+//                Log.d("MainViewModel", "Item updated: $updated")
 //                fetchItems()
             } catch (e: Exception) {
-                Log.e("MainViewModel", "Patch item failed", e)
+//                Log.e("MainViewModel", "Patch item failed", e)
             }
         }
     }
@@ -195,7 +215,7 @@ class MainViewModel(
                 client.records.delete(id = id, sub = collection)
 //                fetchItems()
             } catch (e: Exception) {
-                Log.e("MainViewModel", "Delete item failed", e)
+//                Log.e("MainViewModel", "Delete item failed", e)
             }
         }
     }
@@ -250,21 +270,17 @@ class MainViewModel(
                                         sendSubscribeRequest()
                                     }
                                     processEvent(sseEvent.data)
-//                                    Log.d("SseClient", "ID : ${sseId.value}")
-//                                    Log.d("SseClient", "event : ${sseEvent.event}")
-//                                    Log.d("SseClient", "data : ${sseEvent.data}")
-//                                    Log.d("SseClient", "retry : ${sseEvent.retry}")
                                 }
                             }
                             .collect {}
                     }
                 }
                 else{
-                    Log.d("SseClient", "Already Connected")
+//                    Log.d("SseClient", "Already Connected")
                     sseIsConencted.value = false
                 }
             } catch (e: Exception) {
-                Log.e("MainViewModel", "Realtime subscription failed", e)
+//                Log.e("MainViewModel", "Realtime subscription failed", e)
                 sseIsConencted.value = false
             }
         }
@@ -282,13 +298,13 @@ class MainViewModel(
             contentType(ContentType.Application.Json)
             setBody(body)
         }
-        Log.d("SseClient", "Response SSE : $response")
+//        Log.d("SseClient", "Response SSE : $response")
         return true
     }
 
     fun processEvent(jsonString: String?) {
         val json = Json { ignoreUnknownKeys = true }
-        println("Json String ${jsonString}")
+//        println("Json String ${jsonString}")
         try {
             val element = json.parseToJsonElement(jsonString!!)
             if (element.jsonObject.containsKey("record")) {
@@ -296,23 +312,25 @@ class MainViewModel(
                 when (event.action) {
                     "create" -> {
                         fetchItems()
-                        println("Create ${event.record}")
+//                        println("Create ${event.record}")
                     }
                     "update" -> {
                         fetchItems()
-                        println("Update ${event.record}")
+//                        println("Update ${event.record}")
                     }
                     "delete" -> {
                         fetchItems()
-                        println("Delete ${event.record}")
+//                        println("Delete ${event.record}")
                     }
-                    else -> println("Action tidak dikenal: ${event.action}")
+                    else -> {
+//                        println("Action tidak dikenal: ${event.action}")
+                    }
                 }
             } else {
-                println("Data tidak mengandung record, abaikan.")
+//                println("Data tidak mengandung record, abaikan.")
             }
         } catch (e: Exception) {
-            println("Gagal parsing JSON: ${e.message}")
+//            println("Gagal parsing JSON: ${e.message}")
         }
     }
 

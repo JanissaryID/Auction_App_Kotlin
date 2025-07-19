@@ -1,5 +1,7 @@
 package com.polytron.auctionapp.view.screens
 
+import android.annotation.SuppressLint
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,7 +30,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,21 +46,28 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.polytron.auctionapp.utils.BluetoothHelper
+import com.polytron.auctionapp.utils.BluetoothPrinter
+import com.polytron.auctionapp.view.components.PrinterListDialog
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+@SuppressLint("MissingPermission")
 @Composable
 fun ScreenSettings(
     mainViewModel: MainViewModel = koinInject(),
     modifier: Modifier = Modifier,
+    bluetoothHelper: BluetoothHelper,
     navBack: () -> Unit
 ) {
     val email by mainViewModel.email.collectAsState()
     val password by mainViewModel.password.collectAsState()
     val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
     val isBluetoothConnected by mainViewModel.isBluetoothConnected.collectAsState()
+    val showBluetoothDevice by mainViewModel.showBluetoothDevice.collectAsState()
+    val selectedPrinter by mainViewModel.selectedPrinter.collectAsState()
 
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
@@ -168,7 +176,16 @@ fun ScreenSettings(
             HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
             Spacer(modifier = Modifier.height(24.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .clickable {
+                        bluetoothHelper.requestBluetooth {
+                            mainViewModel.showBluetoothDevice(true)
+                        }
+                    }
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(
                     imageVector = if (isBluetoothConnected) Icons.Default.BluetoothConnected else Icons.Default.BluetoothDisabled,
                     contentDescription = null,
@@ -176,16 +193,27 @@ fun ScreenSettings(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (isBluetoothConnected) "Printer tersambung" else "Printer tidak tersambung",
+                    text = selectedPrinter?.name ?: "Printer tidak tersambung",
                     color = if (isBluetoothConnected) Color(0xFF4CAF50) else Color(0xFFF44336)
                 )
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            TextButton(onClick = mainViewModel::toggleBluetooth) {
-                Text("Simulasi Toggle Bluetooth")
-            }
         }
     }
+
+    if (showBluetoothDevice) {
+        PrinterListDialog(
+            bluetoothHelper = bluetoothHelper,
+            onPrinterSelected = { device ->
+                mainViewModel.setSelectedPrinter(device)
+                mainViewModel.showBluetoothDevice(false)
+
+                val printer = BluetoothPrinter()
+                printer.testPrinter(device)
+            },
+            onDismiss = {
+                mainViewModel.showBluetoothDevice(false)
+            }
+        )
+    }
+
 }

@@ -1,5 +1,7 @@
 package com.polytron.auctionapp.view.screens
 
+import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,10 +26,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.polytron.auctionapp.utils.BluetoothHelper
+import com.polytron.auctionapp.utils.BluetoothPrinter
 import com.polytron.auctionapp.utils.formatCurrencyInput
+import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
+import com.polytron.auctionapp.view.components.PrinterListDialog
 import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
@@ -37,14 +44,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+@SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenAuction(
     mainViewModel: MainViewModel = koinInject(),
+    bluetoothHelper: BluetoothHelper,
     navScanBarcode: () -> Unit,
     navListItems: () -> Unit,
     navBack: () -> Unit,
 ) {
+    val context = LocalContext.current
+
     var rawAuctionPrice by remember { mutableStateOf("") }
     var auctionPrice by remember { mutableStateOf(formatCurrencyInput(rawAuctionPrice)) }
     var isSubmitting by remember { mutableStateOf(false) }
@@ -52,10 +63,12 @@ fun ScreenAuction(
 
     val selectedItems by mainViewModel.selectedItems.collectAsState()
     val editingBuyers by mainViewModel.editingBuyers.collectAsState()
+    val printerDevice by mainViewModel.selectedPrinter.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     val editingPrices by mainViewModel.editingPrices.collectAsState()
+    val showBluetoothDevice by mainViewModel.showBluetoothDevice.collectAsState()
 
     val isAuctionPriceValid = rawAuctionPrice.isNotBlank()
     val isAllBuyerFilled = selectedItems.all {
@@ -90,19 +103,50 @@ fun ScreenAuction(
                 onClick = {
                     isSubmitting = true
                     coroutineScope.launch {
-                        val fallbackPrice = rawAuctionPrice.toIntOrNull()?.toString()
+                        val device = printerDevice
 
-                        selectedItems.forEach { item ->
-                            val finalBuyer = editingBuyers[item.id].orEmpty().ifBlank { item.buyer.orEmpty() }
-                            val finalPrice = editingPrices[item.id].orEmpty().ifBlank { fallbackPrice.orEmpty() }
+                        if (device != null) {
+                            val fallbackPrice = rawAuctionPrice.toIntOrNull()?.toString()
 
-                            val updatedItem = item.copy(
-                                buyer = finalBuyer,
-                                price = finalPrice,
-                                status = 1
-                            )
-                            mainViewModel.patchItem(item.id!!, updatedItem)
-                            delay(300)
+                            selectedItems.forEach { item ->
+                                val finalBuyer = editingBuyers[item.id].orEmpty().ifBlank { item.buyer.orEmpty() }
+                                val finalPrice = editingPrices[item.id].orEmpty().ifBlank { fallbackPrice.orEmpty() }
+
+                                val updatedItem = item.copy(
+                                    buyer = finalBuyer,
+                                    price = finalPrice,
+                                    status = 1
+                                )
+
+                                val printer = BluetoothPrinter()
+
+                                mainViewModel.patchItem(item.id!!, updatedItem)
+
+                                printer.printBarcodeAuction(
+                                    device = device,
+                                    price = formatRupiah(finalPrice),
+                                    name = finalBuyer,
+                                    itemName = item.nameItem!!,
+                                    code = item.codeItem!!,
+                                )
+
+                                delay(300)
+
+                                printer.printBarcodeAuctionItems(
+                                    device = device,
+                                    price = formatRupiah(finalPrice),
+                                    name = finalBuyer,
+                                    itemName = item.nameItem,
+                                )
+
+                                delay(300)
+                            }
+                        }
+                        else {
+                            Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
+                            bluetoothHelper.requestBluetooth {
+                                mainViewModel.showBluetoothDevice(true)
+                            }
                         }
 
                         isSubmitting = false
@@ -168,5 +212,21 @@ fun ScreenAuction(
                 }
             }
         }
+    }
+
+    if (showBluetoothDevice) {
+        PrinterListDialog(
+            bluetoothHelper = bluetoothHelper,
+            onPrinterSelected = { device ->
+                mainViewModel.setSelectedPrinter(device)
+                mainViewModel.showBluetoothDevice(false)
+
+                val printer = BluetoothPrinter()
+//                printer.testPrinter(device)
+            },
+            onDismiss = {
+                mainViewModel.showBluetoothDevice(false)
+            }
+        )
     }
 }

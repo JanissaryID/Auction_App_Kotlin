@@ -1,5 +1,7 @@
 package com.polytron.auctionapp.view.screens
 
+import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,31 +32,37 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.utils.BluetoothHelper
+import com.polytron.auctionapp.utils.BluetoothPrinter
+import com.polytron.auctionapp.view.components.PrinterListDialog
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardPayment
 import com.polytron.auctionapp.viewmodel.MainViewModel
 import org.koin.compose.koinInject
 
+@SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenListPayment(
     mainViewModel: MainViewModel = koinInject(),
+    bluetoothHelper: BluetoothHelper,
     navBack: () -> Unit,
 ) {
+    val context = LocalContext.current
+
     val items by mainViewModel.items.collectAsState()
     val filteredItemsStatTwo = items.filter { it.status == 2 }
 
     var searchQuery by remember { mutableStateOf("") }
 
     val selectedItemsState by mainViewModel.selectedItems.collectAsState()
+    val printerDevice by mainViewModel.selectedPrinter.collectAsState()
+    val showBluetoothDevice by mainViewModel.showBluetoothDevice.collectAsState()
     val selectedItems = remember { mutableStateListOf<ItemResponse>() }
     var isInitialized by remember { mutableStateOf(false) }
-
-//    LaunchedEffect(Unit) {
-//        mainViewModel.fetchItems()
-//    }
 
     LaunchedEffect(selectedItemsState) {
         if (!isInitialized) {
@@ -139,12 +147,45 @@ fun ScreenListPayment(
                                 orderId = orderId,
                                 items = itemList,
                                 takeItemScreen = false,
-                                onClick = {}
+                                onClick = {
+                                    val printer = BluetoothPrinter()
+                                    val device = printerDevice
+
+                                    if (device != null) {
+                                        printer.printBarcodeReceipt(
+                                            item = itemList,
+                                            payment = itemList[0].typePayment.orEmpty(),
+                                            orderID = orderId,
+                                            device = device
+                                        )
+                                    } else {
+                                        Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
+                                        bluetoothHelper.requestBluetooth {
+                                            mainViewModel.showBluetoothDevice(true)
+                                        }
+                                    }
+                                }
                             )
                         }
                     }
                 }
             }
         }
+    }
+
+    if (showBluetoothDevice) {
+        PrinterListDialog(
+            bluetoothHelper = bluetoothHelper,
+            onPrinterSelected = { device ->
+                mainViewModel.setSelectedPrinter(device)
+                mainViewModel.showBluetoothDevice(false)
+
+                val printer = BluetoothPrinter()
+//                printer.testPrinter(device)
+            },
+            onDismiss = {
+                mainViewModel.showBluetoothDevice(false)
+            }
+        )
     }
 }

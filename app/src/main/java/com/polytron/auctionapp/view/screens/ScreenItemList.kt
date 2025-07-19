@@ -1,5 +1,7 @@
 package com.polytron.auctionapp.view.screens
 
+import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,11 +32,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.utils.BluetoothHelper
+import com.polytron.auctionapp.utils.BluetoothPrinter
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
+import com.polytron.auctionapp.view.components.PrinterListDialog
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.bottomsheet.AddOrEditItemBottomSheet
 import com.polytron.auctionapp.view.components.fab.FabWithDelete
@@ -43,14 +49,19 @@ import com.polytron.auctionapp.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 
+@SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenItemList(
     mainViewModel: MainViewModel = koinInject(),
+    bluetoothHelper: BluetoothHelper,
     navBack: () -> Unit
 ) {
+    val context = LocalContext.current
+
     val idUser by mainViewModel.idUser.collectAsState()
     val items by mainViewModel.items.collectAsState()
+    val printerDevice by mainViewModel.selectedPrinter.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
     val sheetState = rememberModalBottomSheetState()
@@ -61,6 +72,7 @@ fun ScreenItemList(
     val isSelectionMode = selectedItems.isNotEmpty()
 
     var isDeleting by remember { mutableStateOf(false) }
+    val showBluetoothDevice by mainViewModel.showBluetoothDevice.collectAsState()
 
     val totalBase = items.sumOf {
         it.basePrice?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L
@@ -69,12 +81,6 @@ fun ScreenItemList(
         it.maxPrice?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L
     }.toString()
 
-    // Fetch data saat pertama kali ditampilkan
-//    LaunchedEffect(Unit) {
-//        mainViewModel.fetchItems()
-//    }
-
-    // Filter berdasarkan pencarian nama/kode
     val filteredItems = items.filter {
         it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
                 it.codeItem?.contains(searchQuery, ignoreCase = true) == true
@@ -208,7 +214,22 @@ fun ScreenItemList(
                                 }
                             },
                             onPrintClick = {
-//                                printerViewModel.printItem(item)
+                                val printer = BluetoothPrinter()
+                                val device = printerDevice
+
+                                if (device != null) {
+                                    printer.printBarcodeLabel(
+                                        device = device,
+                                        itemName = item.nameItem.orEmpty(),
+                                        itemCode = item.codeItem.orEmpty()
+                                    )
+                                } else {
+//                                    println("Belum ada printer yang terhubung.")
+                                    Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
+                                    bluetoothHelper.requestBluetooth {
+                                        mainViewModel.showBluetoothDevice(true)
+                                    }
+                                }
                             }
                         )
                     }
@@ -265,5 +286,21 @@ fun ScreenItemList(
                 }
             )
         }
+    }
+
+    if (showBluetoothDevice) {
+        PrinterListDialog(
+            bluetoothHelper = bluetoothHelper,
+            onPrinterSelected = { device ->
+                mainViewModel.setSelectedPrinter(device)
+                mainViewModel.showBluetoothDevice(false)
+
+                val printer = BluetoothPrinter()
+//                printer.testPrinter(device)
+            },
+            onDismiss = {
+                mainViewModel.showBluetoothDevice(false)
+            }
+        )
     }
 }

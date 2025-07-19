@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.polytron.auctionapp.model.ItemResponse
@@ -114,7 +113,7 @@ fun exportItemsToExcel(context: Context, items: List<ItemResponse>): Boolean {
         true
     } catch (e: Exception) {
         e.printStackTrace()
-        Log.i("Excel", "exportItemsToExcel: ${e.message}")
+//        Log.i("Excel", "exportItemsToExcel: ${e.message}")
         Toast.makeText(context, "Gagal ekspor: ${e.message}", Toast.LENGTH_LONG).show()
         false
     }

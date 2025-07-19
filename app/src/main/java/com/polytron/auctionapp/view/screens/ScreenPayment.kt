@@ -1,5 +1,7 @@
 package com.polytron.auctionapp.view.screens
 
+import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,10 +24,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.polytron.auctionapp.utils.BluetoothHelper
+import com.polytron.auctionapp.utils.BluetoothPrinter
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.utils.generateRandomAlphanumeric
 import com.polytron.auctionapp.view.components.EmptyItemState
+import com.polytron.auctionapp.view.components.PrinterListDialog
 import com.polytron.auctionapp.view.components.ReceiptCard
 import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
 import com.polytron.auctionapp.view.components.TopAppBarCustom
@@ -36,18 +42,24 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+@SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenPayment(
     mainViewModel: MainViewModel = koinInject(),
+    bluetoothHelper: BluetoothHelper,
     navScanBarcode: () -> Unit,
     navListItems: () -> Unit,
     navListPayment: () -> Unit,
     navBack: () -> Unit,
 ) {
+    val context = LocalContext.current
+
     var isFabExpanded by remember { mutableStateOf(false) }
 
     val selectedItems by mainViewModel.selectedItems.collectAsState()
+    val printerDevice by mainViewModel.selectedPrinter.collectAsState()
+    val showBluetoothDevice by mainViewModel.showBluetoothDevice.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -130,23 +142,57 @@ fun ScreenPayment(
                 total = formattedPrice,
                 onDismiss = { showSheet = false },
                 onPay = {
-                    // proses bayar dengan selectedMethod
-                    val orderID = "Order-${generateRandomAlphanumeric()}"
-                    coroutineScope.launch {
-                        selectedItems.forEach { item ->
-                            val updatedItem = item.copy(
-                                status = 2,
+                    val device = printerDevice
+                    if (device != null) {
+                        val orderID = "Order-${generateRandomAlphanumeric()}"
+                        coroutineScope.launch {
+                            selectedItems.forEach { item ->
+                                val updatedItem = item.copy(
+                                    status = 2,
+                                    orderID = orderID,
+                                    typePayment = it.label
+                                )
+                                mainViewModel.patchItem(item.id!!, updatedItem)
+                                delay(300) // opsional agar smooth
+                            }
+
+                            val printer = BluetoothPrinter()
+
+                            printer.printBarcodeReceipt(
+                                item = selectedItems,
+                                payment = it.label,
                                 orderID = orderID,
-                                typePayment = it.label
+                                device = device
                             )
-                            mainViewModel.patchItem(item.id!!, updatedItem)
-                            delay(300) // opsional agar smooth
+
+                            mainViewModel.clearSelectedItems()
+                            showSheet = false
                         }
-                        mainViewModel.clearSelectedItems()
-                        showSheet = false
+                    }
+                    else {
+                        Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
+                        bluetoothHelper.requestBluetooth {
+                            mainViewModel.showBluetoothDevice(true)
+                        }
                     }
                 }
             )
         }
+    }
+
+    if (showBluetoothDevice) {
+        PrinterListDialog(
+            bluetoothHelper = bluetoothHelper,
+            onPrinterSelected = { device ->
+                mainViewModel.setSelectedPrinter(device)
+                mainViewModel.showBluetoothDevice(false)
+
+                val printer = BluetoothPrinter()
+//                printer.testPrinter(device)
+            },
+            onDismiss = {
+                mainViewModel.showBluetoothDevice(false)
+            }
+        )
     }
 }

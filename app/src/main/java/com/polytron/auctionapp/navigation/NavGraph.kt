@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.polytron.auctionapp.model.TypeScreenBarcode
+import com.polytron.auctionapp.utils.BluetoothHelper
 import com.polytron.auctionapp.view.screens.ScreenAuction
 import com.polytron.auctionapp.view.screens.ScreenHome
 import com.polytron.auctionapp.view.screens.ScreenItemList
@@ -26,6 +27,7 @@ import com.polytron.auctionapp.view.screens.ScreenTransactions
 @Composable
 fun AppNavHost(
     navController: NavHostController = rememberNavController(),
+    bluetoothHelper: BluetoothHelper
 ) {
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) {
@@ -37,14 +39,15 @@ fun AppNavHost(
                     Screen.ScanBarcode.createRoute(typeScreen = TypeScreenBarcode.Auction.name)
                 ) },
                 navListItems = { navController.navigate(Screen.ItemListSelectAuction.route) },
-                navBack = { navController.popBackStack() }
+                navBack = { navController.popBackStack() },
+                bluetoothHelper = bluetoothHelper
             )
         }
         composable(
             Screen.ScanBarcode.route,
             arguments = listOf(navArgument("typeScreen") { type = NavType.StringType })
-        ) { Entry ->
-            val typeScreen = Entry.arguments?.getString("typeScreen")
+        ) { entry ->
+            val typeScreen = entry.arguments?.getString("typeScreen")
             ScreenScanBarcode(
                 navBack = { navController.popBackStack() },
                 typeScreen = typeScreen
@@ -52,7 +55,8 @@ fun AppNavHost(
         }
         composable(Screen.ListItems.route) {
             ScreenItemList(
-                navBack = { navController.popBackStack() }
+                navBack = { navController.popBackStack() },
+                bluetoothHelper = bluetoothHelper
             )
         }
         composable(Screen.ItemListSelectAuction.route,) {
@@ -67,7 +71,8 @@ fun AppNavHost(
                 ) },
                 navListItems = { navController.navigate(Screen.ItemListSelectPayment.route) },
                 navListPayment = { navController.navigate(Screen.ListPayment.route) },
-                navBack = { navController.popBackStack() }
+                navBack = { navController.popBackStack() },
+                bluetoothHelper = bluetoothHelper
             )
         }
         composable(Screen.ItemListSelectPayment.route) {
@@ -77,7 +82,8 @@ fun AppNavHost(
         }
         composable(Screen.ListPayment.route) {
             ScreenListPayment(
-                navBack = { navController.popBackStack() }
+                navBack = { navController.popBackStack() },
+                bluetoothHelper = bluetoothHelper
             )
         }
         composable(Screen.TakeItems.route) {
@@ -93,7 +99,8 @@ fun AppNavHost(
         }
         composable(Screen.Settings.route) {
             ScreenSettings(
-                navBack = { navController.popBackStack() }
+                navBack = { navController.popBackStack() },
+                bluetoothHelper = bluetoothHelper
             )
         }
     }
