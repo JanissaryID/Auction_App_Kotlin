@@ -17,7 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.utils.BluetoothHelper
+import com.polytron.auctionapp.bluetooth.BluetoothHelper
 
 @SuppressLint("MissingPermission")
 @Composable

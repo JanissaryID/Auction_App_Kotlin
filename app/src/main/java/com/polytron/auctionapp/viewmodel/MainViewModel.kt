@@ -4,7 +4,7 @@ import android.bluetooth.BluetoothDevice
 import com.polytron.auctionapp.data.datastore.UserPreferences
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.RealtimeEvent
-import com.polytron.auctionapp.utils.BluetoothHelper
+import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import dev.icerock.moko.mvvm.viewmodel.ViewModel
 import io.github.agrevster.pocketbaseKotlin.PocketbaseClient
 import io.github.agrevster.pocketbaseKotlin.dsl.login

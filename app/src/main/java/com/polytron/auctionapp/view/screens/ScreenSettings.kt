@@ -46,8 +46,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.utils.BluetoothHelper
-import com.polytron.auctionapp.utils.BluetoothPrinter
+import com.polytron.auctionapp.bluetooth.BluetoothHelper
+import com.polytron.auctionapp.bluetooth.BluetoothPrinter
 import com.polytron.auctionapp.view.components.PrinterListDialog
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.viewmodel.MainViewModel

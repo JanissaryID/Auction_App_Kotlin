@@ -1,4 +1,4 @@
-package com.polytron.auctionapp.utils
+package com.polytron.auctionapp.bluetooth
 
 import android.Manifest
 import android.app.Activity

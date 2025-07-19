@@ -36,8 +36,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.ItemResponse
-import com.polytron.auctionapp.utils.BluetoothHelper
-import com.polytron.auctionapp.utils.BluetoothPrinter
+import com.polytron.auctionapp.bluetooth.BluetoothHelper
+import com.polytron.auctionapp.bluetooth.BluetoothPrinter
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
 import com.polytron.auctionapp.view.components.PrinterListDialog

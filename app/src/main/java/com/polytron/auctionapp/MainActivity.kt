@@ -8,7 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import com.polytron.auctionapp.navigation.AppNavHost
 import com.polytron.auctionapp.ui.theme.AuctionAppTheme
-import com.polytron.auctionapp.utils.BluetoothHelper
+import com.polytron.auctionapp.bluetooth.BluetoothHelper
 
 class MainActivity : ComponentActivity() {
 
