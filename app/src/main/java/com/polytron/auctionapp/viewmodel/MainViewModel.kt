@@ -95,7 +95,7 @@ class MainViewModel(
     private val client = PocketbaseClient(
         baseUrl = {
             protocol = URLProtocol.HTTPS
-            host = "17f4c36f2413.ngrok-free.app"
+            host = "pb.janissaryid.com"
 //            host = "192.168.1.12"
 //            port = 8090
         }
