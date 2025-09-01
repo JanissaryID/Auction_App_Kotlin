@@ -27,21 +27,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.camera.CameraPreviewView
 import com.polytron.auctionapp.view.components.itemcard.ItemCardBarcode
-import com.polytron.auctionapp.viewmodel.MainViewModel
 import org.koin.compose.koinInject
 
 @Composable
 fun ScreenScanBarcode(
-    mainViewModel: MainViewModel = koinInject(),
+    inventoryViewModel: InventoryViewModel = koinInject(),
     navBack: () -> Unit,
     typeScreen: String?
 ) {
-    val items by mainViewModel.items.collectAsState()
+    val items by inventoryViewModel.items.collectAsState()
     val filteredItemsStat = if (typeScreen == "Payment") {
         items.filter { it.status == 1 }
     } else {
@@ -53,11 +53,11 @@ fun ScreenScanBarcode(
     var result by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val selectedItemsState by mainViewModel.selectedItems.collectAsState()
+    val selectedItemsState by inventoryViewModel.selectedItems.collectAsState()
     var isInitialized by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        mainViewModel.fetchItems()
+        inventoryViewModel.fetchItems()
     }
 
     LaunchedEffect(selectedItemsState) {
@@ -97,7 +97,7 @@ fun ScreenScanBarcode(
                 selectedCount = selectedItems.size,
                 buttonText = "Proses",
                 onClick = {
-                    mainViewModel.setSelectedItems(selectedItems.toList())
+                    inventoryViewModel.setSelectedItems(selectedItems.toList())
                     navBack()
                 }
             )

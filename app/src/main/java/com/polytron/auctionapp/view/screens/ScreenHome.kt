@@ -30,15 +30,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.view.components.itemcard.HomeMenu
 import com.polytron.auctionapp.view.components.itemcard.MenuCard
-import com.polytron.auctionapp.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenHome(
-    mainViewModel: MainViewModel = koinInject(),
     onNavigate: (String) -> Unit
 ) {
     val items = listOf(

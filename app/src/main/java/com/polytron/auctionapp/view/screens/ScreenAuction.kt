@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
+import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
@@ -39,7 +40,6 @@ import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
 import com.polytron.auctionapp.view.components.itemcard.ItemCardAuction
-import com.polytron.auctionapp.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -48,7 +48,7 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenAuction(
-    mainViewModel: MainViewModel = koinInject(),
+    inventoryViewModel: InventoryViewModel = koinInject(),
     bluetoothHelper: BluetoothHelper,
     navScanBarcode: () -> Unit,
     navListItems: () -> Unit,
@@ -61,14 +61,14 @@ fun ScreenAuction(
     var isSubmitting by remember { mutableStateOf(false) }
     var isFabExpanded by remember { mutableStateOf(false) }
 
-    val selectedItems by mainViewModel.selectedItems.collectAsState()
-    val editingBuyers by mainViewModel.editingBuyers.collectAsState()
-    val printerDevice by mainViewModel.selectedPrinter.collectAsState()
+    val selectedItems by inventoryViewModel.selectedItems.collectAsState()
+    val editingBuyers by inventoryViewModel.editingBuyers.collectAsState()
+    val printerDevice by inventoryViewModel.selectedPrinter.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    val editingPrices by mainViewModel.editingPrices.collectAsState()
-    val showBluetoothDevice by mainViewModel.showBluetoothDevice.collectAsState()
+    val editingPrices by inventoryViewModel.editingPrices.collectAsState()
+    val showBluetoothDevice by inventoryViewModel.showBluetoothDevice.collectAsState()
 
     val isAuctionPriceValid = rawAuctionPrice.isNotBlank()
     val isAllBuyerFilled = selectedItems.all {
@@ -79,7 +79,7 @@ fun ScreenAuction(
 
     BackHandler {
         navBack()
-        mainViewModel.clearSelectedItems()
+        inventoryViewModel.clearSelectedItems()
     }
 
     Scaffold(
@@ -90,7 +90,7 @@ fun ScreenAuction(
                 title = "Lelang",
                 onBack = {
                     navBack()
-                    mainViewModel.clearSelectedItems()
+                    inventoryViewModel.clearSelectedItems()
                 }
             )
         },
@@ -120,7 +120,7 @@ fun ScreenAuction(
 
                                 val printer = BluetoothPrinter()
 
-                                mainViewModel.patchItem(item.id!!, updatedItem)
+                                inventoryViewModel.patchItem(item.id!!, updatedItem)
 
                                 printer.printBarcodeAuction(
                                     device = device,
@@ -145,12 +145,12 @@ fun ScreenAuction(
                         else {
                             Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
                             bluetoothHelper.requestBluetooth {
-                                mainViewModel.showBluetoothDevice(true)
+                                inventoryViewModel.showBluetoothDevice(true)
                             }
                         }
 
                         isSubmitting = false
-                        mainViewModel.clearSelectedItems()
+                        inventoryViewModel.clearSelectedItems()
                         rawAuctionPrice = ""
                         auctionPrice = ""
                     }
@@ -196,16 +196,16 @@ fun ScreenAuction(
                             currentBuyer = editingBuyers[item.id].orEmpty(),
                             currentPrice = editingPrices[item.id].orEmpty(),
                             onNameChanged = { newName ->
-                                mainViewModel.updateEditingBuyer(item.id!!, newName)
+                                inventoryViewModel.updateEditingBuyer(item.id!!, newName)
                             },
                             onPriceChanged = { newPrice ->
-                                mainViewModel.updateEditingPrice(item.id!!, newPrice)
+                                inventoryViewModel.updateEditingPrice(item.id!!, newPrice)
                             },
                             onCancelPriceInput = {
-                                mainViewModel.clearEditingForItem(item.id!!)
+                                inventoryViewModel.clearEditingForItem(item.id!!)
                             },
                             onClickDelete = {
-                                mainViewModel.removeSelectedItem(item)
+                                inventoryViewModel.removeSelectedItem(item)
                             }
                         )
                     }
@@ -218,14 +218,14 @@ fun ScreenAuction(
         PrinterListDialog(
             bluetoothHelper = bluetoothHelper,
             onPrinterSelected = { device ->
-                mainViewModel.setSelectedPrinter(device)
-                mainViewModel.showBluetoothDevice(false)
+                inventoryViewModel.setSelectedPrinter(device)
+                inventoryViewModel.showBluetoothDevice(false)
 
                 val printer = BluetoothPrinter()
 //                printer.testPrinter(device)
             },
             onDismiss = {
-                mainViewModel.showBluetoothDevice(false)
+                inventoryViewModel.showBluetoothDevice(false)
             }
         )
     }

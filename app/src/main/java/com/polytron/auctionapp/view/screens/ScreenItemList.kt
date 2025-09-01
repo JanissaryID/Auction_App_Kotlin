@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
+import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
 import com.polytron.auctionapp.view.components.PrinterListDialog
@@ -45,7 +46,6 @@ import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.bottomsheet.AddOrEditItemBottomSheet
 import com.polytron.auctionapp.view.components.fab.FabWithDelete
 import com.polytron.auctionapp.view.components.itemcard.ItemCard
-import com.polytron.auctionapp.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 
@@ -53,15 +53,15 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenItemList(
-    mainViewModel: MainViewModel = koinInject(),
+    inventoryViewModel: InventoryViewModel = koinInject(),
     bluetoothHelper: BluetoothHelper,
     navBack: () -> Unit
 ) {
     val context = LocalContext.current
 
-    val idUser by mainViewModel.idUser.collectAsState()
-    val items by mainViewModel.items.collectAsState()
-    val printerDevice by mainViewModel.selectedPrinter.collectAsState()
+    val idUser by inventoryViewModel.idUser.collectAsState()
+    val items by inventoryViewModel.items.collectAsState()
+    val printerDevice by inventoryViewModel.selectedPrinter.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
     val sheetState = rememberModalBottomSheetState()
@@ -72,7 +72,7 @@ fun ScreenItemList(
     val isSelectionMode = selectedItems.isNotEmpty()
 
     var isDeleting by remember { mutableStateOf(false) }
-    val showBluetoothDevice by mainViewModel.showBluetoothDevice.collectAsState()
+    val showBluetoothDevice by inventoryViewModel.showBluetoothDevice.collectAsState()
 
     val totalBase = items.sumOf {
         it.basePrice?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L
@@ -93,7 +93,7 @@ fun ScreenItemList(
                 title = "${items.size} Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { mainViewModel.fetchItems() },
+                onRefresh = { inventoryViewModel.fetchItems() },
             )
         },
         bottomBar = {
@@ -142,11 +142,11 @@ fun ScreenItemList(
                 onDelete = {
                     isDeleting = true
                     selectedItems.forEach {
-                        mainViewModel.deleteItem(it.id!!)
+                        inventoryViewModel.deleteItem(it.id!!)
                         delay(500)
                     }
                     selectedItems.clear()
-                    mainViewModel.fetchItems()
+                    inventoryViewModel.fetchItems()
                     isDeleting = false
                 },
                 onAddClick = {
@@ -227,7 +227,7 @@ fun ScreenItemList(
 //                                    println("Belum ada printer yang terhubung.")
                                     Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
                                     bluetoothHelper.requestBluetooth {
-                                        mainViewModel.showBluetoothDevice(true)
+                                        inventoryViewModel.showBluetoothDevice(true)
                                     }
                                 }
                             }
@@ -261,7 +261,7 @@ fun ScreenItemList(
                                 basePrice = base,
                                 maxPrice = max
                             )
-                            mainViewModel.patchItem(id, updatedItem)
+                            inventoryViewModel.patchItem(id, updatedItem)
                         }
                     } else {
                         repeat(quantity) { index ->
@@ -276,13 +276,13 @@ fun ScreenItemList(
                                 admin = "admin",
                                 user = idUser
                             )
-                            mainViewModel.createItem(
+                            inventoryViewModel.createItem(
                                 item = item
                             )
                             delay(500)
                         }
                     }
-                    mainViewModel.fetchItems()
+                    inventoryViewModel.fetchItems()
                 }
             )
         }
@@ -292,14 +292,14 @@ fun ScreenItemList(
         PrinterListDialog(
             bluetoothHelper = bluetoothHelper,
             onPrinterSelected = { device ->
-                mainViewModel.setSelectedPrinter(device)
-                mainViewModel.showBluetoothDevice(false)
+                inventoryViewModel.setSelectedPrinter(device)
+                inventoryViewModel.showBluetoothDevice(false)
 
                 val printer = BluetoothPrinter()
 //                printer.testPrinter(device)
             },
             onDismiss = {
-                mainViewModel.showBluetoothDevice(false)
+                inventoryViewModel.showBluetoothDevice(false)
             }
         )
     }

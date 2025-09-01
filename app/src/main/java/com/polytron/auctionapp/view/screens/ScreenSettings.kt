@@ -48,26 +48,26 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
+import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.view.components.PrinterListDialog
 import com.polytron.auctionapp.view.components.TopAppBarCustom
-import com.polytron.auctionapp.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @SuppressLint("MissingPermission")
 @Composable
 fun ScreenSettings(
-    mainViewModel: MainViewModel = koinInject(),
+    inventoryViewModel: InventoryViewModel = koinInject(),
     modifier: Modifier = Modifier,
     bluetoothHelper: BluetoothHelper,
     navBack: () -> Unit
 ) {
-    val email by mainViewModel.email.collectAsState()
-    val password by mainViewModel.password.collectAsState()
-    val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
-    val isBluetoothConnected by mainViewModel.isBluetoothConnected.collectAsState()
-    val showBluetoothDevice by mainViewModel.showBluetoothDevice.collectAsState()
-    val selectedPrinter by mainViewModel.selectedPrinter.collectAsState()
+    val email by inventoryViewModel.email.collectAsState()
+    val password by inventoryViewModel.password.collectAsState()
+    val isLoggedIn by inventoryViewModel.isLoggedIn.collectAsState()
+    val isBluetoothConnected by inventoryViewModel.isBluetoothConnected.collectAsState()
+    val showBluetoothDevice by inventoryViewModel.showBluetoothDevice.collectAsState()
+    val selectedPrinter by inventoryViewModel.selectedPrinter.collectAsState()
 
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
@@ -104,7 +104,7 @@ fun ScreenSettings(
         ) {
             OutlinedTextField(
                 value = email,
-                onValueChange = mainViewModel::onEmailChange,
+                onValueChange = inventoryViewModel::onEmailChange,
                 label = { Text("Email") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -118,7 +118,7 @@ fun ScreenSettings(
 
             OutlinedTextField(
                 value = password,
-                onValueChange = mainViewModel::onPasswordChange,
+                onValueChange = inventoryViewModel::onPasswordChange,
                 label = { Text("Password") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -142,7 +142,7 @@ fun ScreenSettings(
             Button(
                 onClick = {
                     isLoading = true
-                    mainViewModel.login(
+                    inventoryViewModel.login(
                         onSuccess = {
                             isLoading = false
                             showSnackbar = true
@@ -180,7 +180,7 @@ fun ScreenSettings(
                 modifier = Modifier
                     .clickable {
                         bluetoothHelper.requestBluetooth {
-                            mainViewModel.showBluetoothDevice(true)
+                            inventoryViewModel.showBluetoothDevice(true)
                         }
                     }
                     .padding(8.dp),
@@ -204,14 +204,14 @@ fun ScreenSettings(
         PrinterListDialog(
             bluetoothHelper = bluetoothHelper,
             onPrinterSelected = { device ->
-                mainViewModel.setSelectedPrinter(device)
-                mainViewModel.showBluetoothDevice(false)
+                inventoryViewModel.setSelectedPrinter(device)
+                inventoryViewModel.showBluetoothDevice(false)
 
                 val printer = BluetoothPrinter()
                 printer.testPrinter(device)
             },
             onDismiss = {
-                mainViewModel.showBluetoothDevice(false)
+                inventoryViewModel.showBluetoothDevice(false)
             }
         )
     }

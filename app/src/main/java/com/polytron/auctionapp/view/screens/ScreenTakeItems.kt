@@ -33,10 +33,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardPayment
-import com.polytron.auctionapp.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -44,23 +44,23 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenTakeItems(
-    mainViewModel: MainViewModel = koinInject(),
+    inventoryViewModel: InventoryViewModel = koinInject(),
     navBack: () -> Unit,
 //    navScanBarcode: () -> Unit,
 ) {
-    val items by mainViewModel.items.collectAsState()
+    val items by inventoryViewModel.items.collectAsState()
     val filteredItemsStatTwo = items.filter { it.status == 2 }
 
     var searchQuery by remember { mutableStateOf("") }
 
-    val selectedItemsState by mainViewModel.selectedItems.collectAsState()
+    val selectedItemsState by inventoryViewModel.selectedItems.collectAsState()
     val selectedItems = remember { mutableStateListOf<ItemResponse>() }
     var isInitialized by remember { mutableStateOf(false) }
     val isSubmittingMap = remember { mutableStateMapOf<String, Boolean>() }
     val coroutineScope = rememberCoroutineScope()
 
 //    LaunchedEffect(Unit) {
-//        mainViewModel.fetchItems()
+//        inventoryViewModel.fetchItems()
 //    }
 
     LaunchedEffect(selectedItemsState) {
@@ -86,7 +86,7 @@ fun ScreenTakeItems(
                 title = "Ambil Barang",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { mainViewModel.fetchItems() },
+                onRefresh = { inventoryViewModel.fetchItems() },
             )
         },
 //        floatingActionButton = {
@@ -160,11 +160,11 @@ fun ScreenTakeItems(
                                     coroutineScope.launch {
                                         itemList.forEach { item ->
                                             val updatedItem = item.copy(status = 3)
-                                            mainViewModel.patchItem(item.id!!, updatedItem)
+                                            inventoryViewModel.patchItem(item.id!!, updatedItem)
                                             delay(300)
                                         }
                                         isSubmittingMap[orderId] = false
-                                        mainViewModel.fetchItems()
+                                        inventoryViewModel.fetchItems()
                                     }
                                 }
                             )

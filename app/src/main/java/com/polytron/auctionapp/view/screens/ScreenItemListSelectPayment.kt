@@ -39,29 +39,29 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardSelectPayment
-import com.polytron.auctionapp.viewmodel.MainViewModel
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenItemListSelectPayment(
-    mainViewModel: MainViewModel = koinInject(),
+    inventoryViewModel: InventoryViewModel = koinInject(),
     navBack: () -> Unit,
 ) {
-    val items by mainViewModel.items.collectAsState()
+    val items by inventoryViewModel.items.collectAsState()
     val filteredItemsStatOne = items.filter { it.status == 1 }
     var searchQuery by remember { mutableStateOf("") }
 
-    val selectedItemsState by mainViewModel.selectedItems.collectAsState()
+    val selectedItemsState by inventoryViewModel.selectedItems.collectAsState()
     val selectedItems = remember { mutableStateListOf<ItemResponse>() }
     var isInitialized by remember { mutableStateOf(false) }
     val isSelectionMode = selectedItems.isNotEmpty()
 
 //    LaunchedEffect(Unit) {
-//        mainViewModel.fetchItems()
+//        inventoryViewModel.fetchItems()
 //    }
 
     LaunchedEffect(selectedItemsState) {
@@ -84,7 +84,7 @@ fun ScreenItemListSelectPayment(
                 title = "Daftar Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { mainViewModel.fetchItems() },
+                onRefresh = { inventoryViewModel.fetchItems() },
             )
         },
         floatingActionButton = {
@@ -95,7 +95,7 @@ fun ScreenItemListSelectPayment(
             ) {
                 ExtendedFloatingActionButton(
                     onClick = {
-                        mainViewModel.setSelectedItems(selectedItems.toList())
+                        inventoryViewModel.setSelectedItems(selectedItems.toList())
                         navBack() // aksi saat selesai memilih
                     },
                     icon = { Icon(Icons.Default.Check, contentDescription = "Selesai Pilih") },
@@ -127,7 +127,7 @@ fun ScreenItemListSelectPayment(
                 TextButton(
                     onClick = {
                         selectedItems.clear()
-                        mainViewModel.clearSelectedItems()
+                        inventoryViewModel.clearSelectedItems()
                     },
                     modifier = Modifier.align(Alignment.End)
                 ) {

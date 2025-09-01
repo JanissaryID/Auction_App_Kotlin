@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
+import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.utils.generateRandomAlphanumeric
 import com.polytron.auctionapp.view.components.EmptyItemState
@@ -37,7 +38,6 @@ import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.bottomsheet.PaymentBottomSheet
 import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
-import com.polytron.auctionapp.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -46,7 +46,7 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenPayment(
-    mainViewModel: MainViewModel = koinInject(),
+    inventoryViewModel: InventoryViewModel = koinInject(),
     bluetoothHelper: BluetoothHelper,
     navScanBarcode: () -> Unit,
     navListItems: () -> Unit,
@@ -57,9 +57,9 @@ fun ScreenPayment(
 
     var isFabExpanded by remember { mutableStateOf(false) }
 
-    val selectedItems by mainViewModel.selectedItems.collectAsState()
-    val printerDevice by mainViewModel.selectedPrinter.collectAsState()
-    val showBluetoothDevice by mainViewModel.showBluetoothDevice.collectAsState()
+    val selectedItems by inventoryViewModel.selectedItems.collectAsState()
+    val printerDevice by inventoryViewModel.selectedPrinter.collectAsState()
+    val showBluetoothDevice by inventoryViewModel.showBluetoothDevice.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -67,7 +67,7 @@ fun ScreenPayment(
 
     BackHandler {
         navBack()
-        mainViewModel.clearSelectedItems()
+        inventoryViewModel.clearSelectedItems()
     }
 
     Scaffold(
@@ -78,7 +78,7 @@ fun ScreenPayment(
                 title = "Pembayaran",
                 onBack = {
                     navBack()
-                    mainViewModel.clearSelectedItems()
+                    inventoryViewModel.clearSelectedItems()
                 },
                 additionalActions = {
                     IconButton(onClick = { navListPayment() }) {
@@ -116,7 +116,7 @@ fun ScreenPayment(
                 EmptyItemState()
             } else {
                 ReceiptCard(selectedItems = selectedItems){
-                        item -> mainViewModel.removeSelectedItem(item)
+                        item -> inventoryViewModel.removeSelectedItem(item)
                 }
             }
         }
@@ -152,7 +152,7 @@ fun ScreenPayment(
                                     orderID = orderID,
                                     typePayment = it.label
                                 )
-                                mainViewModel.patchItem(item.id!!, updatedItem)
+                                inventoryViewModel.patchItem(item.id!!, updatedItem)
                                 delay(300) // opsional agar smooth
                             }
 
@@ -165,14 +165,14 @@ fun ScreenPayment(
                                 device = device
                             )
 
-                            mainViewModel.clearSelectedItems()
+                            inventoryViewModel.clearSelectedItems()
                             showSheet = false
                         }
                     }
                     else {
                         Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
                         bluetoothHelper.requestBluetooth {
-                            mainViewModel.showBluetoothDevice(true)
+                            inventoryViewModel.showBluetoothDevice(true)
                         }
                     }
                 }
@@ -184,14 +184,14 @@ fun ScreenPayment(
         PrinterListDialog(
             bluetoothHelper = bluetoothHelper,
             onPrinterSelected = { device ->
-                mainViewModel.setSelectedPrinter(device)
-                mainViewModel.showBluetoothDevice(false)
+                inventoryViewModel.setSelectedPrinter(device)
+                inventoryViewModel.showBluetoothDevice(false)
 
                 val printer = BluetoothPrinter()
 //                printer.testPrinter(device)
             },
             onDismiss = {
-                mainViewModel.showBluetoothDevice(false)
+                inventoryViewModel.showBluetoothDevice(false)
             }
         )
     }

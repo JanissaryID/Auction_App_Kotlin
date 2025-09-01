@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.utils.exportItemsToExcel
 import com.polytron.auctionapp.utils.formatRupiah
@@ -42,17 +43,16 @@ import com.polytron.auctionapp.view.components.EmptyItemState
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.bottomsheet.ItemDetailBottomSheet
 import com.polytron.auctionapp.view.components.itemcard.ItemCardTransaction
-import com.polytron.auctionapp.viewmodel.MainViewModel
 import org.koin.compose.koinInject
 
 @RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenTransactions(
-    mainViewModel: MainViewModel = koinInject(),
+    inventoryViewModel: InventoryViewModel = koinInject(),
     navBack: () -> Unit
 ) {
-    val items by mainViewModel.items.collectAsState()
+    val items by inventoryViewModel.items.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
     var selectedItem by remember { mutableStateOf<ItemResponse?>(null) }
@@ -73,7 +73,7 @@ fun ScreenTransactions(
 
     // Fetch data saat pertama kali ditampilkan
 //    LaunchedEffect(Unit) {
-//        mainViewModel.fetchItems()
+//        inventoryViewModel.fetchItems()
 //    }
 
     // Filter berdasarkan pencarian nama/kode
@@ -89,7 +89,7 @@ fun ScreenTransactions(
                 title = "Daftar Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { mainViewModel.fetchItems() },
+                onRefresh = { inventoryViewModel.fetchItems() },
             )
         },
         bottomBar = {

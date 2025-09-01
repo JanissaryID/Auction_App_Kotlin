@@ -89,7 +89,6 @@ fun AppNavHost(
         composable(Screen.TakeItems.route) {
             ScreenTakeItems(
                 navBack = { navController.popBackStack() },
-//                navScanBarcode = { navController.navigate(Screen.ScanBarcode.route) }
             )
         }
         composable(Screen.Transactions.route) {
