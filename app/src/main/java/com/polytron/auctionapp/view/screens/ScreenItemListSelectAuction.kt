@@ -60,10 +60,6 @@ fun ScreenItemListSelectAuction(
     var isInitialized by remember { mutableStateOf(false) }
     val isSelectionMode = selectedItems.isNotEmpty()
 
-//    LaunchedEffect(Unit) {
-//        inventoryViewModel.fetchItems()
-//    }
-
     LaunchedEffect(selectedItemsState) {
         if (!isInitialized) {
             selectedItems.clear()

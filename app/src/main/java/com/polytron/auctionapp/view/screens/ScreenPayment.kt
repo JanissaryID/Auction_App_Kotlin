@@ -159,7 +159,7 @@ fun ScreenPayment(
                             val printer = BluetoothPrinter()
 
                             printer.printBarcodeReceipt(
-                                item = selectedItems,
+                                items = selectedItems,
                                 payment = it.label,
                                 orderID = orderID,
                                 device = device
@@ -168,12 +168,18 @@ fun ScreenPayment(
                             inventoryViewModel.clearSelectedItems()
                             showSheet = false
                         }
-                    }
-                    else {
+                    } else {
                         Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
-                        bluetoothHelper.requestBluetooth {
-                            inventoryViewModel.showBluetoothDevice(true)
-                        }
+                        bluetoothHelper.requestBluetooth(
+                            onReady = {
+                                // Bluetooth aktif → buka dialog pilih printer
+                                inventoryViewModel.showBluetoothDevice(true)
+                            },
+                            onFailure = { reason ->
+                                // User nolak permission / nolak enable BT / device nggak support
+                                Toast.makeText(context, "Bluetooth gagal: $reason", Toast.LENGTH_SHORT).show()
+                            }
+                        )
                     }
                 }
             )
@@ -186,9 +192,6 @@ fun ScreenPayment(
             onPrinterSelected = { device ->
                 inventoryViewModel.setSelectedPrinter(device)
                 inventoryViewModel.showBluetoothDevice(false)
-
-                val printer = BluetoothPrinter()
-//                printer.testPrinter(device)
             },
             onDismiss = {
                 inventoryViewModel.showBluetoothDevice(false)

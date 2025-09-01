@@ -6,14 +6,19 @@ import com.polytron.auctionapp.model.ItemResponse
 import io.github.agrevster.pocketbaseKotlin.PocketbaseClient
 import io.github.agrevster.pocketbaseKotlin.dsl.login
 import io.github.agrevster.pocketbaseKotlin.models.AuthRecord
-import io.ktor.client.call.*
 import io.ktor.client.plugins.sse.sse
-import io.ktor.client.request.*
-import io.ktor.client.request.forms.*
-import io.ktor.http.*
-import io.ktor.sse.*
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.*
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.URLProtocol
+import io.ktor.http.contentType
+import io.ktor.http.isSuccess
+import io.ktor.http.path
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 
 class ItemsRepositoryImpl(
     private val baseHost: String = "pb.janissaryid.com",

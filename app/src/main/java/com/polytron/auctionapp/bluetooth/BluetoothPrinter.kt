@@ -3,48 +3,52 @@ package com.polytron.auctionapp.bluetooth
 import android.Manifest
 import android.bluetooth.BluetoothDevice
 import androidx.annotation.RequiresPermission
+import com.polytron.auctionapp.bluetooth.EscPosCommands.alignCenter
+import com.polytron.auctionapp.bluetooth.EscPosCommands.alignLeft
+import com.polytron.auctionapp.bluetooth.EscPosCommands.barcodeHeight
+import com.polytron.auctionapp.bluetooth.EscPosCommands.barcodeType
+import com.polytron.auctionapp.bluetooth.EscPosCommands.barcodeWidth
+import com.polytron.auctionapp.bluetooth.EscPosCommands.fontBig
+import com.polytron.auctionapp.bluetooth.EscPosCommands.fontNormal
+import com.polytron.auctionapp.bluetooth.EscPosCommands.newLine
+import com.polytron.auctionapp.bluetooth.EscPosCommands.showBarcodeText
+import com.polytron.auctionapp.bluetooth.EscPosCommands.strip
 import com.polytron.auctionapp.model.ItemResponse
 import java.io.OutputStream
 import java.util.UUID
 
-class BluetoothPrinter() {
+class BluetoothPrinter {
 
     private val footer = 32
 
+    // === CETAK TEST PRINTER ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun testPrinter(device: BluetoothDevice): Boolean {
         val uuid = device.uuids?.firstOrNull()?.uuid
             ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
         return try {
-            val socket = device.createRfcommSocketToServiceRecord(uuid)
-            socket.connect()
-
-            val outputStream = socket.outputStream
-
-            val esc = 0x1B.toByte()
-            val alignCenter = byteArrayOf(esc, 0x61, 0x01) // ESC a 1 -> center
-            val newLine = "\n".repeat(5) // Spasi bawah untuk sobekan
-
-            outputStream.write(newLine.toByteArray())
-            outputStream.write(alignCenter)
-            outputStream.write("Printer OK\n".toByteArray(charset("UTF-8")))
-            outputStream.write(newLine.toByteArray())
-            outputStream.flush()
-
-            socket.close()
-//            println("Printer berhasil diuji dan mencetak.")
+            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
+                socket.connect()
+                socket.outputStream.use { os ->
+                    os.write(newLine(5))
+                    os.write(alignCenter)
+                    os.write("Printer OK\n".toByteArray(Charsets.UTF_8))
+                    os.write(newLine(5))
+                    os.flush()
+                }
+            }
             true
-        } catch (e: Exception) {
-//            println("Gagal menghubungkan ke printer: ${e.message}")
+        } catch (_: Exception) {
             false
         }
     }
 
+    // === CETAK STRUK PEMBAYARAN DENGAN BARCODE ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeReceipt(
         device: BluetoothDevice,
-        item: List<ItemResponse>,
+        items: List<ItemResponse>,
         orderID: String,
         payment: String
     ) {
@@ -52,116 +56,79 @@ class BluetoothPrinter() {
             ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
         try {
-            val socket = device.createRfcommSocketToServiceRecord(uuid)
-            socket.connect()
+            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
+                socket.connect()
+                socket.outputStream.use { os ->
+                    // Header nota
+                    os.write(alignCenter)
+                    os.write(fontBig)
+                    os.write("NOTA PEMBAYARAN\n".toByteArray())
 
-            val outputStream: OutputStream = socket.outputStream
+                    // Order ID
+                    os.write(fontNormal)
+                    os.write("\n$orderID\n\n".toByteArray())
 
-            // ESC/POS Command shortcuts
-            val esc = 0x1B.toByte()
-            val alignLeft = byteArrayOf(esc, 0x61, 0x00)
-            val alignCenter = byteArrayOf(esc, 0x61, 0x01)
-            val fontNormal = byteArrayOf(esc, 0x21, 0x00)
-            val fontBig = byteArrayOf(esc, 0x21, 0x30)
+                    // Detail barang
+                    os.write(alignLeft)
+                    var total = 0
+                    items.forEach {
+                        val name = it.nameItem.orEmpty().padEnd(20, ' ').take(20)
+                        val priceInt = it.price?.toIntOrNull() ?: 0
+                        total += priceInt
+                        val price = "Rp $priceInt"
+                        os.write("%-20s %s\n".format(name, price).toByteArray())
+                    }
 
-            // Cetak Judul: NOTA PEMBAYARAN
-            outputStream.write(alignCenter)
-            outputStream.write(fontBig)
-            outputStream.write("NOTA PEMBAYARAN\n".toByteArray())
+                    // Total
+                    os.write("--------------------------------\n".toByteArray())
+                    os.write("%-20s %s\n\n".format("Total", "Rp $total").toByteArray())
 
-            // Cetak Order ID
-            val orderId = orderID
-            outputStream.write(fontNormal)
-            outputStream.write("\n$orderId\n\n".toByteArray())
+                    // Status pembayaran
+                    os.write(alignCenter)
+                    os.write(fontBig)
+                    os.write("LUNAS\n".toByteArray())
+                    os.write(fontNormal)
+                    os.write("$payment\n\n".toByteArray())
 
-            // Cetak detail barang
-            outputStream.write(alignLeft)
-            var total = 0
-            item.forEach {
-                val name = it.nameItem.orEmpty().padEnd(20, ' ').take(20)
+                    // Barcode
+                    os.writeBarcode(orderID)
 
-                val priceInt = it.price?.toIntOrNull() ?: 0
-                val price = "Rp $priceInt"
-                total += priceInt
-
-                val line = "%-20s %s".format(name, price)
-                outputStream.write("$line\n".toByteArray())
+                    // Footer
+                    os.write(strip(footer))
+                    os.write(newLine(2))
+                    os.flush()
+                }
             }
-
-            // Garis pemisah
-            outputStream.write("--------------------------------\n".toByteArray())
-
-            // Cetak Total
-            val totalStr = "Rp $total"
-            val totalLine = "%-20s %s".format("Total", totalStr)
-            outputStream.write("$totalLine\n\n".toByteArray())
-
-            // LUNAS besar tengah
-            outputStream.write(alignCenter)
-            outputStream.write(fontBig)
-            outputStream.write("LUNAS\n".toByteArray())
-
-            // Tipe pembayaran
-            outputStream.write(fontNormal)
-            outputStream.write("$payment\n\n".toByteArray())
-
-            // Cetak Barcode (pakai Order ID)
-            outputStream.writeBarcodeOrder(orderId)
-
-            // Footer
-            val strip = "-".repeat(footer)
-            outputStream.write("$strip\n\n".toByteArray())
-
-            outputStream.flush()
-            Thread.sleep(1000)
-            socket.close()
-
-//            println("Struk berhasil dicetak.")
         } catch (e: Exception) {
             e.printStackTrace()
-//            println("Gagal mencetak struk: ${e.message}")
         }
     }
 
+    // === CETAK LABEL BARCODE SEDERHANA ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeLabel(device: BluetoothDevice, itemName: String, itemCode: String) {
         val uuid = device.uuids?.firstOrNull()?.uuid
             ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
         try {
-            val socket = device.createRfcommSocketToServiceRecord(uuid)
-            socket.connect()
-
-            val outputStream: OutputStream = socket.outputStream
-            val esc = 0x1B.toByte()
-            val alignCenter = byteArrayOf(esc, 0x61, 0x01)
-            val alignLeft = byteArrayOf(esc, 0x61, 0x00)
-
-            outputStream.write(alignLeft)
-
-            outputStream.write(alignCenter)
-            outputStream.write(itemName.toByteArray())
-            outputStream.write("\n\n".toByteArray())
-
-            outputStream.writeBarcode(itemCode)
-
-            // Kembali ke mode teks biasa
-            outputStream.write(alignLeft)
-
-            // Cetak tanda garis sobek
-            val strip = "-".repeat(footer)
-            outputStream.write("$strip\n\n".toByteArray())
-
-            outputStream.flush()
-            socket.close()
-
-//            println("Label barcode berhasil dicetak.")
+            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
+                socket.connect()
+                socket.outputStream.use { os ->
+                    os.write(alignCenter)
+                    os.write(itemName.toByteArray())
+                    os.write(newLine(2))
+                    os.writeBarcode(itemCode)
+                    os.write(strip(footer))
+                    os.write(newLine(2))
+                    os.flush()
+                }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-//            println("Gagal mencetak barcode: ${e.message}")
         }
     }
 
+    // === CETAK BARCODE UNTUK LELANG ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeAuction(
         device: BluetoothDevice,
@@ -174,50 +141,31 @@ class BluetoothPrinter() {
             ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
         try {
-            val socket = device.createRfcommSocketToServiceRecord(uuid)
-            socket.connect()
+            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
+                socket.connect()
+                socket.outputStream.use { os ->
+                    os.write(alignCenter)
+                    os.write(fontBig)
+                    os.write("$name\n\n".toByteArray())
 
-            val outputStream: OutputStream = socket.outputStream
+                    os.write(alignLeft)
+                    os.write(fontNormal)
+                    os.write("Barang : $itemName\n".toByteArray())
+                    os.write("Harga  : $price\n\n".toByteArray())
 
-            // ESC/POS Command shortcuts
-            val esc = 0x1B.toByte()
-            val alignLeft = byteArrayOf(esc, 0x61, 0x00)
-            val alignCenter = byteArrayOf(esc, 0x61, 0x01)
-            val fontNormal = byteArrayOf(esc, 0x21, 0x00)
-            val fontBig = byteArrayOf(esc, 0x21, 0x30)
-
-            // Print header (centered & big)
-            outputStream.write(alignCenter)
-            outputStream.write(fontBig)
-            outputStream.write("$name\n\n".toByteArray())
-
-            // Print item info (left & normal font)
-            outputStream.write(alignLeft)
-            outputStream.write(fontNormal)
-            outputStream.write("Barang : $itemName\n".toByteArray())
-            outputStream.write("Harga  : $price\n\n".toByteArray())
-
-            // Print barcode (centered)
-            outputStream.write(alignCenter)
-            outputStream.writeBarcode(code) // <-- pastikan extension function `writeBarcode` tersedia
-
-            // Print strip separator
-            outputStream.write(alignLeft)
-            val strip = "-".repeat(footer)
-            outputStream.write("\n$strip\n\n".toByteArray())
-
-            // Finalize
-            outputStream.flush()
-            Thread.sleep(1000)
-            socket.close()
-
-//            println("Label barcode berhasil dicetak.")
+                    os.write(alignCenter)
+                    os.writeBarcode(code)
+                    os.write(strip(footer))
+                    os.write(newLine(2))
+                    os.flush()
+                }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-//            println("Gagal mencetak barcode: ${e.message}")
         }
     }
 
+    // === CETAK LABEL LELANG TANPA BARCODE ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeAuctionItems(
         device: BluetoothDevice,
@@ -229,95 +177,41 @@ class BluetoothPrinter() {
             ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
         try {
-            val socket = device.createRfcommSocketToServiceRecord(uuid)
-            socket.connect()
+            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
+                socket.connect()
+                socket.outputStream.use { os ->
+                    os.write(alignCenter)
+                    os.write(fontBig)
+                    os.write("Barang\n\n".toByteArray())
 
-            val outputStream: OutputStream = socket.outputStream
+                    os.write(fontBig)
+                    os.write("$name\n\n".toByteArray())
 
-            // ESC/POS Command shortcuts
-            val esc = 0x1B.toByte()
-            val alignLeft = byteArrayOf(esc, 0x61, 0x00)
-            val alignCenter = byteArrayOf(esc, 0x61, 0x01)
-            val fontNormal = byteArrayOf(esc, 0x21, 0x00)
-            val fontBig = byteArrayOf(esc, 0x21, 0x30)
+                    os.write(alignLeft)
+                    os.write(fontNormal)
+                    os.write("Barang : $itemName\n".toByteArray())
+                    os.write("Harga  : $price\n\n".toByteArray())
 
-            // Print header (centered & big)
-            outputStream.write(alignCenter)
-            outputStream.write(fontBig)
-            outputStream.write("Barang\n\n".toByteArray())
-
-            // Print header (centered & big)
-            outputStream.write(alignCenter)
-            outputStream.write(fontBig)
-            outputStream.write("$name\n\n".toByteArray())
-
-            // Print item info (left & normal font)
-            outputStream.write(alignLeft)
-            outputStream.write(fontNormal)
-            outputStream.write("Barang : $itemName\n".toByteArray())
-            outputStream.write("Harga  : $price\n\n".toByteArray())
-
-            // Print strip separator
-            outputStream.write(alignLeft)
-            val strip = "-".repeat(footer)
-            outputStream.write("\n$strip\n\n".toByteArray())
-
-            // Finalize
-            outputStream.flush()
-            Thread.sleep(1000)
-            socket.close()
-
-//            println("Label barcode berhasil dicetak.")
+                    os.write(strip(footer))
+                    os.write(newLine(2))
+                    os.flush()
+                }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-//            println("Gagal mencetak barcode: ${e.message}")
         }
     }
 
+    // === EXTENSION UNTUK CETAK BARCODE ===
     private fun OutputStream.writeBarcode(code: String) {
-        val esc = 0x1B.toByte()
-        val gs = 0x1D.toByte()
-
-        val alignCenter = byteArrayOf(esc, 0x61, 0x01) // ESC a 1 (center)
-        val barcodeSelect = byteArrayOf(gs, 0x6B, 0x49) // GS k 73 = CODE128
-        val barcodeHeight = byteArrayOf(gs, 0x68, 100)  // Tinggi barcode
-        val barcodeWidth = byteArrayOf(gs, 0x77, 3)     // Lebar garis (2–6)
-        val showBarcodeText = byteArrayOf(gs, 0x48, 0x02) // Tampilkan text di bawah barcode
-
         write(alignCenter)
         write(barcodeHeight)
         write(barcodeWidth)
         write(showBarcodeText)
-
-        write(barcodeSelect)
+        write(barcodeType)
         write(code.length)
         write(code.toByteArray())
-        write("\n".toByteArray())
-
-//        write(code.toByteArray()) // Kode di bawah barcode
-        write("\n\n".toByteArray())
-    }
-
-    private fun OutputStream.writeBarcodeOrder(code: String) {
-        val esc = 0x1B.toByte()
-        val gs = 0x1D.toByte()
-
-        val alignCenter = byteArrayOf(esc, 0x61, 0x01) // ESC a 1 (center)
-        val barcodeType = byteArrayOf(gs, 0x6B, 0x49) // GS k 73 = CODE128
-        val barcodeHeight = byteArrayOf(gs, 0x68, 100)  // Barcode height
-        val barcodeWidth = byteArrayOf(gs, 0x77, 2)     // Line width (2-6)
-        val showBarcodeText = byteArrayOf(gs, 0x48, 0x02) // Show text below
-
-        write(alignCenter)
-        write(barcodeHeight)
-        write(barcodeWidth)
-        write(showBarcodeText)
-
-        write(barcodeType)
-        write(byteArrayOf(code.length.toByte()))
-        write(code.toByteArray())   // Data barcode
-
-        write("\n\n".toByteArray())
+        write(newLine(2))
     }
 }
 

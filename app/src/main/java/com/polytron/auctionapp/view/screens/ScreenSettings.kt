@@ -1,6 +1,7 @@
 package com.polytron.auctionapp.view.screens
 
 import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -51,20 +53,21 @@ import com.polytron.auctionapp.bluetooth.BluetoothPrinter
 import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.view.components.PrinterListDialog
 import com.polytron.auctionapp.view.components.TopAppBarCustom
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @SuppressLint("MissingPermission")
 @Composable
 fun ScreenSettings(
-    inventoryViewModel: InventoryViewModel = koinInject(),
     modifier: Modifier = Modifier,
+    inventoryViewModel: InventoryViewModel = koinInject(),
     bluetoothHelper: BluetoothHelper,
     navBack: () -> Unit
 ) {
     val email by inventoryViewModel.email.collectAsState()
     val password by inventoryViewModel.password.collectAsState()
-    val isLoggedIn by inventoryViewModel.isLoggedIn.collectAsState()
     val isBluetoothConnected by inventoryViewModel.isBluetoothConnected.collectAsState()
     val showBluetoothDevice by inventoryViewModel.showBluetoothDevice.collectAsState()
     val selectedPrinter by inventoryViewModel.selectedPrinter.collectAsState()
@@ -76,6 +79,8 @@ fun ScreenSettings(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val coroutineScope = rememberCoroutineScope()
+
+    val context = LocalContext.current
 
     // Tampilkan snackbar jika login sukses
     LaunchedEffect(showSnackbar) {
@@ -179,9 +184,16 @@ fun ScreenSettings(
             Row(
                 modifier = Modifier
                     .clickable {
-                        bluetoothHelper.requestBluetooth {
-                            inventoryViewModel.showBluetoothDevice(true)
-                        }
+                        bluetoothHelper.requestBluetooth(
+                            onReady = {
+                                // Bluetooth ready → tampilkan dialog pilih printer
+                                inventoryViewModel.showBluetoothDevice(true)
+                            },
+                            onFailure = { reason ->
+                                // User nolak permission / nolak enable Bluetooth / device nggak support
+                                Toast.makeText(context, "Bluetooth gagal: $reason", Toast.LENGTH_SHORT).show()
+                            }
+                        )
                     }
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -208,7 +220,13 @@ fun ScreenSettings(
                 inventoryViewModel.showBluetoothDevice(false)
 
                 val printer = BluetoothPrinter()
-                printer.testPrinter(device)
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        printer.testPrinter(device)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             },
             onDismiss = {
                 inventoryViewModel.showBluetoothDevice(false)

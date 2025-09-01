@@ -34,10 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
 import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.view.components.PrinterListDialog
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardPayment
@@ -153,16 +153,23 @@ fun ScreenListPayment(
 
                                     if (device != null) {
                                         printer.printBarcodeReceipt(
-                                            item = itemList,
+                                            items = itemList,
                                             payment = itemList[0].typePayment.orEmpty(),
                                             orderID = orderId,
                                             device = device
                                         )
                                     } else {
                                         Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
-                                        bluetoothHelper.requestBluetooth {
-                                            inventoryViewModel.showBluetoothDevice(true)
-                                        }
+                                        bluetoothHelper.requestBluetooth(
+                                            onReady = {
+                                                // Bluetooth aktif → buka dialog pilih printer
+                                                inventoryViewModel.showBluetoothDevice(true)
+                                            },
+                                            onFailure = { reason ->
+                                                // User nolak permission / nolak enable BT / device nggak support
+                                                Toast.makeText(context, "Bluetooth gagal: $reason", Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
                                     }
                                 }
                             )
@@ -179,9 +186,6 @@ fun ScreenListPayment(
             onPrinterSelected = { device ->
                 inventoryViewModel.setSelectedPrinter(device)
                 inventoryViewModel.showBluetoothDevice(false)
-
-                val printer = BluetoothPrinter()
-//                printer.testPrinter(device)
             },
             onDismiss = {
                 inventoryViewModel.showBluetoothDevice(false)

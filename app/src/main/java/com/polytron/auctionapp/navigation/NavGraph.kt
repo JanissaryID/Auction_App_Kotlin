@@ -9,8 +9,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.polytron.auctionapp.model.TypeScreenBarcode
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
+import com.polytron.auctionapp.model.TypeScreenBarcode
 import com.polytron.auctionapp.view.screens.ScreenAuction
 import com.polytron.auctionapp.view.screens.ScreenHome
 import com.polytron.auctionapp.view.screens.ScreenItemList

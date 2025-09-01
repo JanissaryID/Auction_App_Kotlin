@@ -13,21 +13,24 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 
-
 class BluetoothHelper(private val activity: ComponentActivity) {
 
     private val bluetoothAdapter: BluetoothAdapter? by lazy {
-        val bluetoothManager = activity.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothManager =
+            activity.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothManager.adapter
     }
 
     private var onBluetoothReady: (() -> Unit)? = null
+    private var onBluetoothFailure: ((String) -> Unit)? = null
 
     private val permissionLauncher =
         activity.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             val allGranted = permissions.all { it.value == true }
             if (allGranted) {
                 checkAndEnableBluetooth()
+            } else {
+                onBluetoothFailure?.invoke("Permission denied")
             }
         }
 
@@ -35,11 +38,25 @@ class BluetoothHelper(private val activity: ComponentActivity) {
         activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
                 onBluetoothReady?.invoke()
+                clearCallbacks()
+            } else {
+                onBluetoothFailure?.invoke("User refused to enable Bluetooth")
+                clearCallbacks()
             }
         }
 
-    fun requestBluetooth(onReady: () -> Unit) {
+    fun requestBluetooth(
+        onReady: () -> Unit,
+        onFailure: ((String) -> Unit)? = null
+    ) {
         this.onBluetoothReady = onReady
+        this.onBluetoothFailure = onFailure
+
+        if (bluetoothAdapter == null) {
+            onFailure?.invoke("Device does not support Bluetooth")
+            clearCallbacks()
+            return
+        }
 
         if (!hasBluetoothPermissions()) {
             permissionLauncher.launch(requiredPermissions())
@@ -51,6 +68,7 @@ class BluetoothHelper(private val activity: ComponentActivity) {
     private fun checkAndEnableBluetooth() {
         if (bluetoothAdapter?.isEnabled == true) {
             onBluetoothReady?.invoke()
+            clearCallbacks()
         } else {
             val enableIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             enableBluetoothLauncher.launch(enableIntent)
@@ -74,7 +92,10 @@ class BluetoothHelper(private val activity: ComponentActivity) {
                 Manifest.permission.BLUETOOTH_CONNECT
             )
         } else {
-            arrayOf(Manifest.permission.BLUETOOTH)
+            arrayOf(
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.ACCESS_FINE_LOCATION // diperlukan untuk scanning di < Android 12
+            )
         }
     }
 
@@ -93,5 +114,9 @@ class BluetoothHelper(private val activity: ComponentActivity) {
             emptySet()
         }
     }
-}
 
+    private fun clearCallbacks() {
+        onBluetoothReady = null
+        onBluetoothFailure = null
+    }
+}

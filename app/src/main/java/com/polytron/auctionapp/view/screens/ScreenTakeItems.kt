@@ -46,7 +46,6 @@ import org.koin.compose.koinInject
 fun ScreenTakeItems(
     inventoryViewModel: InventoryViewModel = koinInject(),
     navBack: () -> Unit,
-//    navScanBarcode: () -> Unit,
 ) {
     val items by inventoryViewModel.items.collectAsState()
     val filteredItemsStatTwo = items.filter { it.status == 2 }
@@ -58,10 +57,6 @@ fun ScreenTakeItems(
     var isInitialized by remember { mutableStateOf(false) }
     val isSubmittingMap = remember { mutableStateMapOf<String, Boolean>() }
     val coroutineScope = rememberCoroutineScope()
-
-//    LaunchedEffect(Unit) {
-//        inventoryViewModel.fetchItems()
-//    }
 
     LaunchedEffect(selectedItemsState) {
         if (!isInitialized) {
@@ -89,14 +84,6 @@ fun ScreenTakeItems(
                 onRefresh = { inventoryViewModel.fetchItems() },
             )
         },
-//        floatingActionButton = {
-//            FloatingActionButton(
-//                onClick = { navScanBarcode() },
-//                containerColor = MaterialTheme.colorScheme.primary
-//            ) {
-//                Icon(Icons.Default.QrCodeScanner, "Scan Barcode")
-//            }
-//        }
     ) { innerPadding ->
         Column(
             modifier = Modifier

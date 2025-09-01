@@ -10,12 +10,15 @@ import com.polytron.auctionapp.data.remote.model.RealtimeSse
 import com.polytron.auctionapp.data.remote.repository.ItemsRepository
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.RealtimeEvent
-import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonObject
 
 class InventoryViewModel(
     private val userPreferencesRepository: UserPreferencesRepository,

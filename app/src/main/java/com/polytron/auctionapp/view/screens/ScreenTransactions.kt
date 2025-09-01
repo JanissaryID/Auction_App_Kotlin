@@ -71,11 +71,6 @@ fun ScreenTransactions(
 
     val context = LocalContext.current
 
-    // Fetch data saat pertama kali ditampilkan
-//    LaunchedEffect(Unit) {
-//        inventoryViewModel.fetchItems()
-//    }
-
     // Filter berdasarkan pencarian nama/kode
     val filteredItems = items.filter {
         it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||

@@ -35,10 +35,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
 import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
+import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
 import com.polytron.auctionapp.view.components.PrinterListDialog
@@ -224,11 +224,17 @@ fun ScreenItemList(
                                         itemCode = item.codeItem.orEmpty()
                                     )
                                 } else {
-//                                    println("Belum ada printer yang terhubung.")
                                     Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
-                                    bluetoothHelper.requestBluetooth {
-                                        inventoryViewModel.showBluetoothDevice(true)
-                                    }
+                                    bluetoothHelper.requestBluetooth(
+                                        onReady = {
+                                            // Bluetooth aktif → buka dialog pilih printer
+                                            inventoryViewModel.showBluetoothDevice(true)
+                                        },
+                                        onFailure = { reason ->
+                                            // User nolak permission / nolak enable BT / device nggak support
+                                            Toast.makeText(context, "Bluetooth gagal: $reason", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
                                 }
                             }
                         )
@@ -294,9 +300,6 @@ fun ScreenItemList(
             onPrinterSelected = { device ->
                 inventoryViewModel.setSelectedPrinter(device)
                 inventoryViewModel.showBluetoothDevice(false)
-
-                val printer = BluetoothPrinter()
-//                printer.testPrinter(device)
             },
             onDismiss = {
                 inventoryViewModel.showBluetoothDevice(false)
