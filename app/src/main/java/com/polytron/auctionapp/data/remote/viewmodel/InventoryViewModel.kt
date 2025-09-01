@@ -4,7 +4,6 @@ package com.polytron.auctionapp.data.remote.viewmodel
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.data.local.repository.UserPreferencesRepository
 import com.polytron.auctionapp.data.remote.model.RealtimeSse
 import com.polytron.auctionapp.data.remote.repository.ItemsRepository
@@ -35,16 +34,13 @@ class InventoryViewModel(
     val password: StateFlow<String> = _password
 
     private val _token = MutableStateFlow<String?>(null)
-    val token: StateFlow<String?> = _token
 
     private val _idUser = MutableStateFlow<String?>(null)
     val idUser: StateFlow<String?> = _idUser
 
     private val _isLoggedIn = MutableStateFlow(false)
-    val isLoggedIn: StateFlow<Boolean> = _isLoggedIn
 
     private val _showSuccessLogin = MutableStateFlow(false)
-    val showSuccessLogin: StateFlow<Boolean> = _showSuccessLogin
 
     // =======================
     // Bluetooth & printer
@@ -65,14 +61,6 @@ class InventoryViewModel(
 
     fun showBluetoothDevice(stat: Boolean) {
         _showBluetoothDevice.value = stat
-    }
-
-    fun updateBluetoothStatus(helper: BluetoothHelper) {
-        _isBluetoothConnected.value = helper.isBluetoothEnabled()
-    }
-
-    fun toggleBluetooth() {
-        _isBluetoothConnected.value = !_isBluetoothConnected.value
     }
 
     // =======================
@@ -100,10 +88,8 @@ class InventoryViewModel(
     // Realtime
     // =======================
     private val _sseConnected = MutableStateFlow(false)
-    val sseConnected: StateFlow<Boolean> = _sseConnected
 
     private val _sseId = MutableStateFlow<String?>(null)
-    val sseId: StateFlow<String?> = _sseId
 
     private var sseJob: Job? = null
 
@@ -129,7 +115,7 @@ class InventoryViewModel(
 
                 if (loggedIn) {
                     // init repo client with token
-                    itemsRepository.loginWithToken(savedToken!!)
+                    itemsRepository.loginWithToken(savedToken)
                     fetchItems()
                     startRealtimeItems() // mulai SSE (connect + subscribe + process)
                 }
@@ -251,12 +237,6 @@ class InventoryViewModel(
     fun clearEditingForItem(itemId: String) {
         _editingBuyers.value = _editingBuyers.value.toMutableMap().apply { remove(itemId) }
         _editingPrices.value = _editingPrices.value.toMutableMap().apply { remove(itemId) }
-    }
-
-    fun updateSelectedItem(updatedItem: ItemResponse) {
-        _selectedItems.value = _selectedItems.value.map {
-            if (it.id == updatedItem.id) updatedItem else it
-        }
     }
 
     // =======================

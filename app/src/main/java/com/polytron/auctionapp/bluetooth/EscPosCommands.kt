@@ -8,7 +8,7 @@ object EscPosCommands {
     // ==== ALIGN ====
     val alignLeft = byteArrayOf(ESC, 0x61, 0x00)
     val alignCenter = byteArrayOf(ESC, 0x61, 0x01)
-    val alignRight = byteArrayOf(ESC, 0x61, 0x02)
+//    val alignRight = byteArrayOf(ESC, 0x61, 0x02)
 
     // ==== FONT SIZE ====
     val fontNormal = byteArrayOf(ESC, 0x21, 0x00)
