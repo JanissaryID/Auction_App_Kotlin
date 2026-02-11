@@ -31,7 +31,10 @@ fun AppNavHost(
 ) {
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) {
-            ScreenHome(onNavigate = { navController.navigate(it) })
+            ScreenHome(
+                onNavigate = { navController.navigate(it) },
+                bluetoothHelper = bluetoothHelper
+            )
         }
         composable(Screen.Auction.route) {
             ScreenAuction(
