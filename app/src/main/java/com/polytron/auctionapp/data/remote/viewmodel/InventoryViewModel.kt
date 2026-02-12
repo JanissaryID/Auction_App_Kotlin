@@ -248,24 +248,45 @@ class InventoryViewModel(
     // Selection & editing
     // =======================
     fun setSelectedItems(items: List<ItemResponse>) { _selectedItems.value = items }
-    fun removeSelectedItem(item: ItemResponse) {
-        _selectedItems.value = _selectedItems.value.filterNot { it.id == item.id }
+
+    fun addSelectedItem(item: ItemResponse) {
+        if (!_selectedItems.value.any { it.id == item.id }) {
+            _selectedItems.value = _selectedItems.value + item
+        }
     }
+
+    fun removeSelectedItem(item: ItemResponse) {
+        _selectedItems.value = _selectedItems.value.filter { it.id != item.id }
+        // Bersihkan juga data editannya jika item dihapus
+        clearEditingForItem(item.id ?: "")
+    }
+
     fun clearSelectedItems() {
         _selectedItems.value = emptyList()
         _editingBuyers.value = emptyMap()
         _editingPrices.value = emptyMap()
     }
+
     fun updateEditingBuyer(itemId: String, name: String) {
-        _editingBuyers.value = _editingBuyers.value.toMutableMap().apply { put(itemId, name) }
+        val current = _editingBuyers.value.toMutableMap()
+        current[itemId] = name
+        _editingBuyers.value = current
     }
+
     fun updateEditingPrice(itemId: String, price: String) {
+        val current = _editingPrices.value.toMutableMap()
         val clean = price.filter { it.isDigit() }
-        _editingPrices.value = _editingPrices.value.toMutableMap().apply { put(itemId, clean) }
+        current[itemId] = clean
+        _editingPrices.value = current
     }
+
     fun clearEditingForItem(itemId: String) {
-        _editingBuyers.value = _editingBuyers.value.toMutableMap().apply { remove(itemId) }
-        _editingPrices.value = _editingPrices.value.toMutableMap().apply { remove(itemId) }
+        val buyers = _editingBuyers.value.toMutableMap()
+        val prices = _editingPrices.value.toMutableMap()
+        buyers.remove(itemId)
+        prices.remove(itemId)
+        _editingBuyers.value = buyers
+        _editingPrices.value = prices
     }
 
     // =======================

@@ -38,35 +38,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardSelectAuction
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenItemListSelectAuction(
-    inventoryViewModel: InventoryViewModel = koinInject(),
+    inventoryViewModel: InventoryViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
     navBack: () -> Unit,
 ) {
     val items by inventoryViewModel.items.collectAsState()
+    val selectedItems by inventoryViewModel.selectedItems.collectAsState()
+
     val filteredItemsStatZero = items.filter { it.status == 0 }
     var searchQuery by remember { mutableStateOf("") }
-
-    val selectedItemsState by inventoryViewModel.selectedItems.collectAsState()
-    val selectedItems = remember { mutableStateListOf<ItemResponse>() }
-    var isInitialized by remember { mutableStateOf(false) }
-    val isSelectionMode = selectedItems.isNotEmpty()
-
-    LaunchedEffect(selectedItemsState) {
-        if (!isInitialized) {
-            selectedItems.clear()
-            selectedItems.addAll(selectedItemsState)
-            isInitialized = true
-        }
-    }
 
     val filteredItems = filteredItemsStatZero.filter {
         it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
@@ -77,7 +71,7 @@ fun ScreenItemListSelectAuction(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBarCustom(
-                title = "Daftar Barang",
+                title = "Pilih Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
                 onRefresh = { inventoryViewModel.fetchItems() },
@@ -85,17 +79,18 @@ fun ScreenItemListSelectAuction(
         },
         floatingActionButton = {
             AnimatedVisibility(
-                visible = isSelectionMode,
+                visible = selectedItems.isNotEmpty(),
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
                 ExtendedFloatingActionButton(
                     onClick = {
-                        inventoryViewModel.setSelectedItems(selectedItems.toList())
-                        navBack() // aksi saat selesai memilih
+                        // Langsung kembali saja, karena data sudah masuk ke VM
+                        // saat onSelectToggle dipanggil tadi.
+                        navBack()
                     },
-                    icon = { Icon(Icons.Default.Check, contentDescription = "Selesai Pilih") },
-                    text = { Text("${selectedItems.size} Barang") },
+                    icon = { Icon(Icons.Default.Check, contentDescription = null) },
+                    text = { Text("${selectedItems.size} Barang Terpilih") },
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             }
@@ -111,66 +106,43 @@ fun ScreenItemListSelectAuction(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Cari berdasarkan nama atau kode") },
+                label = { Text("Cari Nama atau Kode") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 singleLine = true
             )
 
-            if (isSelectionMode) {
+            if (selectedItems.isNotEmpty()) {
                 TextButton(
-                    onClick = {
-                        selectedItems.clear()
-                        inventoryViewModel.clearSelectedItems()
-                    },
+                    onClick = { inventoryViewModel.clearSelectedItems() },
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Batal Pilih")
+                    Text("Batal Pilih Semua")
                 }
             }
 
             if (filteredItems.isEmpty()) {
-                // Empty state
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f)
-                        .padding(top = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Inventory2,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Tidak ada item yang ditemukan",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
-                    }
+                Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                    Text("Barang tidak ditemukan")
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(vertical = 16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)) {
-                    items(filteredItems) { item ->
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp, top = 8.dp),
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                ) {
+                    items(filteredItems, key = { it.id ?: "" }) { item ->
+                        // Cek status terpilih berdasarkan ID yang ada di VM
+                        val isSelected = selectedItems.any { it.id == item.id }
+
                         ItemCardSelectAuction(
                             item = item,
-                            isSelected = selectedItems.contains(item),
+                            isSelected = isSelected,
                             onSelectToggle = {
-                                if (selectedItems.contains(item)) {
-                                    selectedItems.remove(item)
+                                if (isSelected) {
+                                    inventoryViewModel.removeSelectedItem(item)
                                 } else {
-                                    selectedItems.add(item)
+                                    inventoryViewModel.addSelectedItem(item)
                                 }
                             }
                         )
