@@ -1,7 +1,9 @@
 package com.polytron.auctionapp.data.remote.repository
 
+import android.util.Log
 import com.polytron.auctionapp.data.remote.model.AuthResult
 import com.polytron.auctionapp.data.remote.model.RealtimeSse
+import com.polytron.auctionapp.data.remote.model.User
 import com.polytron.auctionapp.model.ItemResponse
 import io.github.agrevster.pocketbaseKotlin.PocketbaseClient
 import io.github.agrevster.pocketbaseKotlin.dsl.login
@@ -33,14 +35,35 @@ class ItemsRepositoryImpl(
     )
 
     override suspend fun loginWithEmailPassword(email: String, password: String): AuthResult {
+        // 1. Auth dengan Password
         val loginResult = client.records.authWithPassword<AuthRecord>(
             collection = "users",
             email = email,
             password = password
         )
+
+        // 2. Karena getOne butuh ID, kita ambil dari loginResult
+        val userId = loginResult.record.id.orEmpty()
+
+        client.login(loginResult.token)
+        // 3. Fetch data user lengkap menggunakan fungsi getUser
+        val userProfile = getUser(userId)
+
+
         return AuthResult(
             token = loginResult.token,
-            userId = loginResult.record.id.orEmpty()
+            userId = userId,
+            name = userProfile.name,
+            avatar = userProfile.avatar
+        )
+    }
+
+    override suspend fun getUser(id: String): User {
+        // Memanggil getOne sesuai definisi yang kamu berikan
+        Log.i("LOGIN", "loginWithEmailPassword: ${id}")
+        return client.records.getOne<User>(
+            sub = "users",
+            id = id
         )
     }
 

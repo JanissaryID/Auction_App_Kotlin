@@ -1,7 +1,7 @@
 package com.polytron.auctionapp.data.remote.viewmodel
 
-
 import android.bluetooth.BluetoothDevice
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.polytron.auctionapp.data.local.repository.UserPreferencesRepository
@@ -11,8 +11,10 @@ import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.model.RealtimeEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -34,11 +36,20 @@ class InventoryViewModel(
     val password: StateFlow<String> = _password
 
     private val _token = MutableStateFlow<String?>(null)
+    val token: StateFlow<String?> = _token
 
     private val _idUser = MutableStateFlow<String?>(null)
     val idUser: StateFlow<String?> = _idUser
 
+    // State untuk Nama/Username yang akan ditampilkan di UI
+    private val _userName = MutableStateFlow<String?>(null)
+    val userName: StateFlow<String?> = _userName
+
+    private val _avatarFileName = MutableStateFlow<String?>(null)
+    val avatarFileName: StateFlow<String?> = _avatarFileName
+
     private val _isLoggedIn = MutableStateFlow(false)
+    val isLoggedIn: StateFlow<Boolean> = _isLoggedIn
 
     private val _showSuccessLogin = MutableStateFlow(false)
 
@@ -54,9 +65,12 @@ class InventoryViewModel(
     private val _selectedPrinter = MutableStateFlow<BluetoothDevice?>(null)
     val selectedPrinter: StateFlow<BluetoothDevice?> = _selectedPrinter
 
+    private val _toastEvent = MutableSharedFlow<String>()
+    val toastEvent = _toastEvent.asSharedFlow()
+
     fun setSelectedPrinter(device: BluetoothDevice) {
         _selectedPrinter.value = device
-        _isBluetoothConnected.value = true // anggap sudah tersambung
+        _isBluetoothConnected.value = true
     }
 
     fun showBluetoothDevice(stat: Boolean) {
@@ -88,15 +102,12 @@ class InventoryViewModel(
     // Realtime
     // =======================
     private val _sseConnected = MutableStateFlow(false)
-
     private val _sseId = MutableStateFlow<String?>(null)
-
     private var sseJob: Job? = null
 
     private val COLLECTION_ITEMS = "Items"
 
     init {
-        // Hanya ViewModel yang menjalankan coroutine
         viewModelScope.launch {
             userPreferencesRepository.userEmail.collectLatest { _email.value = it.orEmpty() }
         }
@@ -106,6 +117,15 @@ class InventoryViewModel(
         viewModelScope.launch {
             userPreferencesRepository.userIdUser.collectLatest { _idUser.value = it.orEmpty() }
         }
+        // Collect Nama User dari DataStore
+        viewModelScope.launch {
+            userPreferencesRepository.userName.collectLatest { _userName.value = it }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.userAvatar.collectLatest { _avatarFileName.value = it }
+        }
+
         viewModelScope.launch {
             userPreferencesRepository.userToken.collectLatest { savedToken ->
                 _token.value = savedToken
@@ -114,10 +134,9 @@ class InventoryViewModel(
                 _showSuccessLogin.value = loggedIn
 
                 if (loggedIn) {
-                    // init repo client with token
                     itemsRepository.loginWithToken(savedToken)
                     fetchItems()
-                    startRealtimeItems() // mulai SSE (connect + subscribe + process)
+                    startRealtimeItems()
                 }
             }
         }
@@ -143,28 +162,56 @@ class InventoryViewModel(
                     return@launch
                 }
 
+                // Repository sekarang sudah melakukan fetch 'getOne' di dalamnya
                 val auth = itemsRepository.loginWithEmailPassword(_email.value, _password.value)
 
                 _token.value = auth.token
                 _idUser.value = auth.userId
+                _userName.value = auth.name
+                _avatarFileName.value = auth.avatar
                 _isLoggedIn.value = true
                 _showSuccessLogin.value = true
 
+                // Simpan ke DataStore
                 userPreferencesRepository.saveLogin(
-                    _email.value,
-                    _password.value,
-                    auth.token,
-                    auth.userId
+                    email = _email.value,
+                    password = _password.value,
+                    token = auth.token,
+                    idUser = auth.userId,
+                    name = auth.name ?: "Unknown",
+                    avatar = auth.avatar
                 )
+
                 itemsRepository.loginWithToken(auth.token)
+
+                // Trigger fetch data awal setelah login berhasil
+                fetchItems()
+                startRealtimeItems()
+
+                _toastEvent.emit("Berhasil Login, ${auth.name}!")
 
                 onSuccess()
             } catch (e: Exception) {
-                errorMessage.value = "Login gagal: ${e.localizedMessage ?: "Unknown error"}"
+                Log.i("LOGIN", "loginWithEmailPassword: $e")
+                errorMessage.value = "Login gagal: ${e.localizedMessage}"
+                _toastEvent.emit("Login gagal")
                 onError(errorMessage.value!!)
             } finally {
                 isLoading.value = false
             }
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            userPreferencesRepository.clearLogin() // Pastikan fungsi ini ada di repo
+            _token.value = null
+            _idUser.value = null
+            _userName.value = null
+            _isLoggedIn.value = false
+            _items.value = emptyList()
+            sseJob?.cancel()
+            _toastEvent.emit("Berhasil Logout")
         }
     }
 
@@ -175,65 +222,47 @@ class InventoryViewModel(
         viewModelScope.launch {
             try {
                 _items.value = itemsRepository.getItems(page = 1, perPage = 500)
-            } catch (_: Exception) {
-                // swallow/log if needed
-            }
+            } catch (_: Exception) {}
         }
     }
 
     fun createItem(item: ItemResponse) {
         viewModelScope.launch {
-            try {
-                itemsRepository.createItem(item)
-                // Optional: fetchItems()
-            } catch (_: Exception) { }
+            try { itemsRepository.createItem(item) } catch (_: Exception) {}
         }
     }
 
     fun patchItem(id: String, item: ItemResponse) {
         viewModelScope.launch {
-            try {
-                itemsRepository.updateItem(id, item)
-                // Optional: fetchItems()
-            } catch (_: Exception) { }
+            try { itemsRepository.updateItem(id, item) } catch (_: Exception) {}
         }
     }
 
     fun deleteItem(id: String) {
         viewModelScope.launch {
-            try {
-                itemsRepository.deleteItem(id)
-                // Optional: fetchItems()
-            } catch (_: Exception) { }
+            try { itemsRepository.deleteItem(id) } catch (_: Exception) {}
         }
     }
 
     // =======================
     // Selection & editing
     // =======================
-    fun setSelectedItems(items: List<ItemResponse>) {
-        _selectedItems.value = items
-    }
-
+    fun setSelectedItems(items: List<ItemResponse>) { _selectedItems.value = items }
     fun removeSelectedItem(item: ItemResponse) {
         _selectedItems.value = _selectedItems.value.filterNot { it.id == item.id }
     }
-
     fun clearSelectedItems() {
         _selectedItems.value = emptyList()
         _editingBuyers.value = emptyMap()
         _editingPrices.value = emptyMap()
     }
-
     fun updateEditingBuyer(itemId: String, name: String) {
         _editingBuyers.value = _editingBuyers.value.toMutableMap().apply { put(itemId, name) }
     }
-
     fun updateEditingPrice(itemId: String, price: String) {
         val clean = price.filter { it.isDigit() }
         _editingPrices.value = _editingPrices.value.toMutableMap().apply { put(itemId, clean) }
     }
-
     fun clearEditingForItem(itemId: String) {
         _editingBuyers.value = _editingBuyers.value.toMutableMap().apply { remove(itemId) }
         _editingPrices.value = _editingPrices.value.toMutableMap().apply { remove(itemId) }
@@ -243,23 +272,16 @@ class InventoryViewModel(
     // Realtime (SSE)
     // =======================
     fun startRealtimeItems() {
-        // Restart aman
         sseJob?.cancel()
-
         sseJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 _sseConnected.value = false
-
                 itemsRepository.withRealtimeEvents { evt: RealtimeSse ->
                     evt.id?.let { id ->
                         if (_sseId.value != id) {
                             _sseId.value = id
-                            // lakukan subscribe ketika pertama kali dapat id
                             viewModelScope.launch {
-                                itemsRepository.subscribeRealtime(
-                                    clientId = id,
-                                    collections = listOf(COLLECTION_ITEMS)
-                                )
+                                itemsRepository.subscribeRealtime(id, listOf(COLLECTION_ITEMS))
                             }
                         }
                         _sseConnected.value = true
@@ -280,17 +302,10 @@ class InventoryViewModel(
             if (element.jsonObject.containsKey("record")) {
                 val event = json.decodeFromJsonElement<RealtimeEvent>(element)
                 when (event.action) {
-                    "create",
-                    "update",
-                    "delete" -> fetchItems()
-
+                    "create", "update", "delete" -> fetchItems()
                     else -> Unit
                 }
-            } else {
-                // non-record event, abaikan
             }
-        } catch (_: Exception) {
-            // parsing gagal, abaikan/log
-        }
+        } catch (_: Exception) {}
     }
 }

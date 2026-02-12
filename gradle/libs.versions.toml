@@ -12,6 +12,7 @@ ktorClientLogging = "3.2.2"
 lifecycleRuntimeKtx = "2.9.2"
 activityCompose = "1.10.1"
 composeBom = "2025.07.00"
+coil = "2.6.0"
 
 koin = "4.1.0"
 materialIconsExtended = "1.7.8"
@@ -21,7 +22,7 @@ navigationRuntimeKtx = "2.9.2"
 datastore = "1.1.7"
 #noinspection NewerVersionAvailable
 ktor = "3.2.2"
-pocketbaseKotlin = "2.7.1"
+pocketbaseKotlin = "2.7.3"
 poiOoxml = "5.4.1"
 serialization = "1.9.0"
 
@@ -75,6 +76,7 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcodeScanning" }
 pocketbase-kotlin = { module = "io.github.agrevster:pocketbase-kotlin", version.ref = "pocketbaseKotlin" }
 poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poiOoxml" }
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

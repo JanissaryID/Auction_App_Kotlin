@@ -2,12 +2,14 @@ package com.polytron.auctionapp.data.remote.repository
 
 import com.polytron.auctionapp.data.remote.model.AuthResult
 import com.polytron.auctionapp.data.remote.model.RealtimeSse
+import com.polytron.auctionapp.data.remote.model.User
 import com.polytron.auctionapp.model.ItemResponse
 
 interface ItemsRepository {
     // Auth
     suspend fun loginWithEmailPassword(email: String, password: String): AuthResult
     suspend fun loginWithToken(token: String)
+    suspend fun getUser(id: String): User
 
     // CRUD
     suspend fun getItems(page: Int = 1, perPage: Int = 500): List<ItemResponse>

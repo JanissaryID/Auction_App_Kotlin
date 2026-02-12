@@ -27,6 +27,12 @@ class UserPreferencesViewModel(
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn
 
+    private val _userName = MutableStateFlow<String?>(null)
+    val userName: StateFlow<String?> = _userName
+
+    private val _avatarFileName = MutableStateFlow<String?>(null)
+    val avatarFileName: StateFlow<String?> = _avatarFileName
+
     init {
         viewModelScope.launch {
             repo.userEmail.collectLatest { _email.value = it.orEmpty() }
@@ -43,11 +49,17 @@ class UserPreferencesViewModel(
         viewModelScope.launch {
             repo.isLoggedIn.collectLatest { _isLoggedIn.value = it }
         }
+        viewModelScope.launch {
+            repo.userName.collectLatest { _userName.value = it }
+        }
+        viewModelScope.launch {
+            repo.userAvatar.collectLatest { _avatarFileName.value = it }
+        }
     }
 
-    fun saveLogin(email: String, password: String, token: String, idUser: String) {
+    fun saveLogin(email: String, password: String, token: String, idUser: String, name: String, avatar: String?) {
         viewModelScope.launch {
-            repo.saveLogin(email, password, token, idUser)
+            repo.saveLogin(email, password, token, idUser, name, avatar)
         }
     }
 
