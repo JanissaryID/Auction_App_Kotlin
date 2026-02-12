@@ -19,7 +19,6 @@ import com.polytron.auctionapp.view.screens.ScreenItemListSelectPayment
 import com.polytron.auctionapp.view.screens.ScreenListPayment
 import com.polytron.auctionapp.view.screens.ScreenPayment
 import com.polytron.auctionapp.view.screens.ScreenScanBarcode
-import com.polytron.auctionapp.view.screens.ScreenSettings
 import com.polytron.auctionapp.view.screens.ScreenTakeItems
 import com.polytron.auctionapp.view.screens.ScreenTransactions
 
@@ -97,12 +96,6 @@ fun AppNavHost(
         composable(Screen.Transactions.route) {
             ScreenTransactions(
                 navBack = { navController.popBackStack() }
-            )
-        }
-        composable(Screen.Settings.route) {
-            ScreenSettings(
-                navBack = { navController.popBackStack() },
-                bluetoothHelper = bluetoothHelper
             )
         }
     }

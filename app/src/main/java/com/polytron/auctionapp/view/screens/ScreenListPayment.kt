@@ -38,8 +38,8 @@ import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
 import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.model.ItemResponse
-import com.polytron.auctionapp.view.components.PrinterListDialog
 import com.polytron.auctionapp.view.components.TopAppBarCustom
+import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.itemcard.ItemCardPayment
 import org.koin.compose.koinInject
 

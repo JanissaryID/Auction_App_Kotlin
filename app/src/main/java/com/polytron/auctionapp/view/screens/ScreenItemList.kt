@@ -41,9 +41,9 @@ import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
-import com.polytron.auctionapp.view.components.PrinterListDialog
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.bottomsheet.AddOrEditItemBottomSheet
+import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.fab.FabWithDelete
 import com.polytron.auctionapp.view.components.itemcard.ItemCard
 import kotlinx.coroutines.delay

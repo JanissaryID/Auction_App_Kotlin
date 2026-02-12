@@ -101,34 +101,43 @@ class ItemsRepositoryImpl(
     }
 
     override suspend fun withRealtimeEvents(onEvent: suspend (RealtimeSse) -> Unit) {
-        // Tidak ada launch di sini. Caller (VM) yang memanggil dalam scope-nya.
-        client.httpClient.sse(path = "/api/realtime") {
-            incoming.collect { evt ->
-                onEvent(
-                    RealtimeSse(
-                        id = evt.id,
-                        data = evt.data
+        try {
+            client.httpClient.sse(path = "/api/realtime") {
+                incoming.collect { evt ->
+                    onEvent(
+                        RealtimeSse(
+                            id = evt.id,
+                            data = evt.data
+                        )
                     )
-                )
+                }
             }
+        } catch (e: Exception) {
+            // Log error agar tidak crash
+            Log.e("SSE_ERROR", "Gagal koneksi SSE: ${e.message}")
+            // Kamu bisa melempar error kembali atau membiarkannya agar VM yang menangani
         }
     }
 
     override suspend fun subscribeRealtime(clientId: String, collections: List<String>): Boolean {
-        val body: JsonObject = buildJsonObject {
-            put("clientId", JsonPrimitive(clientId))
-            put(
-                "subscriptions",
-                JsonArray(collections.map { JsonPrimitive(it) })
-            )
-        }
+        return try {
+            val body: JsonObject = buildJsonObject {
+                put("clientId", JsonPrimitive(clientId))
+                put(
+                    "subscriptions",
+                    JsonArray(collections.map { JsonPrimitive(it) })
+                )
+            }
 
-        val response = client.httpClient.post {
-            url { path("/api/realtime") }
-            contentType(ContentType.Application.Json)
-            setBody(body)
+            val response = client.httpClient.post {
+                url { path("/api/realtime") }
+                contentType(ContentType.Application.Json)
+                setBody(body)
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            Log.e("REALTIME_ERROR", "Gagal subscribe realtime: ${e.message}")
+            false // Kembalikan false agar aplikasi tahu proses gagal tapi tidak crash
         }
-        // Anda bisa validasi response bila perlu
-        return response.status.isSuccess()
     }
 }

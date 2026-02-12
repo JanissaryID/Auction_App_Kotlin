@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -222,7 +223,10 @@ class InventoryViewModel(
         viewModelScope.launch {
             try {
                 _items.value = itemsRepository.getItems(page = 1, perPage = 500)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.e("FETCH_ITEMS", "Error: ${e.message}")
+                // errorMessage.value = "Gagal mengambil data terbaru"
+            }
         }
     }
 
@@ -250,8 +254,9 @@ class InventoryViewModel(
     fun setSelectedItems(items: List<ItemResponse>) { _selectedItems.value = items }
 
     fun addSelectedItem(item: ItemResponse) {
-        if (!_selectedItems.value.any { it.id == item.id }) {
-            _selectedItems.value = _selectedItems.value + item
+        val current = _selectedItems.value
+        if (!current.any { it.id == item.id }) {
+            _selectedItems.value = current + item
         }
     }
 
@@ -295,22 +300,34 @@ class InventoryViewModel(
     fun startRealtimeItems() {
         sseJob?.cancel()
         sseJob = viewModelScope.launch(Dispatchers.IO) {
-            try {
-                _sseConnected.value = false
-                itemsRepository.withRealtimeEvents { evt: RealtimeSse ->
-                    evt.id?.let { id ->
-                        if (_sseId.value != id) {
-                            _sseId.value = id
-                            viewModelScope.launch {
-                                itemsRepository.subscribeRealtime(id, listOf(COLLECTION_ITEMS))
+            // Gunakan loop agar jika koneksi putus (timeout), dia mencoba lagi
+            while (this.isActive) {
+                try {
+                    _sseConnected.value = false
+                    Log.d("SSE", "Mencoba menghubungkan ke Realtime SSE...")
+
+                    itemsRepository.withRealtimeEvents { evt: RealtimeSse ->
+                        evt.id?.let { id ->
+                            if (_sseId.value != id) {
+                                _sseId.value = id
+                                viewModelScope.launch {
+                                    try {
+                                        itemsRepository.subscribeRealtime(id, listOf(COLLECTION_ITEMS))
+                                    } catch (e: Exception) {
+                                        Log.e("SSE", "Gagal Subscribe: ${e.message}")
+                                    }
+                                }
                             }
+                            _sseConnected.value = true
                         }
-                        _sseConnected.value = true
+                        handleRealtimeEventPayload(evt.data)
                     }
-                    handleRealtimeEventPayload(evt.data)
+                } catch (e: Exception) {
+                    _sseConnected.value = false
+                    Log.e("SSE", "Koneksi Realtime Error: ${e.message}. Mencoba lagi dalam 5 detik...")
+                    // Jeda sebelum mencoba menghubungkan kembali agar tidak memberatkan server/HP
+                    kotlinx.coroutines.delay(5000)
                 }
-            } catch (_: Exception) {
-                _sseConnected.value = false
             }
         }
     }

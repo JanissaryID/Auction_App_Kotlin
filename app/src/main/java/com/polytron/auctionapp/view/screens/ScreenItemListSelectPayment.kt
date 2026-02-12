@@ -38,17 +38,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.model.ItemResponse
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardSelectPayment
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenItemListSelectPayment(
-    inventoryViewModel: InventoryViewModel = koinInject(),
+    inventoryViewModel: InventoryViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
     navBack: () -> Unit,
 ) {
     val items by inventoryViewModel.items.collectAsState()
@@ -85,17 +89,17 @@ fun ScreenItemListSelectPayment(
         },
         floatingActionButton = {
             AnimatedVisibility(
-                visible = isSelectionMode,
+                visible = selectedItemsState.isNotEmpty(), // Gunakan state VM
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
                 ExtendedFloatingActionButton(
                     onClick = {
-                        inventoryViewModel.setSelectedItems(selectedItems.toList())
-                        navBack() // aksi saat selesai memilih
+                        // Tidak perlu setSelectedItems lagi karena data sudah di VM
+                        navBack()
                     },
                     icon = { Icon(Icons.Default.Check, contentDescription = "Selesai Pilih") },
-                    text = { Text("${selectedItems.size} Barang") },
+                    text = { Text("${selectedItemsState.size} Barang") },
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             }
@@ -162,15 +166,17 @@ fun ScreenItemListSelectPayment(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)) {
-                    items(filteredItems) { item ->
+                    items(filteredItems, key = { it.id ?: "" }) { item ->
+                        val isSelected = selectedItemsState.any { it.id == item.id }
+
                         ItemCardSelectPayment(
                             item = item,
-                            isSelected = selectedItems.contains(item),
+                            isSelected = isSelected,
                             onSelectToggle = {
-                                if (selectedItems.contains(item)) {
-                                    selectedItems.remove(item)
+                                if (isSelected) {
+                                    inventoryViewModel.removeSelectedItem(item)
                                 } else {
-                                    selectedItems.add(item)
+                                    inventoryViewModel.addSelectedItem(item)
                                 }
                             }
                         )
