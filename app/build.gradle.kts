@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.google.devtools.ksp)
 }
 
 android {
@@ -33,8 +34,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_18
         targetCompatibility = JavaVersion.VERSION_18
     }
-    kotlinOptions {
-        jvmTarget = "18"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_18)
+        }
     }
     buildFeatures {
         compose = true
@@ -98,4 +101,11 @@ dependencies {
     // ML Kit Barcode Scanning
     implementation(libs.barcode.scanning)
     implementation(libs.coil.compose)
+
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.paging) // Penting untuk integrasi Paging
+    ksp(libs.androidx.room.compiler)
+
+    implementation(libs.google.gson)
 }
