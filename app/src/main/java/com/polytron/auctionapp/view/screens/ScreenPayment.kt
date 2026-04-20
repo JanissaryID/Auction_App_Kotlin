@@ -29,7 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
-import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
+import com.polytron.auctionapp.ui.viewmodel.AuctionViewModel
+import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
+import com.polytron.auctionapp.ui.viewmodel.PrinterViewModel
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.utils.generateRandomAlphanumeric
 import com.polytron.auctionapp.view.components.EmptyItemState
@@ -42,13 +44,19 @@ import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenPayment(
-    inventoryViewModel: InventoryViewModel = koinViewModel(
+    itemsViewModel: ItemsViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
+    auctionViewModel: AuctionViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
+    printerViewModel: PrinterViewModel = koinViewModel(
         viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
     ),
     bluetoothHelper: BluetoothHelper,
@@ -61,57 +69,34 @@ fun ScreenPayment(
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // --- State UI & ViewModel ---
-    val selectedItems by inventoryViewModel.selectedItems.collectAsState()
-    val printerDevice by inventoryViewModel.selectedPrinter.collectAsState()
-    val showBluetoothDevice by inventoryViewModel.showBluetoothDevice.collectAsState()
+    val selectedItems by auctionViewModel.selectedItems.collectAsState()
+    val printerDevice by printerViewModel.selectedPrinter.collectAsState()
+    val showBluetoothDevice by printerViewModel.showBluetoothDevice.collectAsState()
 
     var isFabExpanded by remember { mutableStateOf(false) }
     var showSheet by remember { mutableStateOf(false) }
     var showNoPrinterDialog by remember { mutableStateOf(false) }
     var isSubmitting by remember { mutableStateOf(false) }
-
-    // Menyimpan pilihan pembayaran sementara saat printer belum terhubung
     var pendingPaymentLabel by remember { mutableStateOf("") }
 
-    // --- Fungsi Inti: Proses Pembayaran ---
     val onProcessPayment = { paymentLabel: String, shouldPrint: Boolean ->
         isSubmitting = true
         showSheet = false
         showNoPrinterDialog = false
-
         val orderID = "Order-${generateRandomAlphanumeric()}"
 
         coroutineScope.launch {
             try {
-                // 1. Update status ke database server (Status 2 = Paid)
                 selectedItems.forEach { item ->
-                    val updatedItem = item.copy(
-                        status = 2,
-                        orderID = orderID,
-                        typePayment = paymentLabel
-                    )
-                    inventoryViewModel.patchItem(item.id!!, updatedItem)
-                    delay(300) // Jeda tipis untuk stabilitas request
+                    val updatedItem = item.copy(status = 2, orderID = orderID, typePayment = paymentLabel)
+                    itemsViewModel.patchItem(item.id!!, updatedItem)
+                    delay(300)
                 }
-
-                // 2. Eksekusi Print jika printer siap dan user memilih "Cetak"
                 if (shouldPrint && printerDevice != null) {
-                    val printer = BluetoothPrinter()
-                    printer.printBarcodeReceipt(
-                        items = selectedItems,
-                        payment = paymentLabel,
-                        orderID = orderID,
-                        device = printerDevice!!
-                    )
+                    BluetoothPrinter().printBarcodeReceipt(items = selectedItems, payment = paymentLabel, orderID = orderID, device = printerDevice!!)
                 }
-
-                // 3. Cleanup
-                inventoryViewModel.clearSelectedItems()
-                snackbarHostState.showSnackbar(
-                    if (shouldPrint) "Pembayaran Berhasil & Struk Dicetak"
-                    else "Pembayaran Berhasil Disimpan"
-                )
+                auctionViewModel.clearSelectedItems()
+                snackbarHostState.showSnackbar(if (shouldPrint) "Pembayaran Berhasil & Struk Dicetak" else "Pembayaran Berhasil Disimpan")
             } catch (e: Exception) {
                 Toast.makeText(context, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
@@ -120,11 +105,7 @@ fun ScreenPayment(
         }
     }
 
-    // Handle back button hardware
-    BackHandler {
-        navBack()
-        inventoryViewModel.clearSelectedItems()
-    }
+    BackHandler { navBack(); auctionViewModel.clearSelectedItems() }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -132,16 +113,10 @@ fun ScreenPayment(
         topBar = {
             TopAppBarCustom(
                 title = "Pembayaran",
-                onBack = {
-                    navBack()
-                    inventoryViewModel.clearSelectedItems()
-                },
+                onBack = { navBack(); auctionViewModel.clearSelectedItems() },
                 additionalActions = {
                     IconButton(onClick = { navListPayment() }) {
-                        Icon(
-                            imageVector = Icons.Default.Receipt,
-                            contentDescription = "Riwayat Pembayaran"
-                        )
+                        Icon(imageVector = Icons.Default.Receipt, contentDescription = "Riwayat Pembayaran")
                     }
                 }
             )
@@ -164,43 +139,26 @@ fun ScreenPayment(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
             if (selectedItems.isEmpty()) {
                 EmptyItemState()
             } else {
-                // Komponen kartu yang berisi daftar item yang akan dibayar
-                ReceiptCard(selectedItems = selectedItems) { item ->
-                    inventoryViewModel.removeSelectedItem(item)
-                }
+                ReceiptCard(selectedItems = selectedItems) { item -> auctionViewModel.removeSelectedItem(item) }
             }
         }
     }
 
-    // --- 1. Bottom Sheet: Pilih Metode Pembayaran ---
     if (showSheet) {
-        val totalAmount = selectedItems.sumOf { item ->
-            item.price?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L
-        }
-
-        ModalBottomSheet(
-            onDismissRequest = { showSheet = false },
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-        ) {
+        val totalAmount = selectedItems.sumOf { it.price?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L }
+        ModalBottomSheet(onDismissRequest = { showSheet = false }, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
             PaymentBottomSheet(
                 total = formatRupiah(totalAmount.toString()),
                 onDismiss = { showSheet = false },
                 onPay = { paymentType ->
                     if (printerDevice == null) {
-                        // Simpan pilihan user, tampilkan dialog printer
                         pendingPaymentLabel = paymentType.label
                         showNoPrinterDialog = true
                     } else {
-                        // Printer ada, langsung proses cetak
                         onProcessPayment(paymentType.label, true)
                     }
                 }
@@ -208,34 +166,25 @@ fun ScreenPayment(
         }
     }
 
-    // --- 2. Custom No Printer Dialog (Reusable) ---
     if (showNoPrinterDialog) {
         NoPrinterDialog(
             onDismiss = { showNoPrinterDialog = false },
-            onSaveOnly = {
-                onProcessPayment(pendingPaymentLabel, false)
-            },
+            onSaveOnly = { onProcessPayment(pendingPaymentLabel, false) },
             onConnectPrinter = {
                 showNoPrinterDialog = false
                 bluetoothHelper.requestBluetooth(
-                    onReady = { inventoryViewModel.showBluetoothDevice(true) },
+                    onReady = { printerViewModel.showBluetoothDevice(true) },
                     onFailure = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
                 )
             }
         )
     }
 
-    // --- 3. Bluetooth Printer Selection Dialog ---
     if (showBluetoothDevice) {
         PrinterListDialog(
             bluetoothHelper = bluetoothHelper,
-            onPrinterSelected = { device ->
-                inventoryViewModel.setSelectedPrinter(device)
-                inventoryViewModel.showBluetoothDevice(false)
-            },
-            onDismiss = {
-                inventoryViewModel.showBluetoothDevice(false)
-            }
+            onPrinterSelected = { device -> printerViewModel.setSelectedPrinter(device); printerViewModel.showBluetoothDevice(false) },
+            onDismiss = { printerViewModel.showBluetoothDevice(false) }
         )
     }
 }

@@ -23,10 +23,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,43 +32,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
-import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
-import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
+import com.polytron.auctionapp.ui.viewmodel.PrinterViewModel
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.itemcard.ItemCardPayment
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenListPayment(
-    inventoryViewModel: InventoryViewModel = koinInject(),
+    itemsViewModel: ItemsViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
+    printerViewModel: PrinterViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
     bluetoothHelper: BluetoothHelper,
     navBack: () -> Unit,
 ) {
     val context = LocalContext.current
-
-    val items by inventoryViewModel.items.collectAsState()
+    val items by itemsViewModel.items.collectAsState()
     val filteredItemsStatTwo = items.filter { it.status == 2 }
+    val printerDevice by printerViewModel.selectedPrinter.collectAsState()
+    val showBluetoothDevice by printerViewModel.showBluetoothDevice.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
-
-    val selectedItemsState by inventoryViewModel.selectedItems.collectAsState()
-    val printerDevice by inventoryViewModel.selectedPrinter.collectAsState()
-    val showBluetoothDevice by inventoryViewModel.showBluetoothDevice.collectAsState()
-    val selectedItems = remember { mutableStateListOf<ItemResponse>() }
-    var isInitialized by remember { mutableStateOf(false) }
-
-    LaunchedEffect(selectedItemsState) {
-        if (!isInitialized) {
-            selectedItems.clear()
-            selectedItems.addAll(selectedItemsState)
-            isInitialized = true
-        }
-    }
 
     val filteredItems = filteredItemsStatTwo.filter {
         it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
@@ -87,7 +78,7 @@ fun ScreenListPayment(
                 title = "Daftar Pembayaran",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { inventoryViewModel.fetchItems() },
+                onRefresh = { itemsViewModel.fetchItems() },
             )
         },
     ) { innerPadding ->
@@ -102,44 +93,26 @@ fun ScreenListPayment(
                 onValueChange = { searchQuery = it },
                 label = { Text("Cari berdasarkan nama atau kode") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 singleLine = true
             )
 
             if (filteredItems.isEmpty()) {
-                // Empty state
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(top = 48.dp),
+                    modifier = Modifier.fillMaxWidth().weight(1f).padding(top = 48.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Inventory2,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(64.dp)
-                        )
+                        Icon(imageVector = Icons.Default.Inventory2, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(64.dp))
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Tidak ada item yang ditemukan",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
+                        Text(text = "Tidak ada item yang ditemukan", style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurfaceVariant))
                     }
                 }
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(vertical = 16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
+                    modifier = Modifier.fillMaxWidth().weight(1f)
                 ) {
                     groupedFilteredItems.forEach { (orderId, itemList) ->
                         item {
@@ -148,27 +121,14 @@ fun ScreenListPayment(
                                 items = itemList,
                                 takeItemScreen = false,
                                 onClick = {
-                                    val printer = BluetoothPrinter()
                                     val device = printerDevice
-
                                     if (device != null) {
-                                        printer.printBarcodeReceipt(
-                                            items = itemList,
-                                            payment = itemList[0].typePayment.orEmpty(),
-                                            orderID = orderId,
-                                            device = device
-                                        )
+                                        BluetoothPrinter().printBarcodeReceipt(items = itemList, payment = itemList[0].typePayment.orEmpty(), orderID = orderId, device = device)
                                     } else {
                                         Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
                                         bluetoothHelper.requestBluetooth(
-                                            onReady = {
-                                                // Bluetooth aktif → buka dialog pilih printer
-                                                inventoryViewModel.showBluetoothDevice(true)
-                                            },
-                                            onFailure = { reason ->
-                                                // User nolak permission / nolak enable BT / device nggak support
-                                                Toast.makeText(context, "Bluetooth gagal: $reason", Toast.LENGTH_SHORT).show()
-                                            }
+                                            onReady = { printerViewModel.showBluetoothDevice(true) },
+                                            onFailure = { reason -> Toast.makeText(context, "Bluetooth gagal: $reason", Toast.LENGTH_SHORT).show() }
                                         )
                                     }
                                 }
@@ -183,13 +143,8 @@ fun ScreenListPayment(
     if (showBluetoothDevice) {
         PrinterListDialog(
             bluetoothHelper = bluetoothHelper,
-            onPrinterSelected = { device ->
-                inventoryViewModel.setSelectedPrinter(device)
-                inventoryViewModel.showBluetoothDevice(false)
-            },
-            onDismiss = {
-                inventoryViewModel.showBluetoothDevice(false)
-            }
+            onPrinterSelected = { device -> printerViewModel.setSelectedPrinter(device); printerViewModel.showBluetoothDevice(false) },
+            onDismiss = { printerViewModel.showBluetoothDevice(false) }
         )
     }
 }

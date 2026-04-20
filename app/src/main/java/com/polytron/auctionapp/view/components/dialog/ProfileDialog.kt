@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -46,19 +45,19 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
+import com.polytron.auctionapp.ui.viewmodel.AuthViewModel
 
 @Composable
 fun ProfileDialog(
-    inventoryViewModel: InventoryViewModel,
+    authViewModel: AuthViewModel,
     onDismiss: () -> Unit,
     onLogout: () -> Unit
 ) {
-    val userName by inventoryViewModel.userName.collectAsState()
-    val email by inventoryViewModel.email.collectAsState()
-    val idUser by inventoryViewModel.idUser.collectAsState()
-    val avatarFileName by inventoryViewModel.avatarFileName.collectAsState()
-    val token by inventoryViewModel.token.collectAsState()
+    val userName by authViewModel.userName.collectAsState()
+    val email by authViewModel.email.collectAsState()
+    val idUser by authViewModel.idUser.collectAsState()
+    val avatarFileName by authViewModel.avatarFileName.collectAsState()
+    val token by authViewModel.token.collectAsState()
 
     // Susun URL Avatar
     val avatarUrl = remember(idUser, avatarFileName) {
@@ -104,10 +103,10 @@ fun ProfileDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // --- Section Avatar (Sekarang menampilkan Foto asli) ---
+                // --- Section Avatar ---
                 Box(
                     modifier = Modifier
-                        .size(120.dp) // Ukuran di dialog dibuat lebih besar dari TopBar
+                        .size(120.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center

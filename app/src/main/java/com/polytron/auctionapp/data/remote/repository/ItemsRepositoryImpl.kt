@@ -4,10 +4,12 @@ import android.util.Log
 import com.polytron.auctionapp.data.remote.model.AuthResult
 import com.polytron.auctionapp.data.remote.model.RealtimeSse
 import com.polytron.auctionapp.data.remote.model.User
+import com.polytron.auctionapp.data.session.SessionManager
 import com.polytron.auctionapp.model.ItemResponse
 import io.github.agrevster.pocketbaseKotlin.PocketbaseClient
 import io.github.agrevster.pocketbaseKotlin.dsl.login
 import io.github.agrevster.pocketbaseKotlin.models.AuthRecord
+import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.sse.sse
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -16,6 +18,7 @@ import io.ktor.http.URLProtocol
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.http.path
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -23,9 +26,12 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 class ItemsRepositoryImpl(
+    private val sessionManager: SessionManager,
     private val baseHost: String = "pb.janissaryid.com",
     private val collectionItems: String = "Items",
 ) : ItemsRepository {
+
+    private val TAG = "ItemsRepo"
 
     private val client = PocketbaseClient(
         baseUrl = {
@@ -34,21 +40,49 @@ class ItemsRepositoryImpl(
         }
     )
 
+    // =========================================================================
+    // Safe API Call Wrapper — intercepts 401/403 at the HTTP level
+    // =========================================================================
+    private suspend fun <T> safeApiCall(block: suspend () -> T): T {
+        return try {
+            block()
+        } catch (e: ClientRequestException) {
+            // Ktor throws this for 4xx/5xx when HttpCallValidator is active
+            val statusCode = e.response.status.value
+            Log.e(TAG, "ClientRequestException: HTTP $statusCode — ${e.message}")
+            if (statusCode == 401 || statusCode == 403) {
+                sessionManager.onSessionExpired()
+            }
+            throw e
+        } catch (e: Exception) {
+            // Fallback: PocketBase library may wrap errors in generic exceptions
+            val msg = e.message.orEmpty()
+            Log.e(TAG, "API Error: ${e::class.simpleName} — $msg")
+            if (msg.contains("401") || msg.contains("403") ||
+                msg.contains("unauthorized", ignoreCase = true) ||
+                msg.contains("Token is expired", ignoreCase = true) ||
+                msg.contains("missing auth", ignoreCase = true)
+            ) {
+                sessionManager.onSessionExpired()
+            }
+            throw e
+        }
+    }
+
+    // =========================================================================
+    // Auth
+    // =========================================================================
     override suspend fun loginWithEmailPassword(email: String, password: String): AuthResult {
-        // 1. Auth dengan Password
         val loginResult = client.records.authWithPassword<AuthRecord>(
             collection = "users",
             email = email,
             password = password
         )
 
-        // 2. Karena getOne butuh ID, kita ambil dari loginResult
         val userId = loginResult.record.id.orEmpty()
-
         client.login(loginResult.token)
-        // 3. Fetch data user lengkap menggunakan fungsi getUser
-        val userProfile = getUser(userId)
 
+        val userProfile = getUser(userId)
 
         return AuthResult(
             token = loginResult.token,
@@ -59,8 +93,7 @@ class ItemsRepositoryImpl(
     }
 
     override suspend fun getUser(id: String): User {
-        // Memanggil getOne sesuai definisi yang kamu berikan
-        Log.i("LOGIN", "loginWithEmailPassword: ${id}")
+        Log.i(TAG, "getUser: $id")
         return client.records.getOne<User>(
             sub = "users",
             id = id
@@ -71,35 +104,48 @@ class ItemsRepositoryImpl(
         client.login(token)
     }
 
+    // =========================================================================
+    // CRUD — all wrapped with safeApiCall
+    // =========================================================================
     override suspend fun getItems(page: Int, perPage: Int): List<ItemResponse> {
-        val fetched = client.records.getList<ItemResponse>(
-            sub = collectionItems,
-            page = page,
-            perPage = perPage
-        )
-        // sesuai versi lama: reversed
-        return fetched.items.reversed()
+        return safeApiCall {
+            val fetched = client.records.getList<ItemResponse>(
+                sub = collectionItems,
+                page = page,
+                perPage = perPage
+            )
+            fetched.items.reversed()
+        }
     }
 
     override suspend fun createItem(item: ItemResponse): ItemResponse {
-        return client.records.create(
-            sub = collectionItems,
-            body = Json.encodeToString(item)
-        )
+        return safeApiCall {
+            client.records.create(
+                sub = collectionItems,
+                body = Json.encodeToString(item)
+            )
+        }
     }
 
     override suspend fun updateItem(id: String, item: ItemResponse): ItemResponse {
-        return client.records.update(
-            id = id,
-            sub = collectionItems,
-            body = Json.encodeToString(item)
-        )
+        return safeApiCall {
+            client.records.update(
+                id = id,
+                sub = collectionItems,
+                body = Json.encodeToString(item)
+            )
+        }
     }
 
     override suspend fun deleteItem(id: String) {
-        client.records.delete(id = id, sub = collectionItems)
+        safeApiCall {
+            client.records.delete(id = id, sub = collectionItems)
+        }
     }
 
+    // =========================================================================
+    // Realtime (SSE)
+    // =========================================================================
     override suspend fun withRealtimeEvents(onEvent: suspend (RealtimeSse) -> Unit) {
         try {
             client.httpClient.sse(path = "/api/realtime") {
@@ -113,9 +159,7 @@ class ItemsRepositoryImpl(
                 }
             }
         } catch (e: Exception) {
-            // Log error agar tidak crash
-            Log.e("SSE_ERROR", "Gagal koneksi SSE: ${e.message}")
-            // Kamu bisa melempar error kembali atau membiarkannya agar VM yang menangani
+            Log.e(TAG, "SSE connection error: ${e.message}")
         }
     }
 
@@ -136,8 +180,8 @@ class ItemsRepositoryImpl(
             }
             response.status.isSuccess()
         } catch (e: Exception) {
-            Log.e("REALTIME_ERROR", "Gagal subscribe realtime: ${e.message}")
-            false // Kembalikan false agar aplikasi tahu proses gagal tapi tidak crash
+            Log.e(TAG, "Realtime subscribe error: ${e.message}")
+            false
         }
     }
 }

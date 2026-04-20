@@ -26,11 +26,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelStoreOwner
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
-import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
+import com.polytron.auctionapp.ui.viewmodel.AuthViewModel
+import com.polytron.auctionapp.ui.viewmodel.AuctionViewModel
+import com.polytron.auctionapp.ui.viewmodel.PrinterViewModel
 import com.polytron.auctionapp.view.components.dialog.LoginDialog
 import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.dialog.ProfileDialog
@@ -39,24 +42,32 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenHome(
     onNavigate: (String) -> Unit,
-    inventoryViewModel: InventoryViewModel = koinInject(),
+    authViewModel: AuthViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
+    auctionViewModel: AuctionViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
+    printerViewModel: PrinterViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
     bluetoothHelper: BluetoothHelper
 ) {
-    val isBluetoothConnected by inventoryViewModel.isBluetoothConnected.collectAsState()
-    val selectedPrinter by inventoryViewModel.selectedPrinter.collectAsState()
-    val showBluetoothDevice by inventoryViewModel.showBluetoothDevice.collectAsState()
-    val userName by inventoryViewModel.userName.collectAsState()
-    val isLoggedIn by inventoryViewModel.isLoggedIn.collectAsState()
-    val idUser by inventoryViewModel.idUser.collectAsState()
-    val avatarFileName by inventoryViewModel.avatarFileName.collectAsState()
-    val token by inventoryViewModel.token.collectAsState()
+    val isBluetoothConnected by printerViewModel.isBluetoothConnected.collectAsState()
+    val selectedPrinter by printerViewModel.selectedPrinter.collectAsState()
+    val showBluetoothDevice by printerViewModel.showBluetoothDevice.collectAsState()
+    val userName by authViewModel.userName.collectAsState()
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+    val idUser by authViewModel.idUser.collectAsState()
+    val avatarFileName by authViewModel.avatarFileName.collectAsState()
+    val token by authViewModel.token.collectAsState()
 
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -83,6 +94,18 @@ fun ScreenHome(
         HomeMenu("Ambil Barang", Icons.Default.Inventory2, "take_items"),
         HomeMenu("Transaksi", Icons.Default.Receipt, "transactions"),
     )
+
+    // Clear selection when returning to home
+    LaunchedEffect(Unit) {
+        auctionViewModel.clearSelectedItems()
+    }
+
+    // Show toast events from auth
+    LaunchedEffect(Unit) {
+        authViewModel.toastEvent.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface
@@ -163,7 +186,7 @@ fun ScreenHome(
                 Card(
                     onClick = {
                         bluetoothHelper.requestBluetooth(
-                            onReady = { inventoryViewModel.showBluetoothDevice(true) },
+                            onReady = { printerViewModel.showBluetoothDevice(true) },
                             onFailure = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
                         )
                     },
@@ -233,11 +256,11 @@ fun ScreenHome(
     }
 
     // --- Dialogs Lainnya ---
-    if (showLoginDialog) LoginDialog(inventoryViewModel, { showLoginDialog = false })
+    if (showLoginDialog) LoginDialog(onDismiss = { showLoginDialog = false })
     if (showBluetoothDevice) PrinterListDialog(bluetoothHelper, { device ->
-        inventoryViewModel.setSelectedPrinter(device)
-        inventoryViewModel.showBluetoothDevice(false)
+        printerViewModel.setSelectedPrinter(device)
+        printerViewModel.showBluetoothDevice(false)
         CoroutineScope(Dispatchers.IO).launch { try { BluetoothPrinter().testPrinter(device) } catch (e: Exception) {} }
-    }, { inventoryViewModel.showBluetoothDevice(false) })
-    if (showProfileDialog) ProfileDialog(inventoryViewModel, { showProfileDialog = false }, { inventoryViewModel.logout() })
+    }, { printerViewModel.showBluetoothDevice(false) })
+    if (showProfileDialog) ProfileDialog(authViewModel, { showProfileDialog = false }, { authViewModel.logout() })
 }

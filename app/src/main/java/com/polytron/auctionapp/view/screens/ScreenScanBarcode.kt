@@ -26,22 +26,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
+import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.ui.viewmodel.AuctionViewModel
+import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
 import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.camera.CameraPreviewView
 import com.polytron.auctionapp.view.components.itemcard.ItemCardBarcode
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun ScreenScanBarcode(
-    inventoryViewModel: InventoryViewModel = koinInject(),
+    itemsViewModel: ItemsViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
+    auctionViewModel: AuctionViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
     navBack: () -> Unit,
     typeScreen: String?
 ) {
-    val items by inventoryViewModel.items.collectAsState()
+    val items by itemsViewModel.items.collectAsState()
     val filteredItemsStat = if (typeScreen == "Payment") {
         items.filter { it.status == 1 }
     } else {
@@ -49,15 +57,14 @@ fun ScreenScanBarcode(
     }
 
     val selectedItems = remember { mutableStateListOf<ItemResponse>() }
-
     var result by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val selectedItemsState by inventoryViewModel.selectedItems.collectAsState()
+    val selectedItemsState by auctionViewModel.selectedItems.collectAsState()
     var isInitialized by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        inventoryViewModel.fetchItems()
+        itemsViewModel.fetchItems()
     }
 
     LaunchedEffect(selectedItemsState) {
@@ -68,11 +75,9 @@ fun ScreenScanBarcode(
         }
     }
 
-    // ✅ Jika result berubah, cari di filtered dan tambahkan ke selected
     LaunchedEffect(result) {
         result?.let { code ->
             val matchedItem = filteredItemsStat.find { it.codeItem == code }
-
             if (matchedItem != null && selectedItems.none { it.id == matchedItem.id }) {
                 selectedItems.add(matchedItem)
                 snackbarHostState.showSnackbar("Item ditemukan dan ditambahkan")
@@ -87,17 +92,14 @@ fun ScreenScanBarcode(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBarCustom(
-                title = "Scan Barcode",
-                onBack = navBack
-            )
+            TopAppBarCustom(title = "Scan Barcode", onBack = navBack)
         },
         bottomBar = {
             SelectedItemsBottomBar(
                 selectedCount = selectedItems.size,
                 buttonText = "Proses",
                 onClick = {
-                    inventoryViewModel.setSelectedItems(selectedItems.toList())
+                    auctionViewModel.setSelectedItems(selectedItems.toList())
                     navBack()
                 }
             )
@@ -105,24 +107,14 @@ fun ScreenScanBarcode(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 📷 Kamera Preview (Compact Height)
             CameraPreviewView(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-                onBarcodeScanned = { scanned ->
-                    if (result != scanned) result = scanned
-                }
+                modifier = Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(16.dp)),
+                onBarcodeScanned = { scanned -> if (result != scanned) result = scanned }
             )
 
-            // ✅ Daftar Selected Items
             if (selectedItems.isEmpty()) {
                 Text(
                     text = "Belum ada hasil scan",
@@ -131,17 +123,9 @@ fun ScreenScanBarcode(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()) {
                     items(selectedItems) { item ->
-                        ItemCardBarcode(
-                            item = item,
-                            onClickDelete = {
-                                selectedItems.remove(item)
-                            }
-                        )
+                        ItemCardBarcode(item = item, onClickDelete = { selectedItems.remove(item) })
                     }
                 }
             }

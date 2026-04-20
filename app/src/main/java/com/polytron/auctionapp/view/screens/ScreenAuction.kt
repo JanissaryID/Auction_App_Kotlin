@@ -33,7 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
-import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
+import com.polytron.auctionapp.ui.viewmodel.AuctionViewModel
+import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
+import com.polytron.auctionapp.ui.viewmodel.PrinterViewModel
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
@@ -51,7 +53,13 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenAuction(
-    inventoryViewModel: InventoryViewModel = koinViewModel(
+    itemsViewModel: ItemsViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
+    auctionViewModel: AuctionViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
+    printerViewModel: PrinterViewModel = koinViewModel(
         viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
     ),
     bluetoothHelper: BluetoothHelper,
@@ -63,23 +71,18 @@ fun ScreenAuction(
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // State dari ViewModel
-    val selectedItems by inventoryViewModel.selectedItems.collectAsState()
-    val editingBuyers by inventoryViewModel.editingBuyers.collectAsState()
-    val editingPrices by inventoryViewModel.editingPrices.collectAsState()
-    val printerDevice by inventoryViewModel.selectedPrinter.collectAsState()
-    val showBluetoothDevice by inventoryViewModel.showBluetoothDevice.collectAsState()
+    val selectedItems by auctionViewModel.selectedItems.collectAsState()
+    val editingBuyers by auctionViewModel.editingBuyers.collectAsState()
+    val editingPrices by auctionViewModel.editingPrices.collectAsState()
+    val printerDevice by printerViewModel.selectedPrinter.collectAsState()
+    val showBluetoothDevice by printerViewModel.showBluetoothDevice.collectAsState()
 
-    // State UI Lokal
     var rawAuctionPrice by remember { mutableStateOf("") }
     var auctionPrice by remember { mutableStateOf(formatCurrencyInput(rawAuctionPrice)) }
     var isSubmitting by remember { mutableStateOf(false) }
     var isFabExpanded by remember { mutableStateOf(false) }
-
-    // State untuk Dialog Printer Belum Terhubung
     var showNoPrinterDialog by remember { mutableStateOf(false) }
 
-    // Logic Validasi
     val isPriceFilledProperly = selectedItems.isNotEmpty() && selectedItems.all { item ->
         val hasManualPrice = !editingPrices[item.id].isNullOrBlank()
         val hasGlobalPrice = rawAuctionPrice.isNotBlank()
@@ -91,7 +94,6 @@ fun ScreenAuction(
     }
     val isSimpanEnabled = isPriceFilledProperly && isAllBuyerFilled && !isSubmitting
 
-    // Fungsi Internal untuk Simpan Data (bisa dipanggil dengan atau tanpa print)
     val onSaveData = { shouldPrint: Boolean ->
         isSubmitting = true
         showNoPrinterDialog = false
@@ -101,42 +103,24 @@ fun ScreenAuction(
                 selectedItems.forEach { item ->
                     val finalPrice = editingPrices[item.id].orEmpty().ifBlank { rawAuctionPrice }
                     val finalBuyer = editingBuyers[item.id].orEmpty().ifBlank { item.buyer.orEmpty() }
+                    val updatedItem = item.copy(buyer = finalBuyer, price = finalPrice, status = 1)
 
-                    val updatedItem = item.copy(
-                        buyer = finalBuyer,
-                        price = finalPrice,
-                        status = 1
-                    )
+                    itemsViewModel.patchItem(item.id!!, updatedItem)
 
-                    // 1. Update ke Server
-                    inventoryViewModel.patchItem(item.id!!, updatedItem)
-
-                    // 2. Cetak jika diperintahkan dan printer tersedia
                     if (shouldPrint && printerDevice != null) {
-                        printer.printBarcodeAuction(
-                            device = printerDevice!!,
-                            price = formatRupiah(finalPrice),
-                            name = finalBuyer,
-                            itemName = item.nameItem ?: "",
-                            code = item.codeItem ?: "",
-                        )
+                        printer.printBarcodeAuction(device = printerDevice!!, price = formatRupiah(finalPrice), name = finalBuyer, itemName = item.nameItem ?: "", code = item.codeItem ?: "")
                         delay(400)
-                        printer.printBarcodeAuctionItems(
-                            device = printerDevice!!,
-                            price = formatRupiah(finalPrice),
-                            name = finalBuyer,
-                            itemName = item.nameItem ?: "",
-                        )
+                        printer.printBarcodeAuctionItems(device = printerDevice!!, price = formatRupiah(finalPrice), name = finalBuyer, itemName = item.nameItem ?: "")
                         delay(400)
                     }
                 }
 
-                inventoryViewModel.clearSelectedItems()
+                auctionViewModel.clearSelectedItems()
                 rawAuctionPrice = ""
                 auctionPrice = ""
                 snackbarHostState.showSnackbar(if (shouldPrint) "Berhasil disimpan dan dicetak" else "Berhasil disimpan tanpa cetak")
             } catch (e: Exception) {
-                Log.e("Auction Err", "ScreenAuction: $e", )
+                Log.e("ScreenAuction", "Error: $e")
                 Toast.makeText(context, "Gagal: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
                 isSubmitting = false
@@ -157,13 +141,7 @@ fun ScreenAuction(
                 isSubmitting = isSubmitting,
                 enabled = isSimpanEnabled,
                 onClick = {
-                    if (printerDevice == null) {
-                        // Jika printer belum ada, tampilkan dialog pilihan
-                        showNoPrinterDialog = true
-                    } else {
-                        // Jika printer sudah ada, langsung jalankan simpan & cetak
-                        onSaveData(true)
-                    }
+                    if (printerDevice == null) showNoPrinterDialog = true else onSaveData(true)
                 }
             )
         },
@@ -177,10 +155,7 @@ fun ScreenAuction(
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)
-            .padding(horizontal = 16.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
             OutlinedTextField(
                 value = auctionPrice,
                 onValueChange = {
@@ -190,9 +165,7 @@ fun ScreenAuction(
                 },
                 label = { Text("Harga Lelang Global (Opsional)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 prefix = { Text("Rp ") },
                 enabled = !isSubmitting
             )
@@ -203,19 +176,17 @@ fun ScreenAuction(
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 100.dp, top = 8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
+                    modifier = Modifier.fillMaxWidth().weight(1f)
                 ) {
                     items(selectedItems, key = { it.id ?: "" }) { item ->
                         ItemCardAuction(
                             item = item,
                             currentBuyer = editingBuyers[item.id].orEmpty(),
                             currentPrice = editingPrices[item.id].orEmpty(),
-                            onNameChanged = { name -> inventoryViewModel.updateEditingBuyer(item.id!!, name) },
-                            onPriceChanged = { price -> inventoryViewModel.updateEditingPrice(item.id!!, price) },
-                            onCancelPriceInput = { inventoryViewModel.clearEditingForItem(item.id!!) },
-                            onClickDelete = { inventoryViewModel.removeSelectedItem(item) }
+                            onNameChanged = { name -> auctionViewModel.updateEditingBuyer(item.id!!, name) },
+                            onPriceChanged = { price -> auctionViewModel.updateEditingPrice(item.id!!, price) },
+                            onCancelPriceInput = { auctionViewModel.clearEditingForItem(item.id!!) },
+                            onClickDelete = { auctionViewModel.removeSelectedItem(item) }
                         )
                     }
                 }
@@ -223,9 +194,6 @@ fun ScreenAuction(
         }
     }
 
-    // --- DIALOGS ---
-
-    // 1. Dialog Pilihan Jika Printer Belum Terhubung
     if (showNoPrinterDialog) {
         NoPrinterDialog(
             onDismiss = { showNoPrinterDialog = false },
@@ -233,22 +201,18 @@ fun ScreenAuction(
             onConnectPrinter = {
                 showNoPrinterDialog = false
                 bluetoothHelper.requestBluetooth(
-                    onReady = { inventoryViewModel.showBluetoothDevice(true) },
+                    onReady = { printerViewModel.showBluetoothDevice(true) },
                     onFailure = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
                 )
             }
         )
     }
 
-    // 2. Dialog List Printer (Bluetooth)
     if (showBluetoothDevice) {
         PrinterListDialog(
             bluetoothHelper = bluetoothHelper,
-            onPrinterSelected = {
-                inventoryViewModel.setSelectedPrinter(it)
-                inventoryViewModel.showBluetoothDevice(false)
-            },
-            onDismiss = { inventoryViewModel.showBluetoothDevice(false) }
+            onPrinterSelected = { printerViewModel.setSelectedPrinter(it); printerViewModel.showBluetoothDevice(false) },
+            onDismiss = { printerViewModel.showBluetoothDevice(false) }
         )
     }
 }

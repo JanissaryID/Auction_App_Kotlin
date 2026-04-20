@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -40,16 +41,19 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
-import org.koin.compose.koinInject
+import androidx.lifecycle.ViewModelStoreOwner
+import com.polytron.auctionapp.ui.viewmodel.AuthViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun LoginDialog(
-    inventoryViewModel: InventoryViewModel = koinInject(),
+    authViewModel: AuthViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
     onDismiss: () -> Unit
 ) {
-    val email by inventoryViewModel.email.collectAsState()
-    val password by inventoryViewModel.password.collectAsState()
+    val email by authViewModel.email.collectAsState()
+    val password by authViewModel.password.collectAsState()
 
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
@@ -92,7 +96,7 @@ fun LoginDialog(
                 OutlinedTextField(
                     value = email,
                     onValueChange = {
-                        inventoryViewModel.onEmailChange(it)
+                        authViewModel.onEmailChange(it)
                         errorMessage = null
                     },
                     label = { Text("Email") },
@@ -111,7 +115,7 @@ fun LoginDialog(
                 OutlinedTextField(
                     value = password,
                     onValueChange = {
-                        inventoryViewModel.onPasswordChange(it)
+                        authViewModel.onPasswordChange(it)
                         errorMessage = null
                     },
                     label = { Text("Password") },
@@ -165,7 +169,7 @@ fun LoginDialog(
                     Button(
                         onClick = {
                             isLoading = true
-                            inventoryViewModel.login(
+                            authViewModel.login(
                                 onSuccess = {
                                     isLoading = false
                                     onDismiss() // Tutup dialog setelah sukses

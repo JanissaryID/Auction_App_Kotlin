@@ -35,7 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
-import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
+import com.polytron.auctionapp.ui.viewmodel.AuctionViewModel
+import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardSelectAuction
 import org.koin.compose.viewmodel.koinViewModel
@@ -43,13 +44,16 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenItemListSelectAuction(
-    inventoryViewModel: InventoryViewModel = koinViewModel(
+    itemsViewModel: ItemsViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
+    auctionViewModel: AuctionViewModel = koinViewModel(
         viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
     ),
     navBack: () -> Unit,
 ) {
-    val items by inventoryViewModel.items.collectAsState()
-    val selectedItems by inventoryViewModel.selectedItems.collectAsState()
+    val items by itemsViewModel.items.collectAsState()
+    val selectedItems by auctionViewModel.selectedItems.collectAsState()
 
     val filteredItemsStatZero = items.filter { it.status == 0 }
     var searchQuery by remember { mutableStateOf("") }
@@ -66,21 +70,13 @@ fun ScreenItemListSelectAuction(
                 title = "Pilih Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { inventoryViewModel.fetchItems() },
+                onRefresh = { itemsViewModel.fetchItems() },
             )
         },
         floatingActionButton = {
-            AnimatedVisibility(
-                visible = selectedItems.isNotEmpty(),
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
+            AnimatedVisibility(visible = selectedItems.isNotEmpty(), enter = fadeIn(), exit = fadeOut()) {
                 ExtendedFloatingActionButton(
-                    onClick = {
-                        // Langsung kembali saja, karena data sudah masuk ke VM
-                        // saat onSelectToggle dipanggil tadi.
-                        navBack()
-                    },
+                    onClick = { navBack() },
                     icon = { Icon(Icons.Default.Check, contentDescription = null) },
                     text = { Text("${selectedItems.size} Barang Terpilih") },
                     containerColor = MaterialTheme.colorScheme.primary
@@ -89,12 +85,7 @@ fun ScreenItemListSelectAuction(
         },
         floatingActionButtonPosition = FabPosition.Center
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -103,16 +94,11 @@ fun ScreenItemListSelectAuction(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 singleLine = true
             )
-
             if (selectedItems.isNotEmpty()) {
-                TextButton(
-                    onClick = { inventoryViewModel.clearSelectedItems() },
-                    modifier = Modifier.align(Alignment.End)
-                ) {
+                TextButton(onClick = { auctionViewModel.clearSelectedItems() }, modifier = Modifier.align(Alignment.End)) {
                     Text("Batal Pilih Semua")
                 }
             }
-
             if (filteredItems.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
                     Text("Barang tidak ditemukan")
@@ -124,18 +110,13 @@ fun ScreenItemListSelectAuction(
                     modifier = Modifier.fillMaxWidth().weight(1f)
                 ) {
                     items(filteredItems, key = { it.id ?: "" }) { item ->
-                        // Cek status terpilih berdasarkan ID yang ada di VM
                         val isSelected = selectedItems.any { it.id == item.id }
-
                         ItemCardSelectAuction(
                             item = item,
                             isSelected = isSelected,
                             onSelectToggle = {
-                                if (isSelected) {
-                                    inventoryViewModel.removeSelectedItem(item)
-                                } else {
-                                    inventoryViewModel.addSelectedItem(item)
-                                }
+                                if (isSelected) auctionViewModel.removeSelectedItem(item)
+                                else auctionViewModel.addSelectedItem(item)
                             }
                         )
                     }

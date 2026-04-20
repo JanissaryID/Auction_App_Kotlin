@@ -35,10 +35,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
-import com.polytron.auctionapp.data.remote.viewmodel.InventoryViewModel
 import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.ui.viewmodel.AuthViewModel
+import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
+import com.polytron.auctionapp.ui.viewmodel.PrinterViewModel
 import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
 import com.polytron.auctionapp.view.components.TopAppBarCustom
@@ -47,32 +50,37 @@ import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.fab.FabWithDelete
 import com.polytron.auctionapp.view.components.itemcard.ItemCard
 import kotlinx.coroutines.delay
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenItemList(
-    inventoryViewModel: InventoryViewModel = koinInject(),
+    itemsViewModel: ItemsViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
+    authViewModel: AuthViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
+    printerViewModel: PrinterViewModel = koinViewModel(
+        viewModelStoreOwner = LocalContext.current as ViewModelStoreOwner
+    ),
     bluetoothHelper: BluetoothHelper,
     navBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val idUser by authViewModel.idUser.collectAsState()
+    val items by itemsViewModel.items.collectAsState()
+    val printerDevice by printerViewModel.selectedPrinter.collectAsState()
+    val showBluetoothDevice by printerViewModel.showBluetoothDevice.collectAsState()
 
-    val idUser by inventoryViewModel.idUser.collectAsState()
-    val items by inventoryViewModel.items.collectAsState()
-    val printerDevice by inventoryViewModel.selectedPrinter.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
-
     val sheetState = rememberModalBottomSheetState()
     var selectedItem by remember { mutableStateOf<ItemResponse?>(null) }
     var showAddEditBottomSheet by remember { mutableStateOf(false) }
-
     val selectedItems = remember { mutableStateListOf<ItemResponse>() }
     val isSelectionMode = selectedItems.isNotEmpty()
-
     var isDeleting by remember { mutableStateOf(false) }
-    val showBluetoothDevice by inventoryViewModel.showBluetoothDevice.collectAsState()
 
     val totalBase = items.sumOf {
         it.basePrice?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L
@@ -93,43 +101,20 @@ fun ScreenItemList(
                 title = "${items.size} Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { inventoryViewModel.fetchItems() },
+                onRefresh = { itemsViewModel.fetchItems() },
             )
         },
         bottomBar = {
             if (filteredItems.isNotEmpty()) {
-                BottomAppBar(
-                    tonalElevation = 4.dp,
-                    containerColor = MaterialTheme.colorScheme.surface
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Total Awal", style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium)
-                            Text(
-                                formatRupiah(totalBase),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
+                BottomAppBar(tonalElevation = 4.dp, containerColor = MaterialTheme.colorScheme.surface) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total Awal", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Text(formatRupiah(totalBase), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Total Maksimal", style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium)
-                            Text(
-                                formatRupiah(totalMax),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total Maksimal", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Text(formatRupiah(totalMax), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                         }
                     }
                 }
@@ -142,11 +127,11 @@ fun ScreenItemList(
                 onDelete = {
                     isDeleting = true
                     selectedItems.forEach {
-                        inventoryViewModel.deleteItem(it.id!!)
+                        itemsViewModel.deleteItem(it.id!!)
                         delay(500)
                     }
                     selectedItems.clear()
-                    inventoryViewModel.fetchItems()
+                    itemsViewModel.fetchItems()
                     isDeleting = false
                 },
                 onAddClick = {
@@ -156,41 +141,27 @@ fun ScreenItemList(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 label = { Text("Cari berdasarkan nama atau kode") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 singleLine = true
             )
-
             if (isSelectionMode) {
-                TextButton(
-                    onClick = { selectedItems.clear() },
-                    modifier = Modifier.align(Alignment.End)
-                ) {
+                TextButton(onClick = { selectedItems.clear() }, modifier = Modifier.align(Alignment.End)) {
                     Text("Batal Seleksi")
                 }
             }
-
             if (filteredItems.isEmpty()) {
                 EmptyItemState()
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(vertical = 16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
+                    modifier = Modifier.fillMaxWidth().weight(1f)
                 ) {
                     items(filteredItems) { item ->
                         ItemCard(
@@ -198,42 +169,22 @@ fun ScreenItemList(
                             isSelected = selectedItems.contains(item),
                             onClick = {
                                 if (isSelectionMode) {
-                                    if (selectedItems.contains(item)) {
-                                        selectedItems.remove(item)
-                                    } else {
-                                        selectedItems.add(item)
-                                    }
+                                    if (selectedItems.contains(item)) selectedItems.remove(item) else selectedItems.add(item)
                                 } else {
                                     selectedItem = item
                                     showAddEditBottomSheet = true
                                 }
                             },
-                            onLongClick = {
-                                if (!selectedItems.contains(item)) {
-                                    selectedItems.add(item)
-                                }
-                            },
+                            onLongClick = { if (!selectedItems.contains(item)) selectedItems.add(item) },
                             onPrintClick = {
-                                val printer = BluetoothPrinter()
                                 val device = printerDevice
-
                                 if (device != null) {
-                                    printer.printBarcodeLabel(
-                                        device = device,
-                                        itemName = item.nameItem.orEmpty(),
-                                        itemCode = item.codeItem.orEmpty()
-                                    )
+                                    BluetoothPrinter().printBarcodeLabel(device = device, itemName = item.nameItem.orEmpty(), itemCode = item.codeItem.orEmpty())
                                 } else {
                                     Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
                                     bluetoothHelper.requestBluetooth(
-                                        onReady = {
-                                            // Bluetooth aktif → buka dialog pilih printer
-                                            inventoryViewModel.showBluetoothDevice(true)
-                                        },
-                                        onFailure = { reason ->
-                                            // User nolak permission / nolak enable BT / device nggak support
-                                            Toast.makeText(context, "Bluetooth gagal: $reason", Toast.LENGTH_SHORT).show()
-                                        }
+                                        onReady = { printerViewModel.showBluetoothDevice(true) },
+                                        onFailure = { Toast.makeText(context, "Bluetooth gagal: $it", Toast.LENGTH_SHORT).show() }
                                     )
                                 }
                             }
@@ -245,50 +196,23 @@ fun ScreenItemList(
     }
 
     if (showAddEditBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = {
-                showAddEditBottomSheet = false
-                selectedItem = null
-            },
-            sheetState = sheetState
-        ) {
+        ModalBottomSheet(onDismissRequest = { showAddEditBottomSheet = false; selectedItem = null }, sheetState = sheetState) {
             AddOrEditItemBottomSheet(
                 itemToEdit = selectedItem,
-                onDismiss = {
-                    showAddEditBottomSheet = false
-                    selectedItem = null
-                },
+                onDismiss = { showAddEditBottomSheet = false; selectedItem = null },
                 onSubmit = { name, code, base, max, quantity ->
                     if (selectedItem != null) {
                         selectedItem!!.id?.let { id ->
-                            val updatedItem = selectedItem!!.copy(
-                                nameItem = name,
-                                codeItem = code,
-                                basePrice = base,
-                                maxPrice = max
-                            )
-                            inventoryViewModel.patchItem(id, updatedItem)
+                            itemsViewModel.patchItem(id, selectedItem!!.copy(nameItem = name, codeItem = code, basePrice = base, maxPrice = max))
                         }
                     } else {
                         repeat(quantity) { index ->
                             val suffix = index + 1
-                            val finalName = "$name $suffix"
-                            val finalCode = "$code $suffix"
-                            val item = ItemResponse(
-                                nameItem = finalName,
-                                codeItem = finalCode,
-                                basePrice = base,
-                                maxPrice = max,
-                                admin = "admin",
-                                user = idUser
-                            )
-                            inventoryViewModel.createItem(
-                                item = item
-                            )
+                            itemsViewModel.createItem(ItemResponse(nameItem = "$name $suffix", codeItem = "$code $suffix", basePrice = base, maxPrice = max, admin = "admin", user = idUser))
                             delay(500)
                         }
                     }
-                    inventoryViewModel.fetchItems()
+                    itemsViewModel.fetchItems()
                 }
             )
         }
@@ -297,13 +221,8 @@ fun ScreenItemList(
     if (showBluetoothDevice) {
         PrinterListDialog(
             bluetoothHelper = bluetoothHelper,
-            onPrinterSelected = { device ->
-                inventoryViewModel.setSelectedPrinter(device)
-                inventoryViewModel.showBluetoothDevice(false)
-            },
-            onDismiss = {
-                inventoryViewModel.showBluetoothDevice(false)
-            }
+            onPrinterSelected = { device -> printerViewModel.setSelectedPrinter(device); printerViewModel.showBluetoothDevice(false) },
+            onDismiss = { printerViewModel.showBluetoothDevice(false) }
         )
     }
 }
