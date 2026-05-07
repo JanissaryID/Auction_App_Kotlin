@@ -18,8 +18,6 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -133,48 +131,45 @@ fun ScreenTransactions(
                     groupedTransactions.toSortedMap().forEach { (orderId, transactionItems) ->
                         item(key = orderId) {
                             val isExpanded = expandedGroups[orderId] ?: false
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                                )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp)
                             ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Column {
-                                            Text(
-                                                text = orderId,
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                text = "${transactionItems.size} transaksi",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                        TextButton(onClick = { expandedGroups[orderId] = !isExpanded }) {
-                                            Icon(
-                                                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                                contentDescription = null
-                                            )
-                                            Text(if (isExpanded) "Tutup" else "Detail")
-                                        }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = orderId,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "${transactionItems.size} transaksi",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
+                                    TextButton(onClick = { expandedGroups[orderId] = !isExpanded }) {
+                                        Icon(
+                                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                            contentDescription = null
+                                        )
+                                        Text(if (isExpanded) "Tutup" else "Detail")
+                                    }
+                                }
 
-                                    if (isExpanded) {
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                            transactionItems.forEach { item ->
-                                                ItemCardTransaction(
-                                                    item = item,
-                                                    isSelected = false,
-                                                    onClicked = { selectedItem = item; showDetailSheet = true }
-                                                )
-                                            }
+                                if (isExpanded) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        transactionItems.forEach { item ->
+                                            ItemCardTransaction(
+                                                item = item,
+                                                isSelected = false,
+                                                onClicked = { selectedItem = item; showDetailSheet = true }
+                                            )
                                         }
                                     }
                                 }
@@ -188,12 +183,12 @@ fun ScreenTransactions(
 
     if (showDetailSheet && selectedItem != null) {
         ModalBottomSheet(
-            onDismissRequest = { showDetailSheet = false; selectedItem = null },
+            onDismissRequest = { showDetailSheet = false },
             sheetState = sheetState
         ) {
             ItemDetailBottomSheet(
                 item = selectedItem!!,
-                onDismissRequest = { showDetailSheet = false; selectedItem = null }
+                onDismissRequest = { showDetailSheet = false }
             )
         }
     }
