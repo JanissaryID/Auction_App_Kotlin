@@ -126,57 +126,68 @@ fun ScreenHome(
 
             // --- 1. HEADER CARD WITH FLOATING ICON ---
             item(span = { GridItemSpan(2) }) {
-                Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    Card(
-                        onClick = { if (isLoggedIn) showProfileDialog = true else showLoginDialog = true },
-                        shape = RoundedCornerShape(28.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isLoggedIn)
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            else MaterialTheme.colorScheme.primaryContainer
-                        ),
-                        modifier = Modifier.fillMaxWidth().padding(end = 24.dp)
+                Card(
+                    onClick = { if (isLoggedIn) showProfileDialog = true else showLoginDialog = true },
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 20.dp, end = 40.dp)) {
-                            Text(
-                                text = if (isLoggedIn) "Selamat Pelayanan," else "Mulai Pelayanan,",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (isLoggedIn) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                            )
-                            Text(
-                                text = if (isLoggedIn) (userName ?: "Petugas") else "Ketuk di sini untuk masuk",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (isLoggedIn) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                        Surface(
+                            shape = CircleShape,
+                            color = if (isLoggedIn) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(52.dp),
+                            tonalElevation = 2.dp
+                        ) {
+                            if (isLoggedIn) {
+                                AsyncImage(
+                                    model = imageRequest,
+                                    contentDescription = "Avatar",
+                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                    contentScale = ContentScale.Crop,
+                                    error = rememberVectorPainter(Icons.Default.AccountCircle),
+                                    placeholder = rememberVectorPainter(Icons.Default.AccountCircle)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.PersonAdd,
+                                    contentDescription = "Login",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.padding(13.dp)
+                                )
+                            }
                         }
-                    }
 
-                    Surface(
-                        onClick = { if (isLoggedIn) showProfileDialog = true else showLoginDialog = true },
-                        shape = CircleShape,
-                        color = if (isLoggedIn) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.align(Alignment.CenterEnd).size(64.dp),
-                        tonalElevation = 8.dp,
-                        shadowElevation = 4.dp
-                    ) {
-                        if (isLoggedIn) {
-                            AsyncImage(
-                                model = imageRequest,
-                                contentDescription = "Avatar",
-                                modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                contentScale = ContentScale.Crop,
-                                error = rememberVectorPainter(Icons.Default.AccountCircle),
-                                placeholder = rememberVectorPainter(Icons.Default.AccountCircle)
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isLoggedIn) "Selamat Pelayanan" else "Mulai Pelayanan",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.PersonAdd,
-                                contentDescription = "Login",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.padding(16.dp)
+                            Text(
+                                text = if (isLoggedIn) (userName ?: "Petugas") else "Ketuk untuk login",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
+
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
