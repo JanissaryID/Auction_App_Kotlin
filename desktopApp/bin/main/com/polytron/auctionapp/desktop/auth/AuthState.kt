@@ -13,7 +13,8 @@ data class User(
 )
 
 class AuthManager(
-    private val pocketBaseRepository: PocketBaseRepository
+    private val pocketBaseRepository: PocketBaseRepository,
+    private val sessionManager: com.polytron.auctionapp.desktop.data.session.DesktopSessionManager
 ) {
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
@@ -22,10 +23,39 @@ class AuthManager(
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
     /**
+     * Restore session from persistent storage if available.
+     */
+    suspend fun restoreSession() {
+        val token = sessionManager.getToken()
+        val userId = sessionManager.getUserId()
+        val name = sessionManager.getUserName()
+        val email = sessionManager.getUserEmail()
+
+        if (token != null && userId != null && email != null) {
+            _authState.value = AuthState.Loading
+            try {
+                pocketBaseRepository.loginWithToken(token)
+                val user = User(
+                    userId = userId,
+                    name = if (name.isNullOrBlank()) null else name,
+                    avatar = null, // Avatar not persisted for now
+                    email = email
+                )
+                _currentUser.value = user
+                _authState.value = AuthState.Authenticated(user)
+            } catch (e: Exception) {
+                sessionManager.clearSession()
+                _authState.value = AuthState.Unauthenticated
+            }
+        }
+    }
+
+    /**
      * Login with email & password via PocketBase API.
      * Returns true on success, false on failure.
      */
     suspend fun login(email: String, password: String): Boolean {
+        println("DEBUG: AuthManager.login called for $email")
         _authState.value = AuthState.Loading
         return try {
             val authResult = pocketBaseRepository.loginWithEmailPassword(email, password)
@@ -35,10 +65,20 @@ class AuthManager(
                 avatar = authResult.avatar,
                 email = email
             )
+            
+            // Save to persistent storage
+            sessionManager.saveSession(
+                token = authResult.token,
+                userId = authResult.userId,
+                name = authResult.name,
+                email = email
+            )
+            
             _currentUser.value = user
             _authState.value = AuthState.Authenticated(user)
             true
         } catch (e: Exception) {
+            e.printStackTrace() // Debug: Print full error to console
             val errorMsg = when {
                 e.message?.contains("400") == true -> "Email atau password salah"
                 e.message?.contains("Failed to authenticate") == true -> "Email atau password salah"
@@ -52,6 +92,7 @@ class AuthManager(
     }
 
     fun logout() {
+        sessionManager.clearSession()
         _currentUser.value = null
         _authState.value = AuthState.Unauthenticated
     }

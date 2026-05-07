@@ -128,6 +128,8 @@ fun AuctionScreen() {
         }
     }
 
+    var showSuccessMessage by remember { mutableStateOf<String?>(null) }
+
     // Start Auction Dialog
     if (showStartAuctionDialog && selectedItem != null) {
         StartAuctionDialog(
@@ -137,12 +139,26 @@ fun AuctionScreen() {
                 selectedItem = null
             },
             onConfirm = { startingPrice ->
-                // In real app, this would start an auction
-                // For now, just show success message
-                showStartAuctionDialog = false
-                selectedItem = null
+                sharedVm.updateItem(selectedItem!!.id, selectedItem!!.copy(price = startingPrice)) {
+                    showSuccessMessage = "Auction started for ${selectedItem!!.nameItem}"
+                    showStartAuctionDialog = false
+                    selectedItem = null
+                }
             }
         )
+    }
+
+    // Success Message Overlay
+    showSuccessMessage?.let { message ->
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            com.polytron.auctionapp.desktop.components.SuccessAnimation(
+                message = message,
+                onDismiss = { showSuccessMessage = null }
+            )
+        }
     }
 }
 

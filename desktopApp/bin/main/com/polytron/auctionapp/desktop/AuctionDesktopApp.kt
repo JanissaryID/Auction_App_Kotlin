@@ -27,6 +27,11 @@ fun AuctionDesktopApp() {
     
     val authState by authManager.authState.collectAsState()
 
+    // Restore session on startup
+    LaunchedEffect(Unit) {
+        authManager.restoreSession()
+    }
+
     // Load data when authenticated
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
@@ -39,20 +44,11 @@ fun AuctionDesktopApp() {
     ) {
         Surface(modifier = Modifier.fillMaxSize()) {
             when (authState) {
-                is AuthState.Loading -> {
-                    // Show loading while authenticating
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is AuthState.Unauthenticated, is AuthState.Error -> {
-                    // Show login screen
+                is AuthState.Unauthenticated, is AuthState.Error, is AuthState.Loading -> {
+                    // Show login screen (it will handle the loading indicator internally if needed)
                     LoginScreen(
                         onLoginSuccess = {
-                            // Login successful, will trigger recomposition via authState
+                            // Login successful
                         }
                     )
                 }
