@@ -63,7 +63,7 @@ fun AuctionDesktopApp() {
                             },
                             onLogout = {
                                 authManager.logout()
-                                navigationState.navigateTo(NavDestination.HOME)
+                                navigationState.navigateTo(NavDestination.ITEM_LIST)
                             },
                             userName = (authState as? AuthState.Authenticated)?.user?.name
                         )
@@ -74,9 +74,6 @@ fun AuctionDesktopApp() {
                             color = MaterialTheme.colorScheme.background
                         ) {
                             when (navigationState.currentDestination) {
-                                NavDestination.HOME -> HomeScreen(
-                                    onNavigate = { navigationState.navigateTo(it) }
-                                )
                                 NavDestination.ITEM_LIST -> ItemListScreen()
                                 NavDestination.AUCTION -> AuctionScreen()
                                 NavDestination.PAYMENT -> PaymentScreen()

@@ -2,6 +2,7 @@ package com.polytron.auctionapp.desktop.data
 
 import com.polytron.auctionapp.desktop.data.remote.ItemResponse
 import com.polytron.auctionapp.desktop.data.remote.PocketBaseRepository
+import com.polytron.auctionapp.desktop.data.session.DesktopSessionManager
 import com.polytron.auctionapp.shared.model.SharedItem
 import com.polytron.auctionapp.shared.repository.ItemsRepository
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * Converts between ItemResponse (PocketBase) ↔ SharedItem (shared module).
  */
 class DesktopRemoteItemsRepository(
-    private val pocketBaseRepository: PocketBaseRepository
+    private val pocketBaseRepository: PocketBaseRepository,
+    private val sessionManager: DesktopSessionManager
 ) : ItemsRepository {
 
     private val itemsState = MutableStateFlow<List<SharedItem>>(emptyList())
@@ -29,13 +31,13 @@ class DesktopRemoteItemsRepository(
     }
 
     override suspend fun createItem(item: SharedItem): SharedItem {
-        val response = pocketBaseRepository.createItem(item.toItemResponse())
+        val response = pocketBaseRepository.createItem(item.toItemResponse(requireCurrentUserId()))
         refreshItems() // Refresh list after create
         return response.toSharedItem()
     }
 
     override suspend fun updateItem(id: String, item: SharedItem): SharedItem {
-        val response = pocketBaseRepository.updateItem(id, item.toItemResponse())
+        val response = pocketBaseRepository.updateItem(id, item.toItemResponse(requireCurrentUserId()))
         refreshItems() // Refresh list after update
         return response.toSharedItem()
     }
@@ -50,10 +52,12 @@ class DesktopRemoteItemsRepository(
         val existingItem = itemsState.value.find { it.id == id } ?: return
         val updateResponse = ItemResponse(
             orderID = existingItem.orderId,
+            admin = "admin",
             nameItem = existingItem.nameItem,
             buyer = existingItem.buyer,
             price = existingItem.price,
             codeItem = existingItem.codeItem,
+            user = requireCurrentUserId(),
             status = status
         )
         pocketBaseRepository.updateItem(id, updateResponse)
@@ -75,14 +79,21 @@ class DesktopRemoteItemsRepository(
         )
     }
 
-    private fun SharedItem.toItemResponse(): ItemResponse {
+    private fun SharedItem.toItemResponse(userId: String): ItemResponse {
         return ItemResponse(
             orderID = this.orderId,
+            admin = "admin",
             nameItem = this.nameItem,
             buyer = this.buyer,
             price = this.price,
             codeItem = this.codeItem,
+            user = userId,
             status = this.status
         )
+    }
+
+    private fun requireCurrentUserId(): String {
+        return sessionManager.getUserId()?.takeIf { it.isNotBlank() }
+            ?: error("Tidak ada user id aktif. Silakan login ulang.")
     }
 }
