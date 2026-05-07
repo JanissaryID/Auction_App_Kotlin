@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -41,6 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.model.toSharedItem
+import com.polytron.auctionapp.shared.viewmodel.ItemsSharedViewModel
 import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
 import com.polytron.auctionapp.utils.exportItemsToExcel
 import com.polytron.auctionapp.utils.formatRupiah
@@ -61,7 +64,11 @@ fun ScreenTransactions(
 ) {
     val items by itemsViewModel.items.collectAsState()
     val context = LocalContext.current
-    var searchQuery by remember { mutableStateOf("") }
+    
+    // Inject shared ViewModel as singleton
+    val sharedVm: ItemsSharedViewModel = org.koin.compose.koinInject()
+    val sharedState by sharedVm.state.collectAsState()
+    
     var selectedItem by remember { mutableStateOf<ItemResponse?>(null) }
     var showDetailSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -69,11 +76,18 @@ fun ScreenTransactions(
     val totalBase = items.sumOf { it.basePrice?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L }.toString()
     val totalPrice = items.sumOf { it.price?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L }.toString()
 
-    val filteredItems = items.filter {
-        it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
-                it.codeItem?.contains(searchQuery, ignoreCase = true) == true
+    // Refresh items on first load
+    LaunchedEffect(Unit) {
+        sharedVm.refreshItems()
     }
-    val groupedTransactions = filteredItems.groupBy { it.orderID.orEmpty().ifBlank { "Tanpa Order ID" } }
+
+    val filteredItems = items.filter { item ->
+        sharedState.filteredItems.any { it.id == item.id }
+    }
+    val groupedTransactions = sharedState.groupedByOrderId
+        .mapValues { (_, sharedItems) ->
+            filteredItems.filter { item -> sharedItems.any { it.id == item.id } }
+        }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
 
     Scaffold(
@@ -83,7 +97,9 @@ fun ScreenTransactions(
                 title = "Daftar Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { itemsViewModel.fetchItems() },
+                onRefresh = {
+                    sharedVm.refreshItems()
+                },
             )
         },
         bottomBar = {
@@ -113,8 +129,8 @@ fun ScreenTransactions(
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
             OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+                value = sharedState.searchQuery,
+                onValueChange = { sharedVm.updateSearchQuery(it) },
                 label = { Text("Cari berdasarkan nama atau kode") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),

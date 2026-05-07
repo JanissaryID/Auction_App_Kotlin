@@ -6,6 +6,7 @@ import com.polytron.auctionapp.data.local.repository.UserPreferencesRepository
 import com.polytron.auctionapp.data.local.repository.UserPreferencesRepositoryImpl
 import com.polytron.auctionapp.data.remote.repository.ItemsRepository
 import com.polytron.auctionapp.data.remote.repository.ItemsRepositoryImpl
+import com.polytron.auctionapp.data.shared.AndroidSharedItemsRepository
 import com.polytron.auctionapp.data.session.SessionManager
 import com.polytron.auctionapp.ui.viewmodel.AuctionViewModel
 import com.polytron.auctionapp.ui.viewmodel.AuthViewModel
@@ -23,6 +24,12 @@ val appModule = module {
     single<UserPreferencesRepository> { UserPreferencesRepositoryImpl(androidContext()) }
     single { SessionManager(userPreferencesRepository = get()) }
     single<ItemsRepository> { ItemsRepositoryImpl(sessionManager = get()) }
+    single<com.polytron.auctionapp.shared.repository.ItemsRepository> {
+        AndroidSharedItemsRepository(remoteRepository = get<ItemsRepository>())
+    }
+
+    // --- Shared ViewModels (Singleton) ---
+    single { com.polytron.auctionapp.shared.viewmodel.ItemsSharedViewModel(repository = get()) }
 
     // --- ViewModels ---
     viewModel { AuthViewModel(userPreferencesRepository = get(), itemsRepository = get(), sessionManager = get()) }

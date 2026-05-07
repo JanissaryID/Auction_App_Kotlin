@@ -28,6 +28,7 @@ serialization = "1.10.0"
 room = "2.8.4"
 ksp = "2.3.0"
 gson = "2.13.2"
+composeMultiplatform = "1.9.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -50,6 +51,7 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
 koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
 koin-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin" }
+koin-compose-multiplatform = { group = "io.insert-koin", name = "koin-compose", version.ref = "koin" }
 koin-android-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel", version.ref = "koin" }
 
 moko-core = { group = "dev.icerock.moko", name = "mvvm-core", version.ref = "moko" }
@@ -95,4 +97,7 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-parcelize = { id = "kotlin-parcelize" }
 google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 

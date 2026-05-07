@@ -23,11 +23,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
+import com.polytron.auctionapp.model.toSharedItem
+import com.polytron.auctionapp.shared.viewmodel.ItemsSharedViewModel
 import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
 import com.polytron.auctionapp.ui.viewmodel.PrinterViewModel
 import com.polytron.auctionapp.view.components.TopAppBarCustom
@@ -57,19 +58,27 @@ fun ScreenListPayment(
 ) {
     val context = LocalContext.current
     val items by itemsViewModel.items.collectAsState()
-    val filteredItemsStatTwo = items.filter { it.status == 2 }
     val printerDevice by printerViewModel.selectedPrinter.collectAsState()
     val showBluetoothDevice by printerViewModel.showBluetoothDevice.collectAsState()
+    
+    // Inject shared ViewModel as singleton
+    val sharedVm: ItemsSharedViewModel = org.koin.compose.koinInject()
+    val sharedState by sharedVm.state.collectAsState()
 
-    var searchQuery by remember { mutableStateOf("") }
+    // Filter items dengan status 2 dari shared state
+    val filteredItemsStatTwo = sharedState.items.filter { it.status == 2 }
+    val filteredItems = sharedState.filteredItems.filter { it.status == 2 }
 
-    val filteredItems = filteredItemsStatTwo.filter {
-        it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
-                it.codeItem?.contains(searchQuery, ignoreCase = true) == true ||
-                it.buyer?.contains(searchQuery, ignoreCase = true) == true
+    val groupedFilteredItems = sharedState.groupedByOrderId
+        .mapValues { (_, sharedItems) ->
+            sharedItems.filter { it.status == 2 }
+        }
+        .filterValues { it.isNotEmpty() }
+
+    // Refresh items on first load
+    LaunchedEffect(Unit) {
+        sharedVm.refreshItems()
     }
-
-    val groupedFilteredItems = filteredItems.groupBy { it.orderID.orEmpty() }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -78,7 +87,7 @@ fun ScreenListPayment(
                 title = "Daftar Pembayaran",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { itemsViewModel.fetchItems() },
+                onRefresh = { sharedVm.refreshItems() },
             )
         },
     ) { innerPadding ->
@@ -89,8 +98,8 @@ fun ScreenListPayment(
                 .padding(horizontal = 16.dp)
         ) {
             OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+                value = sharedState.searchQuery,
+                onValueChange = { sharedVm.updateSearchQuery(it) },
                 label = { Text("Cari berdasarkan nama atau kode") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -116,14 +125,24 @@ fun ScreenListPayment(
                 ) {
                     groupedFilteredItems.forEach { (orderId, itemList) ->
                         item {
+                            // Convert SharedItem back to ItemResponse for printing
+                            val androidItems = itemList.mapNotNull { sharedItem ->
+                                items.firstOrNull { it.id == sharedItem.id }
+                            }
+                            
                             ItemCardPayment(
                                 orderId = orderId,
-                                items = itemList,
+                                items = androidItems,
                                 takeItemScreen = false,
                                 onClick = {
                                     val device = printerDevice
                                     if (device != null) {
-                                        BluetoothPrinter().printBarcodeReceipt(items = itemList, payment = itemList[0].typePayment.orEmpty(), orderID = orderId, device = device)
+                                        BluetoothPrinter().printBarcodeReceipt(
+                                            items = androidItems, 
+                                            payment = androidItems.firstOrNull()?.typePayment.orEmpty(), 
+                                            orderID = orderId, 
+                                            device = device
+                                        )
                                     } else {
                                         Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
                                         bluetoothHelper.requestBluetooth(

@@ -21,18 +21,19 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
+import com.polytron.auctionapp.model.toSharedItem
+import com.polytron.auctionapp.shared.viewmodel.ItemsSharedViewModel
 import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardPayment
@@ -49,19 +50,27 @@ fun ScreenTakeItems(
     navBack: () -> Unit,
 ) {
     val items by itemsViewModel.items.collectAsState()
-    val filteredItemsStatTwo = items.filter { it.status == 2 }
+    
+    // Inject shared ViewModel as singleton
+    val sharedVm: ItemsSharedViewModel = org.koin.compose.koinInject()
+    val sharedState by sharedVm.state.collectAsState()
 
-    var searchQuery by remember { mutableStateOf("") }
     val isSubmittingMap = remember { mutableStateMapOf<String, Boolean>() }
     val coroutineScope = rememberCoroutineScope()
 
-    val filteredItems = filteredItemsStatTwo.filter {
-        it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
-                it.codeItem?.contains(searchQuery, ignoreCase = true) == true ||
-                it.buyer?.contains(searchQuery, ignoreCase = true) == true
-    }
+    // Filter items dengan status 2 dari shared state
+    val filteredItems = sharedState.filteredItems.filter { it.status == 2 }
 
-    val groupedFilteredItems = filteredItems.groupBy { it.orderID.orEmpty() }
+    val groupedFilteredItems = sharedState.groupedByOrderId
+        .mapValues { (_, sharedItems) ->
+            sharedItems.filter { it.status == 2 }
+        }
+        .filterValues { it.isNotEmpty() }
+
+    // Refresh items on first load
+    LaunchedEffect(Unit) {
+        sharedVm.refreshItems()
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -70,7 +79,7 @@ fun ScreenTakeItems(
                 title = "Ambil Barang",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { itemsViewModel.fetchItems() },
+                onRefresh = { sharedVm.refreshItems() },
             )
         },
     ) { innerPadding ->
@@ -81,8 +90,8 @@ fun ScreenTakeItems(
                 .padding(horizontal = 16.dp)
         ) {
             OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+                value = sharedState.searchQuery,
+                onValueChange = { sharedVm.updateSearchQuery(it) },
                 label = { Text("Cari berdasarkan nama atau kode") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -108,20 +117,26 @@ fun ScreenTakeItems(
                 ) {
                     groupedFilteredItems.forEach { (orderId, itemList) ->
                         item {
+                            // Convert SharedItem back to ItemResponse for display
+                            val androidItems = itemList.mapNotNull { sharedItem ->
+                                items.firstOrNull { it.id == sharedItem.id }
+                            }
+                            
                             ItemCardPayment(
                                 orderId = orderId,
-                                items = itemList,
+                                items = androidItems,
                                 takeItemScreen = true,
                                 isSubmitting = isSubmittingMap[orderId] == true,
                                 onClick = {
                                     isSubmittingMap[orderId] = true
                                     coroutineScope.launch {
                                         itemList.forEach { item ->
-                                            itemsViewModel.patchItem(item.id!!, item.copy(status = 3))
+                                            // Use shared ViewModel for status update
+                                            sharedVm.updateItemStatus(item.id, 3)
                                             delay(300)
                                         }
                                         isSubmittingMap[orderId] = false
-                                        itemsViewModel.fetchItems()
+                                        sharedVm.refreshItems()
                                     }
                                 }
                             )

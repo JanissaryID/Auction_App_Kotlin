@@ -21,4 +21,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "Auction App"
 include(":app")
+include(":desktopApp")
+include(":shared")
  

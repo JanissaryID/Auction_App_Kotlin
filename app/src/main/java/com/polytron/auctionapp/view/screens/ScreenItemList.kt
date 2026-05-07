@@ -27,12 +27,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +45,8 @@ import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
 import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.model.toSharedItem
+import com.polytron.auctionapp.shared.viewmodel.ItemsSharedViewModel
 import com.polytron.auctionapp.ui.viewmodel.AuthViewModel
 import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
 import com.polytron.auctionapp.ui.viewmodel.PrinterViewModel
@@ -54,12 +58,9 @@ import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.fab.FabWithDelete
 import com.polytron.auctionapp.view.components.itemcard.ItemCard
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-
-private fun normalizeItemGroupName(name: String?): String {
-    if (name.isNullOrBlank()) return "Tanpa Nama"
-    return name.replace(Regex("\\s*[-–]?\\s*\\d+$"), "").trim().ifBlank { "Tanpa Nama" }
-}
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,7 +84,11 @@ fun ScreenItemList(
     val printerDevice by printerViewModel.selectedPrinter.collectAsState()
     val showBluetoothDevice by printerViewModel.showBluetoothDevice.collectAsState()
 
-    var searchQuery by remember { mutableStateOf("") }
+    // Inject shared ViewModel as singleton
+    val sharedVm: ItemsSharedViewModel = org.koin.compose.koinInject()
+    val sharedState by sharedVm.state.collectAsState()
+    
+    val coroutineScope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
     var selectedItem by remember { mutableStateOf<ItemResponse?>(null) }
     var showAddEditBottomSheet by remember { mutableStateOf(false) }
@@ -98,11 +103,18 @@ fun ScreenItemList(
         it.maxPrice?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L
     }.toString()
 
-    val filteredItems = items.filter {
-        it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
-                it.codeItem?.contains(searchQuery, ignoreCase = true) == true
+    // Refresh items on first load
+    LaunchedEffect(Unit) {
+        sharedVm.refreshItems()
     }
-    val groupedItems = filteredItems.groupBy { normalizeItemGroupName(it.nameItem) }
+
+    val filteredItems = items.filter { item ->
+        sharedState.filteredItems.any { it.id == item.id }
+    }
+    val groupedItems = sharedState.groupedByName
+        .mapValues { (_, sharedItems) ->
+            filteredItems.filter { item -> sharedItems.any { it.id == item.id } }
+        }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
 
     Scaffold(
@@ -112,7 +124,9 @@ fun ScreenItemList(
                 title = "${items.size} Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
-                onRefresh = { itemsViewModel.fetchItems() },
+                onRefresh = {
+                    sharedVm.refreshItems()
+                },
             )
         },
         bottomBar = {
@@ -154,8 +168,8 @@ fun ScreenItemList(
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
             OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+                value = sharedState.searchQuery,
+                onValueChange = { sharedVm.updateSearchQuery(it) },
                 label = { Text("Cari berdasarkan nama atau kode") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
