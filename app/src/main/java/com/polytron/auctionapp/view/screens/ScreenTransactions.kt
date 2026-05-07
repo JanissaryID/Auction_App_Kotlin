@@ -6,15 +6,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -23,10 +28,12 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -68,6 +75,8 @@ fun ScreenTransactions(
         it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
                 it.codeItem?.contains(searchQuery, ignoreCase = true) == true
     }
+    val groupedTransactions = filteredItems.groupBy { it.orderID.orEmpty().ifBlank { "Tanpa Order ID" } }
+    val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -121,12 +130,56 @@ fun ScreenTransactions(
                     contentPadding = PaddingValues(vertical = 16.dp),
                     modifier = Modifier.fillMaxWidth().weight(1f)
                 ) {
-                    items(filteredItems) { item ->
-                        ItemCardTransaction(
-                            item = item,
-                            isSelected = false,
-                            onClicked = { selectedItem = item; showDetailSheet = true }
-                        )
+                    groupedTransactions.toSortedMap().forEach { (orderId, transactionItems) ->
+                        item(key = orderId) {
+                            val isExpanded = expandedGroups[orderId] ?: false
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = orderId,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "${transactionItems.size} transaksi",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        TextButton(onClick = { expandedGroups[orderId] = !isExpanded }) {
+                                            Icon(
+                                                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                contentDescription = null
+                                            )
+                                            Text(if (isExpanded) "Tutup" else "Detail")
+                                        }
+                                    }
+
+                                    if (isExpanded) {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            transactionItems.forEach { item ->
+                                                ItemCardTransaction(
+                                                    item = item,
+                                                    isSelected = false,
+                                                    onClicked = { selectedItem = item; showDetailSheet = true }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -6,14 +6,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,6 +57,11 @@ import com.polytron.auctionapp.view.components.fab.FabWithDelete
 import com.polytron.auctionapp.view.components.itemcard.ItemCard
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
+
+private fun normalizeItemGroupName(name: String?): String {
+    if (name.isNullOrBlank()) return "Tanpa Nama"
+    return name.replace(Regex("\\s*[-–]?\\s*\\d+$"), "").trim().ifBlank { "Tanpa Nama" }
+}
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,6 +104,8 @@ fun ScreenItemList(
         it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
                 it.codeItem?.contains(searchQuery, ignoreCase = true) == true
     }
+    val groupedItems = filteredItems.groupBy { normalizeItemGroupName(it.nameItem) }
+    val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -163,32 +176,77 @@ fun ScreenItemList(
                     contentPadding = PaddingValues(vertical = 16.dp),
                     modifier = Modifier.fillMaxWidth().weight(1f)
                 ) {
-                    items(filteredItems) { item ->
-                        ItemCard(
-                            item = item,
-                            isSelected = selectedItems.contains(item),
-                            onClick = {
-                                if (isSelectionMode) {
-                                    if (selectedItems.contains(item)) selectedItems.remove(item) else selectedItems.add(item)
-                                } else {
-                                    selectedItem = item
-                                    showAddEditBottomSheet = true
-                                }
-                            },
-                            onLongClick = { if (!selectedItems.contains(item)) selectedItems.add(item) },
-                            onPrintClick = {
-                                val device = printerDevice
-                                if (device != null) {
-                                    BluetoothPrinter().printBarcodeLabel(device = device, itemName = item.nameItem.orEmpty(), itemCode = item.codeItem.orEmpty())
-                                } else {
-                                    Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
-                                    bluetoothHelper.requestBluetooth(
-                                        onReady = { printerViewModel.showBluetoothDevice(true) },
-                                        onFailure = { Toast.makeText(context, "Bluetooth gagal: $it", Toast.LENGTH_SHORT).show() }
-                                    )
+                    groupedItems.toSortedMap().forEach { (groupName, groupedItemList) ->
+                        item(key = groupName) {
+                            val isExpanded = expandedGroups[groupName] ?: false
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = groupName,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "${groupedItemList.size} item",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        TextButton(onClick = { expandedGroups[groupName] = !isExpanded }) {
+                                            Icon(
+                                                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                contentDescription = null
+                                            )
+                                            Text(if (isExpanded) "Tutup" else "Detail")
+                                        }
+                                    }
+
+                                    if (isExpanded) {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            groupedItemList.forEach { item ->
+                                                ItemCard(
+                                                    item = item,
+                                                    isSelected = selectedItems.contains(item),
+                                                    onClick = {
+                                                        if (isSelectionMode) {
+                                                            if (selectedItems.contains(item)) selectedItems.remove(item) else selectedItems.add(item)
+                                                        } else {
+                                                            selectedItem = item
+                                                            showAddEditBottomSheet = true
+                                                        }
+                                                    },
+                                                    onLongClick = { if (!selectedItems.contains(item)) selectedItems.add(item) },
+                                                    onPrintClick = {
+                                                        val device = printerDevice
+                                                        if (device != null) {
+                                                            BluetoothPrinter().printBarcodeLabel(device = device, itemName = item.nameItem.orEmpty(), itemCode = item.codeItem.orEmpty())
+                                                        } else {
+                                                            Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
+                                                            bluetoothHelper.requestBluetooth(
+                                                                onReady = { printerViewModel.showBluetoothDevice(true) },
+                                                                onFailure = { Toast.makeText(context, "Bluetooth gagal: $it", Toast.LENGTH_SHORT).show() }
+                                                            )
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
-                        )
+                        }
                     }
                 }
             }
