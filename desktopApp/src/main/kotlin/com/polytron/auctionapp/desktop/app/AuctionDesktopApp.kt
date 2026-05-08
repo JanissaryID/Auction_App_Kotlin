@@ -22,6 +22,10 @@ import com.polytron.auctionapp.desktop.theme.DesktopTheme
 import com.polytron.auctionapp.presentation.auction.AuctionViewModel
 import com.polytron.auctionapp.presentation.auth.AuthViewModel
 import com.polytron.auctionapp.presentation.items.ItemsViewModel
+import com.polytron.auctionapp.presentation.payment.PaymentViewModel
+import com.polytron.auctionapp.presentation.pickup.PickupViewModel
+import com.polytron.auctionapp.utils.generateRandomAlphanumeric
+import kotlinx.coroutines.launch
 import org.koin.core.parameter.parametersOf
 import org.koin.mp.KoinPlatform
 
@@ -39,6 +43,12 @@ fun AuctionDesktopApp() {
         val auctionViewModel = remember {
             koin.get<AuctionViewModel>()
         }
+        val paymentViewModel = remember {
+            koin.get<PaymentViewModel>()
+        }
+        val pickupViewModel = remember {
+            koin.get<PickupViewModel>()
+        }
 
         val navigator = rememberDesktopNavigator()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -48,6 +58,10 @@ fun AuctionDesktopApp() {
         val items by itemsViewModel.items.collectAsState()
         val isLoadingItems by itemsViewModel.isLoading.collectAsState()
         val selectedAuctionItems by auctionViewModel.selectedItems.collectAsState()
+        val editingBuyers by auctionViewModel.editingBuyers.collectAsState()
+        val editingPrices by auctionViewModel.editingPrices.collectAsState()
+        val selectedPaymentItems by paymentViewModel.selectedItems.collectAsState()
+        val selectedPickupItems by pickupViewModel.selectedItems.collectAsState()
 
         LaunchedEffect(authViewModel) {
             authViewModel.toastEvent.collect { message ->
@@ -75,23 +89,91 @@ fun AuctionDesktopApp() {
                 DesktopDestination.Items -> ItemsScreen(
                     items = items,
                     isLoading = isLoadingItems,
-                    onRefresh = itemsViewModel::fetchItems
+                    onRefresh = itemsViewModel::fetchItems,
+                    onAddItem = { navigator.showDialog(DesktopDialog.AddItem) },
+                    onEditItem = { id -> navigator.showDialog(DesktopDialog.EditItem(id)) },
+                    onDeleteItem = { id -> navigator.showDialog(DesktopDialog.ConfirmDelete(listOf(id))) },
+                    onItemDetail = { id -> navigator.showDialog(DesktopDialog.ItemDetail(id)) },
+                    onBulkDelete = { ids -> navigator.showDialog(DesktopDialog.ConfirmDelete(ids)) }
                 )
 
                 DesktopDestination.Auction -> AuctionScreen(
                     items = items,
-                    selectedItemCount = selectedAuctionItems.size
+                    selectedItems = selectedAuctionItems,
+                    editingBuyers = editingBuyers,
+                    editingPrices = editingPrices,
+                    onAddItem = { navigator.showDialog(DesktopDialog.SelectAuctionItems) },
+                    onBarcodeEntry = { navigator.showDialog(DesktopDialog.BarcodeEntry) },
+                    onRemoveItem = auctionViewModel::removeSelectedItem,
+                    onClearAll = auctionViewModel::clearSelectedItems,
+                    onBuyerChange = auctionViewModel::updateEditingBuyer,
+                    onPriceChange = auctionViewModel::updateEditingPrice,
+                    onSubmit = {
+                        appScope.launch {
+                            selectedAuctionItems.forEach { item ->
+                                val itemId = item.id ?: ""
+                                val buyer = editingBuyers[itemId] ?: ""
+                                val price = editingPrices[itemId] ?: ""
+                                itemsViewModel.patchItem(
+                                    id = itemId,
+                                    item = item.copy(
+                                        status = 1,
+                                        buyer = buyer,
+                                        price = price
+                                    )
+                                )
+                            }
+                            auctionViewModel.clearSelectedItems()
+                            snackbarHostState.showSnackbar("Lelang berhasil disimpan")
+                        }
+                    }
                 )
 
-                DesktopDestination.Payment -> PaymentScreen(items = items)
-                DesktopDestination.Pickup -> PickupScreen(items = items)
-                DesktopDestination.Transactions -> TransactionsScreen(items = items)
+                DesktopDestination.Payment -> PaymentScreen(
+                    items = items,
+                    selectedItems = selectedPaymentItems,
+                    onAddItem = { navigator.showDialog(DesktopDialog.SelectPaymentItems) },
+                    onBarcodeEntry = { navigator.showDialog(DesktopDialog.BarcodeEntry) },
+                    onRemoveItem = paymentViewModel::removeSelectedItem,
+                    onClearAll = paymentViewModel::clearSelectedItems,
+                    onPayClick = { navigator.showDialog(DesktopDialog.PaymentMethod) }
+                )
+                DesktopDestination.Pickup -> PickupScreen(
+                    items = items,
+                    selectedItems = selectedPickupItems,
+                    onAddItem = { navigator.showDialog(DesktopDialog.SelectPickupItems) },
+                    onBarcodeEntry = { navigator.showDialog(DesktopDialog.BarcodeEntry) },
+                    onRemoveItem = pickupViewModel::removeSelectedItem,
+                    onClearAll = pickupViewModel::clearSelectedItems,
+                    onPickupClick = {
+                        appScope.launch {
+                            selectedPickupItems.forEach { item ->
+                                itemsViewModel.patchItem(
+                                    id = item.id!!,
+                                    item = item.copy(status = 3)
+                                )
+                            }
+                            pickupViewModel.clearSelectedItems()
+                            snackbarHostState.showSnackbar("Pengambilan berhasil dikonfirmasi")
+                        }
+                    }
+                )
+                DesktopDestination.Transactions -> TransactionsScreen(
+                    items = items,
+                    isLoading = isLoadingItems,
+                    onRefresh = itemsViewModel::fetchItems,
+                    onTransactionDetail = { orderId -> navigator.showDialog(DesktopDialog.TransactionDetail(orderId)) }
+                )
             }
         }
 
         DesktopDialogHost(
             dialog = navigator.dialog,
             authViewModel = authViewModel,
+            itemsViewModel = itemsViewModel,
+            auctionViewModel = auctionViewModel,
+            paymentViewModel = paymentViewModel,
+            pickupViewModel = pickupViewModel,
             onDismiss = navigator::closeDialog
         )
     }

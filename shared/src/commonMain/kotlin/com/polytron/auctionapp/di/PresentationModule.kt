@@ -3,6 +3,8 @@ package com.polytron.auctionapp.di
 import com.polytron.auctionapp.presentation.auction.AuctionViewModel
 import com.polytron.auctionapp.presentation.auth.AuthViewModel
 import com.polytron.auctionapp.presentation.items.ItemsViewModel
+import com.polytron.auctionapp.presentation.payment.PaymentViewModel
+import com.polytron.auctionapp.presentation.pickup.PickupViewModel
 import kotlinx.coroutines.CoroutineScope
 import org.koin.dsl.module
 
@@ -32,4 +34,6 @@ val presentationModule = module {
         )
     }
     factory { AuctionViewModel() }
+    factory { PaymentViewModel() }
+    factory { PickupViewModel() }
 }

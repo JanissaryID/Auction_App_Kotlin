@@ -8,6 +8,7 @@ sealed interface DesktopDialog {
     data class ItemDetail(val itemId: String) : DesktopDialog
     data object SelectAuctionItems : DesktopDialog
     data object SelectPaymentItems : DesktopDialog
+    data object SelectPickupItems : DesktopDialog
     data object BarcodeEntry : DesktopDialog
     data object PaymentMethod : DesktopDialog
     data class TransactionDetail(val orderId: String) : DesktopDialog

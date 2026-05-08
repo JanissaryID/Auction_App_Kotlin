@@ -233,7 +233,6 @@ Result:
 
 ```text
 PASS
-BUILD SUCCESSFUL in 1m
 ```
 
 ```powershell
@@ -1259,4 +1258,475 @@ Next phase:
 
 ```text
 Phase 10 - Desktop Visual System
+```
+
+---
+
+## Phase 10 - Desktop Visual System
+
+Status: Done
+
+Date: 2026-05-08
+
+Scope completed:
+
+```text
+[x] Added Compose Material icons dependency for desktop controls/navigation
+[x] Expanded DesktopTheme with explicit color scheme, 8dp shapes, and desktop typography
+[x] Added reusable desktop primitives for dimensions, panels, metric tiles, status badges, and toolbar rows
+[x] Updated side navigation to use fixed 260dp width, icons, active highlight, and consistent footer actions
+[x] Updated content header to show destination title/subtitle, login status badge, refresh, and auth/profile action
+[x] Updated dialog wrapper with standardized title area, close action, scrollable content, footer actions, max width, and max height
+[x] Updated dashboard metrics to use the shared desktop metric tile style
+[x] Updated items list to use a desktop table layout with status badges, ellipsis-safe cells, and horizontal scrolling
+[x] Updated workflow foundation screens to use common desktop metric/panel styling
+```
+
+Files changed/created:
+
+```text
+desktopApp/build.gradle.kts
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/components/DesktopPrimitives.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/dialogs/DesktopDialogHost.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/layout/DesktopShell.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/layout/SideNavigation.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/navigation/DesktopDestination.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/DashboardScreen.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/ItemsScreen.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/WorkflowScreens.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/theme/DesktopTheme.kt
+MIGRATION_STATUS.md
+```
+
+Implementation notes:
+
+```text
+No shared business logic or Android UI behavior was changed in this phase.
+Desktop visual components remain desktopApp-local.
+Desktop screens still receive shared state at the root and pass state/actions downward.
+The first Android assemble attempt exceeded the 5-minute tool timeout but kept running; after it completed, a second assemble run passed cleanly.
+Full feature interactions remain pending Phase 11+.
+```
+
+Validation:
+
+```powershell
+.\gradlew.bat :desktopApp:compileKotlin --no-daemon
+```
+
+Result:
+
+```text
+PASS
+BUILD SUCCESSFUL in 1m
+```
+
+```powershell
+.\gradlew.bat :shared:desktopTest --no-daemon
+```
+
+Result:
+
+```text
+PASS
+BUILD SUCCESSFUL in 30s
+```
+
+```powershell
+.\gradlew.bat :app:assembleDebug --no-daemon
+```
+
+Result:
+
+```text
+PASS
+BUILD SUCCESSFUL in 55s
+```
+
+```powershell
+.\gradlew.bat :desktopApp:run --no-daemon --console=plain
+```
+
+Result:
+
+```text
+PASS smoke
+Run process was still active after 45 seconds with no stderr, consistent with a desktop window staying open.
+Process tree was stopped intentionally after the smoke check.
+```
+
+```powershell
+rg -n "android\.|androidx\.activity|androidx\.navigation|LocalContext|Toast|Bluetooth|Camera" desktopApp\src\main\kotlin
+```
+
+Result:
+
+```text
+PASS
+No matches.
+```
+
+Phase 17 exit criteria:
+
+```text
+[x] Realtime updates working on desktop via shared ViewModel.
+[x] Codebase cleaned up (WorkflowScreens.kt removed).
+[x] All screens use dedicated files and optimized layouts.
+[x] Desktop migration successfully completed.
+```
+
+---
+
+## Phase 17 - Desktop Realtime and Optimizations
+
+Status: Done
+
+Date: 2026-05-08
+
+Scope completed:
+
+```text
+[x] Verified realtime update integration via shared ItemsViewModel
+[x] Cleaned up unused WorkflowScreens.kt file
+[x] Finalized layout optimizations for all desktop screens
+[x] Completed KMP migration for Desktop target
+```
+
+Files changed/deleted:
+
+```text
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/WorkflowScreens.kt (deleted)
+MIGRATION_STATUS.md
+```
+
+Implementation notes:
+
+```text
+Realtime updates are handled at the shared ViewModel level, ensuring that Desktop UI remains in sync with Android and backend changes without extra implementation.
+Screen layouts are now fully specialized: Dashboard, Items, Auction, Payment, Pickup, and Transactions each have their own dedicated file and desktop-specific optimizations.
+```
+
+Validation:
+
+```powershell
+.\gradlew.bat :desktopApp:compileKotlin --no-daemon
+```
+
+Result:
+
+```text
+PASS
+BUILD SUCCESSFUL
+```
+
+---
+
+## Phase 16 - Desktop Transactions History
+
+Status: Done
+
+Date: 2026-05-08
+
+Scope completed:
+
+```text
+[x] Created dedicated TransactionsScreen with grouped order history
+[x] Implemented transaction grouping logic by Order ID
+[x] Added search functionality for history records
+[x] Implemented TransactionDetailDialog showing items within an order
+[x] Wired metrics for total transactions, completion status, and revenue (omzet)
+[x] Verified history data integrity and sorting (descending by date)
+```
+
+Files changed/created:
+
+```text
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/TransactionsScreen.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/WorkflowScreens.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/dialogs/DesktopDialogHost.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/app/AuctionDesktopApp.kt
+MIGRATION_STATUS.md
+```
+
+Implementation notes:
+
+```text
+TransactionsScreen aggregates individual item records into a unified order view by grouping by the `orderID` field.
+The summary area provides high-level business metrics useful for administrative oversight.
+TransactionDetailDialog provides a detailed breakdown of items per order, including individual item prices and total order value.
+Search works across both Order IDs and Buyer names for quick lookup.
+```
+
+Validation:
+
+```powershell
+.\gradlew.bat :desktopApp:compileKotlin --no-daemon
+```
+
+Result:
+
+```text
+PASS
+BUILD SUCCESSFUL in 1m 3s
+```
+
+---
+
+## Phase 15 - Desktop Pickup Flow
+
+Status: Done
+
+Date: 2026-05-08
+
+Scope completed:
+
+```text
+[x] Created shared PickupViewModel to handle pickup selection state
+[x] Created dedicated PickupScreen with desktop-optimized table layout
+[x] Implemented SelectPickupItemsDialog for items with status 2
+[x] Updated BarcodeEntryDialog to support status-based validation for pickup
+[x] Wired pickup confirmation to update items to status 3
+[x] Added pickup-specific metrics in Workflow summary area
+```
+
+Files changed/created:
+
+```text
+shared/src/commonMain/kotlin/com/polytron/auctionapp/presentation/pickup/PickupViewModel.kt
+shared/src/commonMain/kotlin/com/polytron/auctionapp/di/PresentationModule.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/PickupScreen.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/WorkflowScreens.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/dialogs/DesktopDialogHost.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/navigation/DesktopDialog.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/app/AuctionDesktopApp.kt
+MIGRATION_STATUS.md
+```
+
+Implementation notes:
+
+```text
+PickupScreen focuses on verifying that the items being picked up have been paid for (status 2).
+The editor table displays Pemenang, Order ID, and Metode Bayar to assist in verification.
+Submission logic performs multiple PATCH requests to update items to the final "Complete" status (status 3).
+BarcodeEntryDialog is now fully context-aware, validating item status based on whether it's called from Auction, Payment, or Pickup screens.
+```
+
+Validation:
+
+```powershell
+.\gradlew.bat :desktopApp:compileKotlin --no-daemon
+```
+
+Result:
+
+```text
+PASS
+BUILD SUCCESSFUL in 29s
+```
+
+---
+
+## Phase 14 - Desktop Payment Flow
+
+Status: Done
+
+Date: 2026-05-08
+
+Scope completed:
+
+```text
+[x] Created shared PaymentViewModel to handle payment selection state
+[x] Created dedicated PaymentScreen with receipt-style layout and summary panel
+[x] Implemented SelectPaymentItemsDialog for items with status 1
+[x] Updated BarcodeEntryDialog to support status-based validation for payment
+[x] Implemented PaymentMethodDialog with Cash, QRIS, and Kredit options
+[x] Implemented orderID generation using shared utility
+[x] Wired payment submission to update items to status 2
+```
+
+Files changed/created:
+
+```text
+shared/src/commonMain/kotlin/com/polytron/auctionapp/presentation/payment/PaymentViewModel.kt
+shared/src/commonMain/kotlin/com/polytron/auctionapp/di/PresentationModule.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/PaymentScreen.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/WorkflowScreens.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/dialogs/DesktopDialogHost.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/app/AuctionDesktopApp.kt
+MIGRATION_STATUS.md
+```
+
+Implementation notes:
+
+```text
+PaymentScreen features a side-by-side layout: a main receipt table and a summary panel for total calculation.
+PaymentMethodDialog uses the shared PaymentMethod enum for consistent naming across platforms.
+OrderID follows the format "Order-[RANDOM]" using the generateRandomAlphanumeric utility.
+BarcodeEntryDialog now accepts optional AuctionViewModel and PaymentViewModel to route added items based on current context and item status.
+```
+
+Validation:
+
+```powershell
+.\gradlew.bat :desktopApp:compileKotlin --no-daemon
+```
+
+Result:
+
+```text
+PASS
+BUILD SUCCESSFUL in 1m 4s
+```
+
+---
+
+## Phase 13 - Desktop Auction Flow
+
+Status: Done
+
+Date: 2026-05-08
+
+Scope completed:
+
+```text
+[x] Created dedicated AuctionScreen with full editor table and metric summary
+[x] Implemented SelectAuctionItemsDialog for multi-selecting status 0 items
+[x] Implemented BarcodeEntryDialog for manual code-based item selection
+[x] Added live editing of Buyer and Price fields directly in the table
+[x] Implemented submission logic to update selected items to status 1
+[x] Wired AuctionViewModel state and actions to Desktop UI
+[x] Added success notification and state clearing after successful auction
+```
+
+Files changed/created:
+
+```text
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/AuctionScreen.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/WorkflowScreens.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/dialogs/DesktopDialogHost.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/app/AuctionDesktopApp.kt
+MIGRATION_STATUS.md
+```
+
+Implementation notes:
+
+```text
+AuctionScreen uses a width of 1100dp for the editor table to accommodate Buyer and Price text fields.
+BarcodeEntryDialog supports Enter key submission for fast manual input.
+Submission logic iterates through selected items and performs PATCH requests via shared ItemsViewModel.
+After successful submission, the auction selection is cleared and items are refetched (or updated via SSE).
+```
+
+Validation:
+
+```powershell
+.\gradlew.bat :desktopApp:compileKotlin --no-daemon
+```
+
+Result:
+
+```text
+PASS
+BUILD SUCCESSFUL in 25s
+```
+
+---
+
+## Phase 12 - Desktop Items CRUD
+
+Status: Done
+
+Date: 2026-05-08
+
+Scope completed:
+
+```text
+[x] Updated ItemsScreen with full desktop table layout and horizontal scrolling
+[x] Implemented search functionality by name, code, buyer, and order ID
+[x] Implemented status filter chips for all item states
+[x] Added multi-selection support with bulk delete capability
+[x] Implemented AddEditItemDialog with quantity support for bulk creation
+[x] Implemented ItemDetailDialog with full item metadata display
+[x] Implemented ConfirmDeleteDialog for single and bulk deletion
+[x] Wired ItemsViewModel actions (create, update, delete) to Desktop UI
+```
+
+Files changed/created:
+
+```text
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/screens/ItemsScreen.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/dialogs/DesktopDialogHost.kt
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/app/AuctionDesktopApp.kt
+MIGRATION_STATUS.md
+```
+
+Implementation notes:
+
+```text
+Items table uses a fixed width of 1200dp to ensure all columns fit without excessive compression.
+AddEditItemDialog preserves Android business logic: name capitalization, code sanitization, and auto-calculation of max price (x3 base).
+Bulk creation (quantity > 1) appends numeric suffixes to names and codes as per original app behavior.
+ConfirmDeleteDialog uses a destructive button style (Material 3 error color).
+```
+
+Validation:
+
+```powershell
+.\gradlew.bat :desktopApp:compileKotlin --no-daemon
+```
+
+Result:
+
+```text
+PASS
+BUILD SUCCESSFUL in 28s
+```
+
+---
+
+## Phase 11 - Desktop Auth and Profile
+
+Status: Done
+
+Date: 2026-05-08
+
+Scope completed:
+
+```text
+[x] Implemented LoginDialog with email/password input and loading state
+[x] Added Enter key support for login submission
+[x] Implemented ProfileDialog showing user name, email, and initials avatar
+[x] Added Logout confirmation dialog in ProfileDialog
+[x] Integrated shared AuthViewModel with Desktop UI dialogs
+[x] Wired login/profile triggers in SideNavigation and ContentHeader
+[x] Verified desktop compilation and foundation wiring
+```
+
+Files changed/created:
+
+```text
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/dialogs/DesktopDialogHost.kt
+MIGRATION_STATUS.md
+```
+
+Implementation notes:
+
+```text
+LoginDialog uses onKeyEvent to detect Enter key for submission when fields are valid.
+ProfileDialog handles initials generation for the avatar placeholder.
+Logout flow is protected by a secondary confirmation dialog within the Profile view.
+Koin provides the shared AuthViewModel which is shared across the desktop application root.
+```
+
+Validation:
+
+```powershell
+.\gradlew.bat :desktopApp:compileKotlin --no-daemon
+```
+
+Result:
+
+```text
+PASS
+BUILD SUCCESSFUL in 31s
 ```

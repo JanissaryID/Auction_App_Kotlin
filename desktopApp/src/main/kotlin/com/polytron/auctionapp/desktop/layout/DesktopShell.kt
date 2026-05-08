@@ -10,18 +10,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.polytron.auctionapp.desktop.components.DesktopDimens
+import com.polytron.auctionapp.desktop.components.StatusBadge
+import com.polytron.auctionapp.desktop.components.StatusTone
 import com.polytron.auctionapp.desktop.navigation.DesktopDestination
 
 @Composable
@@ -65,6 +77,7 @@ fun DesktopShell(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.background)
             ) {
                 ContentHeader(
                     destination = currentDestination,
@@ -78,7 +91,7 @@ fun DesktopShell(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(24.dp)
+                        .padding(DesktopDimens.ContentPadding)
                 ) {
                     content()
                 }
@@ -96,37 +109,77 @@ private fun ContentHeader(
     onLoginClick: () -> Unit,
     onProfileClick: () -> Unit
 ) {
-    Row(
+    Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 24.dp, vertical = 18.dp)
+            .fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 0.dp
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = destination.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = destination.subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        TextButton(onClick = onRefreshClick) {
-            Text("Refresh")
-        }
-        Spacer(Modifier.width(8.dp))
-        if (isLoggedIn) {
-            Button(onClick = onProfileClick) {
-                Text(userName?.takeIf { it.isNotBlank() } ?: "Profil")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = destination.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = destination.subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-        } else {
-            Button(onClick = onLoginClick) {
-                Text("Login")
+
+            StatusBadge(
+                text = if (isLoggedIn) userName?.takeIf { it.isNotBlank() } ?: "Login" else "Belum login",
+                tone = if (isLoggedIn) StatusTone.Ready else StatusTone.Neutral
+            )
+            Spacer(Modifier.width(12.dp))
+
+            OutlinedButton(
+                onClick = onRefreshClick,
+                contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Refresh")
+            }
+            Spacer(Modifier.width(8.dp))
+            if (isLoggedIn) {
+                Button(
+                    onClick = onProfileClick,
+                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Profil")
+                }
+            } else {
+                Button(
+                    onClick = onLoginClick,
+                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Login,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Login")
+                }
             }
         }
     }
