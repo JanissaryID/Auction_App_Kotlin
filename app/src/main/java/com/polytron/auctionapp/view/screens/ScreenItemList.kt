@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
-import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.ui.viewmodel.AuthViewModel
 import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
 import com.polytron.auctionapp.ui.viewmodel.PrinterViewModel

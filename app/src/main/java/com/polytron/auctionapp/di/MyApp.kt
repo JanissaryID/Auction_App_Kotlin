@@ -11,7 +11,7 @@ class MyApp : Application() {
         // Inisialisasi Koin
         startKoin {
             androidContext(this@MyApp)
-            modules(appModule)
+            modules(sharedModules + androidPlatformModule + appModule)
         }
     }
 }

@@ -37,7 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.utils.formatRupiah
 

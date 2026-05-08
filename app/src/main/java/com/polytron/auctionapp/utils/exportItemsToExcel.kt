@@ -7,8 +7,8 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import com.polytron.auctionapp.model.ItemResponse
-import com.polytron.auctionapp.model.PaymentMethod
+import com.polytron.auctionapp.domain.model.ItemResponse
+import com.polytron.auctionapp.domain.model.PaymentMethod
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.xssf.usermodel.XSSFWorkbook

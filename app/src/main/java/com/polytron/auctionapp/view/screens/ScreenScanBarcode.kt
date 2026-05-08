@@ -29,7 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
-import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.ui.viewmodel.AuctionViewModel
 import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
 import com.polytron.auctionapp.view.components.SelectedItemsBottomBar

@@ -9,10 +9,9 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
-import com.polytron.auctionapp.data.session.SessionManager
+import com.polytron.auctionapp.domain.session.SessionManager
 import com.polytron.auctionapp.navigation.AppNavHost
 import com.polytron.auctionapp.ui.theme.AuctionAppTheme
 import kotlinx.coroutines.launch

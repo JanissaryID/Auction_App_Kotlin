@@ -17,6 +17,7 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(libs.koin.core)
+    implementation(libs.slf4j.nop)
 }
 
 compose.desktop {

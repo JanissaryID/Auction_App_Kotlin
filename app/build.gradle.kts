@@ -46,6 +46,8 @@ android {
 
 dependencies {
 
+    implementation(project(":shared"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -76,21 +78,8 @@ dependencies {
 
     implementation(libs.navigation)
 
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.cio)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.serialization.kotlinx.json)
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.ktor.client.websockets)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.client.logging)
-
-    implementation(libs.datastore.preferences)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.poi.ooxml)
-    implementation(libs.datastore.preferences)
-
-    implementation(libs.pocketbase.kotlin)
 
     // CameraX
     implementation(libs.androidx.camera.camera2)

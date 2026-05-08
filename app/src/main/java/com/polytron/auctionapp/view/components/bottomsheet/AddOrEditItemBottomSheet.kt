@@ -31,7 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import kotlinx.coroutines.launch
 

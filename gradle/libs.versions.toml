@@ -29,6 +29,7 @@ serialization = "1.10.0"
 room = "2.8.4"
 ksp = "2.3.0"
 gson = "2.13.2"
+slf4j = "2.0.17"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -88,6 +89,7 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 androidx-room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
 
 google-gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+slf4j-nop = { group = "org.slf4j", name = "slf4j-nop", version.ref = "slf4j" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

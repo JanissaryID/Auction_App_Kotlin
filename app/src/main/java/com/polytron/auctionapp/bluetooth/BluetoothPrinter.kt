@@ -13,7 +13,7 @@ import com.polytron.auctionapp.bluetooth.EscPosCommands.fontNormal
 import com.polytron.auctionapp.bluetooth.EscPosCommands.newLine
 import com.polytron.auctionapp.bluetooth.EscPosCommands.showBarcodeText
 import com.polytron.auctionapp.bluetooth.EscPosCommands.strip
-import com.polytron.auctionapp.model.ItemResponse
+import com.polytron.auctionapp.domain.model.ItemResponse
 import java.io.OutputStream
 import java.util.UUID
 

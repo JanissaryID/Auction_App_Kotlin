@@ -34,7 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.polytron.auctionapp.model.PaymentMethod
+import com.polytron.auctionapp.domain.model.PaymentMethod
 import com.polytron.auctionapp.utils.formatCurrencyInput
 
 @Composable
