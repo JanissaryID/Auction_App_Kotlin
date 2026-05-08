@@ -8,12 +8,14 @@ Tujuan utama:
 - Business logic harus sama persis antara Android dan Desktop.
 - Desktop Windows tidak membutuhkan camera dan bluetooth.
 - Desktop UI harus desktop-friendly: side navigation di kiri, content di kanan, dan detail/action kompleks memakai custom dialog, bukan pindah halaman.
+- Code harus modular dengan Clean Architecture, DI menggunakan Koin, dan pola MVVM.
 - Banyak AI/model boleh bekerja paralel, tetapi harus mengikuti aturan dokumen ini agar visi tetap sama dan perubahan AI lain tidak rusak.
 
 Wajib dibaca sebelum AI manapun mengubah kode:
 
 - Bagian "Kondisi Project Saat Ini".
 - Bagian "Arsitektur Target".
+- Bagian "Clean Architecture, MVVM, dan Koin".
 - Bagian "Aturan Multi-AI".
 - Bagian phase yang sesuai dengan scope task.
 - Bagian "Definition of Done".
@@ -89,6 +91,21 @@ Kesimpulan:
 7. Migrasi bertahap.
    Setiap fase harus buildable dan punya checkpoint.
 
+8. Clean Architecture wajib dipakai.
+   Pisahkan `domain`, `data`, `presentation`, dan `di`. UI tidak boleh memanggil network/local storage langsung. Repository implementation tidak boleh bocor ke ViewModel.
+
+9. MVVM wajib dipakai untuk Android dan Desktop.
+   Screen hanya render state dan mengirim event/action ke ViewModel. ViewModel mengelola state, validasi UI-level, loading, error, dan memanggil use case. Business rules inti berada di use case/domain, bukan di Composable.
+
+10. Dependency Injection wajib menggunakan Koin.
+    Object graph harus didefinisikan di module Koin. Hindari manual singleton global, service locator custom, dan pemanggilan dependency acak dari UI.
+
+11. Modular bukan berarti over-engineering.
+    Pada tahap awal cukup modular di level module KMP dan package/layer/feature. Jangan pecah menjadi terlalu banyak Gradle module sebelum shared business logic stabil.
+
+12. Feature harus punya boundary jelas.
+    Auth, Items, Auction, Payment, Pickup, Transactions, Export, dan Platform services harus mudah dikenali dari struktur package, use case, ViewModel, dan dialog/screen-nya.
+
 ---
 
 ## 3. Arsitektur Target
@@ -156,6 +173,190 @@ shared -> desktopApp
 app -> desktopApp
 desktopApp -> app
 ```
+
+### 3.1 Clean Architecture, MVVM, dan Koin
+
+Target internal architecture:
+
+```text
+presentation -> domain <- data
+di wires all dependencies
+platform code provides platform implementations
+```
+
+Layer responsibility:
+
+```text
+domain
+  Entity/domain model yang dipakai business logic
+  Repository interface
+  Use case
+  Business validation
+  Pure calculation
+  Tidak import Compose
+  Tidak import Koin
+  Tidak import Android/Desktop API
+
+data
+  DTO/network model jika perlu
+  Remote data source
+  Local preference/data source
+  Repository implementation
+  Mapper DTO <-> domain model
+  SSE client implementation
+  Export implementation contract adapter
+  Boleh bergantung ke domain
+  Tidak boleh bergantung ke presentation
+
+presentation
+  ViewModel
+  UiState
+  UiEvent/UiEffect
+  UI validation ringan
+  Loading/error state
+  Calls use cases only
+  Tidak memanggil Ktor, DataStore, file system, atau repository implementation langsung
+
+di
+  Koin modules
+  Bind interface ke implementation
+  Provide platform services
+  Provide ViewModel
+```
+
+Allowed dependency:
+
+```text
+domain -> Kotlin stdlib, coroutines/flow if needed
+data -> domain, Ktor, serialization, platform storage
+presentation -> domain, coroutines/flow, lifecycle/viewmodel APIs
+app Android UI -> presentation, shared, Android-only adapters
+desktopApp UI -> presentation, shared, Desktop-only adapters
+di -> domain, data, presentation, platform implementations
+```
+
+Forbidden dependency:
+
+```text
+domain -> data
+domain -> presentation
+domain -> Koin
+domain -> Compose
+domain -> Android API
+data -> presentation
+ViewModel -> repository implementation class
+Composable -> repository/use case/data source directly
+Composable -> Koin get() except at screen root if no better integration exists
+```
+
+MVVM contract:
+
+```text
+Screen/Composable:
+  collect UiState
+  render UI
+  call viewModel.onAction(...)
+  show one-shot effects from ViewModel
+  no business logic beyond tiny display formatting
+
+ViewModel:
+  owns MutableStateFlow<UiState>
+  exposes StateFlow<UiState>
+  exposes SharedFlow<UiEffect> for snackbar/dialog one-shot events
+  calls use cases
+  never knows concrete repository implementation
+  never imports Android Context except Android-only ViewModel wrapper if absolutely required
+
+UseCase:
+  one focused business operation
+  calls repository interface
+  returns result or throws domain/data exception consistently
+  easy to unit test
+```
+
+Recommended ViewModel shape:
+
+```kotlin
+data class ItemsUiState(
+    val items: List<ItemResponse> = emptyList(),
+    val isLoading: Boolean = false,
+    val searchQuery: String = "",
+    val selectedIds: Set<String> = emptySet(),
+    val errorMessage: String? = null
+)
+
+sealed interface ItemsAction {
+    data object Refresh : ItemsAction
+    data class SearchChanged(val value: String) : ItemsAction
+    data class ToggleSelected(val itemId: String) : ItemsAction
+    data class DeleteSelected(val itemIds: Set<String>) : ItemsAction
+}
+
+sealed interface ItemsEffect {
+    data class ShowMessage(val message: String) : ItemsEffect
+}
+```
+
+Koin contract:
+
+```text
+common/shared modules:
+  domainModule
+  dataModule
+  presentationModule
+
+platform modules:
+  androidPlatformModule
+  desktopPlatformModule
+
+app startup:
+  Android starts Koin with shared modules + androidPlatformModule
+  Desktop starts Koin with shared modules + desktopPlatformModule
+```
+
+Koin rules:
+
+- Prefer constructor injection.
+- Bind interfaces explicitly:
+  - `single<ItemsRepository> { ItemsRepositoryImpl(...) }`
+  - `single<UserPreferencesRepository> { AndroidUserPreferencesRepository(...) }`
+- Use `factory` for use cases unless stateful singleton is required.
+- Use `viewModel` or KMP-compatible ViewModel DSL for ViewModels.
+- Do not call `startKoin` from shared common code.
+- Do not put platform `Context`, `Window`, or file chooser directly into common module.
+- Do not use Koin as a service locator inside domain classes.
+
+Recommended Koin grouping:
+
+```kotlin
+val domainModule = module {
+    factory { LoginUseCase(repository = get(), preferences = get(), sessionManager = get()) }
+    factory { FetchItemsUseCase(repository = get()) }
+    factory { CreateItemUseCase(repository = get()) }
+    factory { UpdateItemUseCase(repository = get()) }
+    factory { DeleteItemUseCase(repository = get()) }
+    factory { StartItemsRealtimeUseCase(repository = get()) }
+    factory { SubmitAuctionUseCase(updateItem = get()) }
+    factory { SubmitPaymentUseCase(updateItem = get(), idGenerator = get()) }
+    factory { ConfirmPickupUseCase(updateItem = get()) }
+}
+
+val dataModule = module {
+    single<ItemsRepository> { ItemsRepositoryImpl(sessionManager = get(), logger = get()) }
+    single { SessionManager(userPreferencesRepository = get(), logger = get()) }
+}
+
+val presentationModule = module {
+    viewModel { AuthViewModel(loginUseCase = get(), logoutUseCase = get(), restoreSessionUseCase = get()) }
+    viewModel { ItemsViewModel(fetchItemsUseCase = get(), observeRealtimeUseCase = get(), sessionManager = get()) }
+    viewModel { AuctionViewModel(submitAuctionUseCase = get()) }
+    viewModel { PaymentViewModel(submitPaymentUseCase = get()) }
+    viewModel { PickupViewModel(confirmPickupUseCase = get()) }
+    viewModel { TransactionsViewModel(exportTransactionsUseCase = get()) }
+}
+```
+
+The exact code can differ depending on KMP ViewModel library choice, but the dependency direction must remain the same.
 
 ---
 
@@ -774,6 +975,136 @@ Exit criteria:
 
 ---
 
+## Phase 1A - Clean Architecture, Koin, and MVVM Scaffold
+
+Goal:
+
+- Create architecture skeleton before moving business logic.
+- Ensure all later AI work follows the same layer and DI shape.
+
+Allowed files:
+
+- `shared/src/commonMain/kotlin/.../domain/**`
+- `shared/src/commonMain/kotlin/.../data/**` empty contracts/skeleton only
+- `shared/src/commonMain/kotlin/.../presentation/**`
+- `shared/src/commonMain/kotlin/.../di/**`
+- `shared/src/androidMain/kotlin/.../di/**`
+- `shared/src/desktopMain/kotlin/.../di/**`
+- `app/src/main/.../di/**` only for Koin wiring
+- `desktopApp/src/.../di/**` only for Koin wiring
+
+Forbidden:
+
+- Implementing real network calls in this phase.
+- Moving Android UI.
+- Rewriting feature behavior.
+- Adding repository calls directly to UI.
+
+Target package skeleton:
+
+```text
+shared/src/commonMain/kotlin/com/polytron/auctionapp/
+|-- core/
+|   |-- logging/
+|   |-- result/
+|   `-- util/
+|-- domain/
+|   |-- model/
+|   |-- repository/
+|   `-- usecase/
+|-- data/
+|   |-- remote/
+|   |-- local/
+|   |-- mapper/
+|   `-- repository/
+|-- presentation/
+|   |-- auth/
+|   |-- items/
+|   |-- auction/
+|   |-- payment/
+|   |-- pickup/
+|   `-- transactions/
+`-- di/
+    |-- DomainModule.kt
+    |-- DataModule.kt
+    `-- PresentationModule.kt
+```
+
+Tasks:
+
+1. Create base package folders.
+
+2. Create common result type if needed:
+
+```kotlin
+sealed interface AppResult<out T> {
+    data class Success<T>(val data: T) : AppResult<T>
+    data class Failure(val message: String, val cause: Throwable? = null) : AppResult<Nothing>
+}
+```
+
+Do not force `AppResult` everywhere if exceptions are already handled consistently. Pick one style and document it.
+
+3. Create `AppLogger` contract in common.
+
+4. Create DI module files:
+
+```kotlin
+val domainModule = module {
+    // use cases added in later phases
+}
+
+val dataModule = module {
+    // repository bindings added in later phases
+}
+
+val presentationModule = module {
+    // viewmodels added in later phases
+}
+
+val sharedModules = listOf(
+    domainModule,
+    dataModule,
+    presentationModule
+)
+```
+
+5. Create platform module placeholders:
+
+```kotlin
+val androidPlatformModule = module {
+    // Android logger/preferences/exporter later
+}
+
+val desktopPlatformModule = module {
+    // Desktop logger/preferences/exporter later
+}
+```
+
+6. Decide ViewModel base approach:
+
+- Preferred: KMP-compatible ViewModel with Koin ViewModel.
+- Fallback: plain state holder/controller with explicit `CoroutineScope`.
+
+Document the selected approach in a short comment or architecture note.
+
+Validation:
+
+```powershell
+.\gradlew.bat :shared:compileKotlinDesktop
+.\gradlew.bat :app:assembleDebug
+```
+
+Exit criteria:
+
+- Architecture folders exist.
+- Koin module files exist.
+- Shared compiles.
+- Android still builds.
+- Later phases know exactly where to place domain/data/presentation code.
+
+---
+
 ## Phase 2 - Move Pure Models to shared/commonMain
 
 Goal:
@@ -1176,6 +1507,18 @@ Exit criteria:
 Goal:
 
 - Share Auth, Items, and Auction state logic.
+- Keep MVVM clean: UI -> ViewModel -> UseCase -> Repository interface -> Repository implementation.
+
+Layering rules for this phase:
+
+- ViewModel must live under `presentation/<feature>/`.
+- Each ViewModel should expose one main `StateFlow<FeatureUiState>`.
+- One-shot messages should use `SharedFlow<FeatureEffect>` or equivalent.
+- ViewModel should receive use cases through constructor injection.
+- ViewModel may depend on `SessionManager` only if session state is truly part of that screen's state.
+- ViewModel must not instantiate repository, Ktor client, DataStore, file storage, or exporter directly.
+- Composable screen must not call repository/use case directly.
+- Keep reusable UI components stateless where possible.
 
 Current Android classes:
 
@@ -1233,8 +1576,8 @@ Auth:
 - isLoggedIn delegates to SessionManager.
 - restore token only once.
 - login validates non-blank email/password.
-- login saves email/password/token/id/name/avatar.
-- logout clears session and local profile.
+- login use case saves email/password/token/id/name/avatar.
+- logout use case clears session and local profile.
 - session expired clears local profile and emits event.
 
 Items:
@@ -1242,7 +1585,7 @@ Items:
 - items list is StateFlow.
 - loading state is StateFlow.
 - fetchItems loads page 1 perPage 500.
-- create/update/delete call repository.
+- create/update/delete call use cases, and use cases call repository interface.
 - isLoggedIn true triggers fetch + SSE.
 - isLoggedIn false clears data + cancels SSE.
 - SSE event create/update/delete triggers fetchItems.
@@ -1286,6 +1629,8 @@ Exit criteria:
 - Shared state logic works.
 - Android can consume shared state logic.
 - Desktop can consume shared state logic.
+- ViewModels are registered through Koin.
+- ViewModels depend on use cases/interfaces, not concrete repository implementations.
 
 ---
 
@@ -1326,6 +1671,12 @@ implementation(project(":shared"))
   - `ItemsRepository`
   - shared ViewModels/controllers
   - Android `BluetoothHelper` remains in app
+- Android `startKoin` must include:
+  - `domainModule`
+  - `dataModule`
+  - `presentationModule`
+  - `androidPlatformModule`
+  - Android-only module for `BluetoothHelper` and Android-only printer/camera dependencies
 
 3. Remove duplicate business classes from app only after Android compiles with shared.
 
@@ -1417,6 +1768,28 @@ fun main() = application {
     }
 }
 ```
+
+Desktop Koin startup requirements:
+
+```kotlin
+startKoin {
+    modules(
+        domainModule,
+        dataModule,
+        presentationModule,
+        desktopPlatformModule,
+        desktopAppModule
+    )
+}
+```
+
+Rules:
+
+- `desktopAppModule` may contain desktop window/UI helpers only.
+- Shared ViewModels should come from shared `presentationModule`.
+- Desktop screens receive ViewModel from Koin at screen root, then pass state/actions down to stateless child components.
+- Child components and dialogs should not call Koin directly.
+- Desktop-specific services such as file chooser must be injected as interfaces if they are needed by shared presentation logic.
 
 Window target:
 
@@ -2392,8 +2765,13 @@ These rules are mandatory for all AI/model agents.
 14. Do not make desktop depend on `app`.
 15. Do not change API field names.
 16. Do not change status semantics.
-17. Always run relevant build/test after edits.
-18. Handoff must include changed files and verification.
+17. Do not bypass MVVM by calling repository/use case directly from Composable screens.
+18. Do not inject concrete repository implementation into ViewModel.
+19. Do not create manual singleton/service locator when Koin should own the dependency.
+20. Do not add business rules to DI modules; DI modules only wire dependencies.
+21. Keep `domain` free from Koin, Compose, Android, Desktop, Ktor, DataStore, and file-system APIs.
+22. Always run relevant build/test after edits.
+23. Handoff must include changed files and verification.
 
 ### 9.2 Ownership Rules
 
@@ -2410,22 +2788,37 @@ AI-Gradle:
   desktopApp/build.gradle.kts
 
 AI-Shared-Models:
-  shared/src/commonMain/.../model
-  shared/src/commonMain/.../data/remote/model
+  shared/src/commonMain/.../domain/model
+  shared/src/commonMain/.../data/remote/model if DTOs are needed
+
+AI-Shared-Domain:
+  shared/src/commonMain/.../domain/repository
+  shared/src/commonMain/.../domain/usecase
+  shared/src/commonMain/.../domain/validation
 
 AI-Shared-Repository:
-  shared/src/commonMain/.../data/remote/repository
+  shared/src/commonMain/.../data/repository
+  shared/src/commonMain/.../data/remote
+  shared/src/commonMain/.../data/mapper
   shared/src/androidMain/... repository implementation
   shared/src/desktopMain/... repository implementation
 
 AI-Shared-Session:
-  shared/src/commonMain/.../session
-  shared/src/commonMain/.../preferences
+  shared/src/commonMain/.../domain/session or core/session
+  shared/src/commonMain/.../domain/repository/UserPreferencesRepository.kt
   shared/src/androidMain/... preferences
   shared/src/desktopMain/... preferences
 
 AI-Shared-State:
-  shared/src/commonMain/.../viewmodel or controller
+  shared/src/commonMain/.../presentation
+  shared/src/commonMain/.../presentation/*/*ViewModel.kt
+  shared/src/commonMain/.../presentation/*/*UiState.kt
+  shared/src/commonMain/.../presentation/*/*Action.kt
+
+AI-Shared-DI:
+  shared/src/commonMain/.../di
+  shared/src/androidMain/.../di
+  shared/src/desktopMain/.../di
 
 AI-Android-Rewire:
   app/build.gradle.kts
@@ -2530,6 +2923,9 @@ Core rules:
 - Business logic must remain identical between Android and Desktop.
 - Desktop Windows does not need camera or bluetooth.
 - Desktop UI uses side navigation and custom dialogs, not page navigation for detail.
+- Code must follow Clean Architecture with `domain`, `data`, `presentation`, and `di`.
+- Use MVVM: screens render ViewModel state and send actions.
+- Use Koin for DI; do not create manual singletons/service locators.
 - Do not add Android-only APIs into shared/commonMain.
 - Do not edit outside assigned scope.
 - Do not revert changes made by other AI/user.
@@ -2574,6 +2970,10 @@ Never do these unless explicitly approved:
 - Bulk reformat all files.
 - Upgrade all dependencies at once.
 - Add unrelated architecture framework.
+- Bypass Clean Architecture by putting API calls in ViewModel or Composable.
+- Add non-Koin DI framework or custom service locator.
+- Put Koin calls inside domain/use case classes.
+- Put business rules inside Koin module declarations.
 
 ---
 
@@ -2612,9 +3012,11 @@ Test Items state holder:
 - logged in triggers fetch.
 - logged out clears.
 - SSE event triggers fetch.
-- create calls repository.
-- update calls repository.
-- delete calls repository.
+- create action calls create use case.
+- update action calls update use case.
+- delete action calls delete use case.
+- use cases call repository interface.
+- ViewModel tests use fake use cases or fake repository through use case, not concrete repository implementation.
 
 ### 11.3 Manual Desktop Tests
 
@@ -2691,7 +3093,151 @@ Mitigation:
 
 ## 13. Suggested File Map Target
 
-This is a suggested final map. Exact package names may vary, but dependency direction must stay.
+This is the authoritative clean architecture map. Exact package names may vary, but dependency direction must stay. New code should follow this map first. If any older flat map in this document conflicts with this map, use the clean architecture map below.
+
+```text
+shared/src/commonMain/kotlin/com/polytron/auctionapp/
+|-- core/
+|   |-- logging/
+|   |   `-- AppLogger.kt
+|   |-- result/
+|   |   `-- AppResult.kt
+|   `-- util/
+|       |-- formatCurrencyInput.kt
+|       |-- formatRupiah.kt
+|       `-- generateRandomAlphanumeric.kt
+|
+|-- domain/
+|   |-- model/
+|   |   |-- ItemResponse.kt
+|   |   |-- PaymentMethod.kt
+|   |   |-- RealtimeEvent.kt
+|   |   |-- RealtimeSse.kt
+|   |   |-- TypeScreenBarcode.kt
+|   |   |-- User.kt
+|   |   `-- AuthResult.kt
+|   |-- repository/
+|   |   |-- ItemsRepository.kt
+|   |   |-- UserPreferencesRepository.kt
+|   |   `-- ExcelExporter.kt
+|   |-- session/
+|   |   `-- SessionManager.kt
+|   |-- usecase/
+|   |   |-- auth/
+|   |   |   |-- LoginUseCase.kt
+|   |   |   |-- LogoutUseCase.kt
+|   |   |   `-- RestoreSessionUseCase.kt
+|   |   |-- items/
+|   |   |   |-- FetchItemsUseCase.kt
+|   |   |   |-- CreateItemUseCase.kt
+|   |   |   |-- UpdateItemUseCase.kt
+|   |   |   `-- DeleteItemUseCase.kt
+|   |   |-- realtime/
+|   |   |   `-- ObserveItemsRealtimeUseCase.kt
+|   |   |-- auction/
+|   |   |   `-- SubmitAuctionUseCase.kt
+|   |   |-- payment/
+|   |   |   `-- SubmitPaymentUseCase.kt
+|   |   |-- pickup/
+|   |   |   `-- ConfirmPickupUseCase.kt
+|   |   `-- transactions/
+|   |       `-- ExportTransactionsUseCase.kt
+|   `-- validation/
+|       |-- AuctionValidator.kt
+|       |-- PaymentValidator.kt
+|       `-- ItemValidator.kt
+|
+|-- data/
+|   |-- remote/
+|   |   |-- dto/
+|   |   |-- datasource/
+|   |   |   |-- ItemsRemoteDataSource.kt
+|   |   |   `-- AuthRemoteDataSource.kt
+|   |   `-- sse/
+|   |       `-- RealtimeDataSource.kt
+|   |-- local/
+|   |   `-- UserPreferencesDataSource.kt
+|   |-- mapper/
+|   |   |-- ItemMapper.kt
+|   |   `-- UserMapper.kt
+|   |-- export/
+|   |   `-- ExcelExporterImpl.kt
+|   `-- repository/
+|       |-- ItemsRepositoryImpl.kt
+|       `-- UserPreferencesRepositoryImpl.kt
+|
+|-- presentation/
+|   |-- auth/
+|   |   |-- AuthViewModel.kt
+|   |   |-- AuthUiState.kt
+|   |   |-- AuthAction.kt
+|   |   `-- AuthEffect.kt
+|   |-- items/
+|   |   |-- ItemsViewModel.kt
+|   |   |-- ItemsUiState.kt
+|   |   |-- ItemsAction.kt
+|   |   `-- ItemsEffect.kt
+|   |-- auction/
+|   |   |-- AuctionViewModel.kt
+|   |   |-- AuctionUiState.kt
+|   |   |-- AuctionAction.kt
+|   |   `-- AuctionEffect.kt
+|   |-- payment/
+|   |   |-- PaymentViewModel.kt
+|   |   |-- PaymentUiState.kt
+|   |   |-- PaymentAction.kt
+|   |   `-- PaymentEffect.kt
+|   |-- pickup/
+|   |   |-- PickupViewModel.kt
+|   |   |-- PickupUiState.kt
+|   |   |-- PickupAction.kt
+|   |   `-- PickupEffect.kt
+|   `-- transactions/
+|       |-- TransactionsViewModel.kt
+|       |-- TransactionsUiState.kt
+|       |-- TransactionsAction.kt
+|       `-- TransactionsEffect.kt
+|
+`-- di/
+    |-- DomainModule.kt
+    |-- DataModule.kt
+    |-- PresentationModule.kt
+    `-- SharedModules.kt
+```
+
+Platform-specific shared files:
+
+```text
+shared/src/androidMain/kotlin/com/polytron/auctionapp/
+|-- data/local/AndroidUserPreferencesDataSource.kt
+|-- data/export/AndroidExcelExporter.kt
+|-- core/logging/AndroidLogger.kt
+`-- di/AndroidPlatformModule.kt
+
+shared/src/desktopMain/kotlin/com/polytron/auctionapp/
+|-- data/local/DesktopUserPreferencesDataSource.kt
+|-- data/export/DesktopExcelExporter.kt
+|-- core/logging/DesktopLogger.kt
+`-- di/DesktopPlatformModule.kt
+```
+
+Desktop app files:
+
+```text
+desktopApp/src/main/kotlin/com/polytron/auctionapp/desktop/
+|-- Main.kt
+|-- app/AuctionDesktopApp.kt
+|-- di/DesktopAppModule.kt
+|-- layout/DesktopShell.kt
+|-- layout/SideNavigation.kt
+|-- navigation/DesktopDestination.kt
+|-- navigation/DesktopDialog.kt
+|-- dialogs/
+|-- screens/
+`-- components/
+```
+
+Deprecated flat map below is retained only to help locate old files during migration. Do not use it as the placement guide for new code if it conflicts with the clean architecture map above.
 
 ```text
 shared/src/commonMain/kotlin/com/polytron/auctionapp/
@@ -2797,6 +3343,12 @@ Migration is complete only when all are true:
 - Transactions and detail dialogs work on Desktop.
 - Desktop UI uses side navigation.
 - Desktop details/forms use custom dialogs.
+- Code follows Clean Architecture layer boundaries: `domain`, `data`, `presentation`, `di`.
+- Android and Desktop use MVVM; screens render ViewModel state and send actions.
+- Koin is the only DI mechanism for app object graph.
+- ViewModels are provided through Koin and depend on use cases/interfaces.
+- Domain layer has no dependency on Koin, Compose, Android/Desktop APIs, Ktor, DataStore, or file-system APIs.
+- Repository implementations stay in data layer or platform data layer, not presentation.
 - No Android-only import exists in `shared/commonMain`.
 - Desktop does not depend on `app`.
 - Multi-AI handoff notes are complete.
@@ -2834,7 +3386,7 @@ Then run:
 
 Do not edit Android behavior unless assigned.
 Do not put Android APIs in shared/commonMain.
+Keep Clean Architecture, Koin DI, and MVVM boundaries.
 Follow the phase assigned to you.
 End with changed files and validation results.
 ```
-
