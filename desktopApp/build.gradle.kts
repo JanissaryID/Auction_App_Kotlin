@@ -12,6 +12,11 @@ kotlin {
     }
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_18
+    targetCompatibility = JavaVersion.VERSION_18
+}
+
 dependencies {
     implementation(project(":shared"))
     implementation(compose.desktop.currentOs)
@@ -19,6 +24,7 @@ dependencies {
     implementation(compose.materialIconsExtended)
     implementation(libs.koin.core)
     implementation(libs.slf4j.nop)
+    implementation(libs.poi.ooxml)
 }
 
 compose.desktop {

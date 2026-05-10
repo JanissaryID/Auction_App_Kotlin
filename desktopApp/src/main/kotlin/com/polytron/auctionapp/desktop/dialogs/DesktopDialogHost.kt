@@ -55,6 +55,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import com.polytron.auctionapp.desktop.components.DesktopDimens
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.window.DialogWindow
 import com.polytron.auctionapp.desktop.navigation.DesktopDialog
 import com.polytron.auctionapp.domain.model.ItemResponse
@@ -1354,14 +1358,28 @@ private fun BasicDialog(
     },
     content: @Composable ColumnScope.() -> Unit
 ) {
-    DialogWindow(onCloseRequest = onDismiss) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
         Surface(
             modifier = Modifier
-                .widthIn(min = 420.dp, max = maxWidth)
-                .heightIn(max = DesktopDimens.DialogMaxHeight),
-            shape = MaterialTheme.shapes.small,
-            tonalElevation = 8.dp,
-            shadowElevation = 8.dp
+                .widthIn(min = 480.dp, max = maxWidth)
+                .heightIn(max = DesktopDimens.DialogMaxHeight)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { /* block click-through */ },
+            shape = MaterialTheme.shapes.medium,
+            tonalElevation = 6.dp,
+            shadowElevation = 12.dp,
+            color = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth()

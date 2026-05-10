@@ -27,7 +27,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import com.polytron.auctionapp.desktop.components.DesktopDimens
+import com.polytron.auctionapp.desktop.components.DesktopAsyncImage
 import com.polytron.auctionapp.desktop.navigation.DesktopDestination
 
 @Composable
@@ -35,6 +39,9 @@ fun SideNavigation(
     currentDestination: DesktopDestination,
     isLoggedIn: Boolean,
     userName: String?,
+    email: String,
+    idUser: String?,
+    avatarFileName: String?,
     onDestinationSelected: (DesktopDestination) -> Unit,
     onLoginClick: () -> Unit,
     onProfileClick: () -> Unit,
@@ -56,6 +63,9 @@ fun SideNavigation(
                 currentDestination = currentDestination,
                 isLoggedIn = isLoggedIn,
                 userName = userName,
+                email = email,
+                idUser = idUser,
+                avatarFileName = avatarFileName,
                 onDestinationSelected = onDestinationSelected,
                 onLoginClick = onLoginClick,
                 onProfileClick = onProfileClick
@@ -69,6 +79,9 @@ private fun SideNavigationContent(
     currentDestination: DesktopDestination,
     isLoggedIn: Boolean,
     userName: String?,
+    email: String,
+    idUser: String?,
+    avatarFileName: String?,
     onDestinationSelected: (DesktopDestination) -> Unit,
     onLoginClick: () -> Unit,
     onProfileClick: () -> Unit
@@ -80,8 +93,16 @@ private fun SideNavigationContent(
             .padding(horizontal = 16.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        val avatarUrl = if (!idUser.isNullOrBlank() && !avatarFileName.isNullOrBlank()) {
+            "https://pb.janissaryid.com/api/files/_pb_users_auth_/$idUser/$avatarFileName"
+        } else null
+
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.small)
+                .clickable { if (isLoggedIn) onProfileClick() else onLoginClick() }
+                .padding(4.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -90,21 +111,30 @@ private fun SideNavigationContent(
                 shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.primaryContainer
             ) {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(7.dp)
-                )
+                if (avatarUrl != null) {
+                    DesktopAsyncImage(
+                        model = avatarUrl,
+                        contentDescription = "Profile Photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(36.dp).clip(MaterialTheme.shapes.small)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(7.dp)
+                    )
+                }
             }
             Column {
                 Text(
-                    text = "Auction App",
+                    text = "Unduh-Unduh",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Desktop",
+                    text = if (isLoggedIn && email.isNotBlank()) email else "Desktop",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -123,40 +153,12 @@ private fun SideNavigationContent(
 
         Spacer(Modifier.weight(1f))
 
-        if (isLoggedIn) {
-            Text(
-                text = userName?.takeIf { it.isNotBlank() } ?: "Pengguna",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            OutlinedButton(
-                onClick = onProfileClick,
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.size(8.dp))
-                Text("Profil")
-            }
-        } else {
-            Button(
-                onClick = onLoginClick,
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Login,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.size(8.dp))
-                Text("Login")
-            }
-        }
+        Text(
+            text = "v1.0.0",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp)
+        )
     }
 }
 

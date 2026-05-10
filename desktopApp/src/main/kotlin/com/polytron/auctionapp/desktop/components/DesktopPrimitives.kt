@@ -14,20 +14,36 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Image
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material3.Icon
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.URL
+import javax.imageio.ImageIO
 
 object DesktopDimens {
     val SideNavWidth = 260.dp
     val ContentPadding = 24.dp
     val PanelPadding = 18.dp
-    val DialogSmallWidth = 520.dp
-    val DialogMediumWidth = 720.dp
-    val DialogMaxHeight = 720.dp
+    val DialogSmallWidth = 720.dp
+    val DialogMediumWidth = 900.dp
+    val DialogMaxHeight = 800.dp
 }
 
 @Composable
@@ -172,6 +188,74 @@ private fun statusToneColors(tone: StatusTone): StatusToneColors {
             container = MaterialTheme.colorScheme.errorContainer,
             content = MaterialTheme.colorScheme.onErrorContainer,
             outline = MaterialTheme.colorScheme.error.copy(alpha = 0.28f)
+        )
+    }
+}
+
+@Composable
+fun HeaderCell(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun BodyCell(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text.ifBlank { "-" },
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = 1,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun DesktopAsyncImage(
+    model: String,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit
+) {
+    var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+
+    LaunchedEffect(model) {
+        withContext(Dispatchers.IO) {
+            try {
+                val url = URL(model)
+                val connection = url.openConnection()
+                connection.connect()
+                connection.getInputStream().use { input ->
+                    val bufferedImage = ImageIO.read(input)
+                    if (bufferedImage != null) {
+                        imageBitmap = bufferedImage.toComposeImageBitmap()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    if (imageBitmap != null) {
+        Image(
+            bitmap = imageBitmap!!,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = contentScale
+        )
+    } else {
+        Icon(
+            imageVector = Icons.Default.AccountCircle,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = modifier.padding(7.dp)
         )
     }
 }

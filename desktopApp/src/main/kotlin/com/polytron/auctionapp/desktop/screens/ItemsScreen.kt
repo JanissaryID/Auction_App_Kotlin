@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -46,7 +47,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.polytron.auctionapp.desktop.components.BodyCell
 import com.polytron.auctionapp.desktop.components.DesktopToolbar
+import com.polytron.auctionapp.desktop.components.HeaderCell
 import com.polytron.auctionapp.desktop.components.StatusBadge
 import com.polytron.auctionapp.desktop.components.StatusTone
 import com.polytron.auctionapp.domain.model.ItemResponse
@@ -92,7 +95,7 @@ fun ItemsScreen(
                     onValueChange = { searchQuery = it },
                     placeholder = { Text("Cari barang...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    modifier = Modifier.width(300.dp).height(48.dp),
+                    modifier = Modifier.width(300.dp).height(40.dp),
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -236,7 +239,7 @@ private fun StatusFilterChip(
 ) {
     OutlinedButton(
         onClick = onClick,
-        modifier = Modifier.height(36.dp),
+        modifier = Modifier.height(40.dp),
         shape = MaterialTheme.shapes.extraLarge,
         colors = if (selected) {
             ButtonDefaults.outlinedButtonColors(
@@ -264,7 +267,7 @@ private fun ItemRowHeader(
 ) {
     Row(
         modifier = Modifier
-            .width(1200.dp)
+            .widthIn(min = 1200.dp).fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 14.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -298,7 +301,7 @@ private fun ItemRow(
 ) {
     Row(
         modifier = Modifier
-            .width(1200.dp)
+            .widthIn(min = 1200.dp).fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -328,7 +331,7 @@ private fun ItemRow(
     }
     Spacer(
         modifier = Modifier
-            .width(1200.dp)
+            .widthIn(min = 1200.dp).fillMaxWidth()
             .height(1.dp)
             .background(MaterialTheme.colorScheme.outlineVariant)
     )
@@ -354,29 +357,7 @@ private fun ActionIcon(
     }
 }
 
-@Composable
-private fun HeaderCell(text: String, modifier: Modifier) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-    )
-}
 
-@Composable
-private fun BodyCell(text: String, modifier: Modifier) {
-    Text(
-        text = text.ifBlank { "-" },
-        style = MaterialTheme.typography.bodyMedium,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-    )
-}
 
 @Composable
 private fun StatusCell(status: Int?, modifier: Modifier) {

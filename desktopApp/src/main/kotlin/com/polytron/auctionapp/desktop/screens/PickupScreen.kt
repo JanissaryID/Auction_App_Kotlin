@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,7 +37,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.polytron.auctionapp.desktop.components.BodyCell
 import com.polytron.auctionapp.desktop.components.DesktopToolbar
+import com.polytron.auctionapp.desktop.components.HeaderCell
 import com.polytron.auctionapp.desktop.components.MetricTile
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
@@ -161,7 +164,7 @@ fun PickupScreen(
 private fun PickupRowHeader() {
     Row(
         modifier = Modifier
-            .width(1000.dp)
+            .widthIn(min = 1000.dp).fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 14.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -183,7 +186,7 @@ private fun PickupRow(
 ) {
     Row(
         modifier = Modifier
-            .width(1000.dp)
+            .widthIn(min = 1000.dp).fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -207,31 +210,8 @@ private fun PickupRow(
         }
     }
     HorizontalDivider(
-        modifier = Modifier.width(1000.dp),
+        modifier = Modifier.widthIn(min = 1000.dp).fillMaxWidth(),
         color = MaterialTheme.colorScheme.outlineVariant
     )
 }
 
-@Composable
-private fun HeaderCell(text: String, modifier: Modifier) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-    )
-}
-
-@Composable
-private fun BodyCell(text: String, modifier: Modifier) {
-    Text(
-        text = text.ifBlank { "-" },
-        style = MaterialTheme.typography.bodyMedium,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-    )
-}

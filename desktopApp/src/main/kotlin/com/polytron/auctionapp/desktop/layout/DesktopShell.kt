@@ -41,11 +41,13 @@ fun DesktopShell(
     currentDestination: DesktopDestination,
     isLoggedIn: Boolean,
     userName: String?,
+    email: String,
+    idUser: String?,
+    avatarFileName: String?,
     snackbarHostState: SnackbarHostState,
     onDestinationSelected: (DesktopDestination) -> Unit,
     onLoginClick: () -> Unit,
     onProfileClick: () -> Unit,
-    onRefreshClick: () -> Unit,
     content: @Composable () -> Unit
 ) {
     Scaffold(
@@ -61,6 +63,9 @@ fun DesktopShell(
                 currentDestination = currentDestination,
                 isLoggedIn = isLoggedIn,
                 userName = userName,
+                email = email,
+                idUser = idUser,
+                avatarFileName = avatarFileName,
                 onDestinationSelected = onDestinationSelected,
                 onLoginClick = onLoginClick,
                 onProfileClick = onProfileClick
@@ -79,14 +84,7 @@ fun DesktopShell(
                     .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.background)
             ) {
-                ContentHeader(
-                    destination = currentDestination,
-                    isLoggedIn = isLoggedIn,
-                    userName = userName,
-                    onRefreshClick = onRefreshClick,
-                    onLoginClick = onLoginClick,
-                    onProfileClick = onProfileClick
-                )
+
 
                 Box(
                     modifier = Modifier
@@ -100,87 +98,3 @@ fun DesktopShell(
     }
 }
 
-@Composable
-private fun ContentHeader(
-    destination: DesktopDestination,
-    isLoggedIn: Boolean,
-    userName: String?,
-    onRefreshClick: () -> Unit,
-    onLoginClick: () -> Unit,
-    onProfileClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 0.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = destination.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = destination.subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            StatusBadge(
-                text = if (isLoggedIn) userName?.takeIf { it.isNotBlank() } ?: "Login" else "Belum login",
-                tone = if (isLoggedIn) StatusTone.Ready else StatusTone.Neutral
-            )
-            Spacer(Modifier.width(12.dp))
-
-            OutlinedButton(
-                onClick = onRefreshClick,
-                contentPadding = ButtonDefaults.ButtonWithIconContentPadding
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("Refresh")
-            }
-            Spacer(Modifier.width(8.dp))
-            if (isLoggedIn) {
-                Button(
-                    onClick = onProfileClick,
-                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AccountCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Profil")
-                }
-            } else {
-                Button(
-                    onClick = onLoginClick,
-                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Login,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Login")
-                }
-            }
-        }
-    }
-}
