@@ -14,14 +14,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import com.polytron.auctionapp.desktop.components.DesktopDimens
 import com.polytron.auctionapp.desktop.components.DesktopAsyncImage
+import com.polytron.auctionapp.desktop.components.DesktopTextButton as TextButton
 import com.polytron.auctionapp.desktop.navigation.DesktopDestination
 
 @Composable
@@ -183,7 +181,7 @@ private fun SideNavigationItem(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(42.dp),
+            .height(DesktopDimens.ControlHeight),
         shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.textButtonColors(
             containerColor = backgroundColor,

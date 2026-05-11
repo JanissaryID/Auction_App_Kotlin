@@ -2,7 +2,6 @@ package com.polytron.auctionapp.desktop.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,21 +13,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,11 +33,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.desktop.components.BodyCell
+import com.polytron.auctionapp.desktop.components.DesktopButton as Button
+import com.polytron.auctionapp.desktop.components.DesktopOutlinedButton as OutlinedButton
+import com.polytron.auctionapp.desktop.components.DesktopTable
 import com.polytron.auctionapp.desktop.components.DesktopToolbar
 import com.polytron.auctionapp.desktop.components.HeaderCell
 import com.polytron.auctionapp.desktop.components.MetricTile
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
+
+private val PickupTableMinWidth = 1080.dp
 
 @Composable
 fun PickupScreen(
@@ -133,12 +133,7 @@ fun PickupScreen(
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .verticalScroll(rememberScrollState())
-            ) {
+            DesktopTable(minWidth = PickupTableMinWidth) {
                 PickupRowHeader()
                 if (selectedItems.isEmpty()) {
                     Text(
@@ -164,15 +159,15 @@ fun PickupScreen(
 private fun PickupRowHeader() {
     Row(
         modifier = Modifier
-            .widthIn(min = 1000.dp).fillMaxWidth()
+            .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 14.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         HeaderCell("Kode", Modifier.width(100.dp))
-        HeaderCell("Nama Barang", Modifier.weight(2f))
-        HeaderCell("Pemenang", Modifier.weight(1.5f))
+        HeaderCell("Nama Barang", Modifier.weight(2f).widthIn(min = 280.dp))
+        HeaderCell("Pemenang", Modifier.weight(1.5f).widthIn(min = 220.dp))
         HeaderCell("Order ID", Modifier.width(180.dp))
         HeaderCell("Metode Bayar", Modifier.width(120.dp))
         HeaderCell("Aksi", Modifier.width(60.dp))
@@ -186,14 +181,14 @@ private fun PickupRow(
 ) {
     Row(
         modifier = Modifier
-            .widthIn(min = 1000.dp).fillMaxWidth()
+            .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         BodyCell(item.codeItem.orEmpty(), Modifier.width(100.dp))
-        BodyCell(item.nameItem.orEmpty(), Modifier.weight(2f))
-        BodyCell(item.buyer.orEmpty(), Modifier.weight(1.5f))
+        BodyCell(item.nameItem.orEmpty(), Modifier.weight(2f).widthIn(min = 280.dp))
+        BodyCell(item.buyer.orEmpty(), Modifier.weight(1.5f).widthIn(min = 220.dp))
         BodyCell(item.orderID.orEmpty(), Modifier.width(180.dp))
         BodyCell(item.typePayment.orEmpty(), Modifier.width(120.dp))
         
@@ -210,8 +205,7 @@ private fun PickupRow(
         }
     }
     HorizontalDivider(
-        modifier = Modifier.widthIn(min = 1000.dp).fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.outlineVariant
     )
 }
-

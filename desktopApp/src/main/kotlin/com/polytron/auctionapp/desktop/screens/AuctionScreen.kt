@@ -2,7 +2,6 @@ package com.polytron.auctionapp.desktop.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,19 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,12 +35,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.desktop.components.BodyCell
+import com.polytron.auctionapp.desktop.components.DesktopButton as Button
+import com.polytron.auctionapp.desktop.components.DesktopDimens
+import com.polytron.auctionapp.desktop.components.DesktopOutlinedButton as OutlinedButton
+import com.polytron.auctionapp.desktop.components.DesktopTable
 import com.polytron.auctionapp.desktop.components.DesktopToolbar
 import com.polytron.auctionapp.desktop.components.HeaderCell
 import com.polytron.auctionapp.desktop.components.MetricTile
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.utils.formatRupiah
+
+private val AuctionTableMinWidth = 1180.dp
 
 @Composable
 fun AuctionScreen(
@@ -144,12 +145,7 @@ fun AuctionScreen(
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .verticalScroll(rememberScrollState())
-            ) {
+            DesktopTable(minWidth = AuctionTableMinWidth) {
                 AuctionRowHeader()
                 if (selectedItems.isEmpty()) {
                     Text(
@@ -180,17 +176,17 @@ fun AuctionScreen(
 private fun AuctionRowHeader() {
     Row(
         modifier = Modifier
-            .widthIn(min = 1100.dp).fillMaxWidth()
+            .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 14.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         HeaderCell("Kode", Modifier.width(120.dp))
-        HeaderCell("Nama Barang", Modifier.weight(2f))
+        HeaderCell("Nama Barang", Modifier.weight(2f).widthIn(min = 250.dp))
         HeaderCell("Harga Dasar", Modifier.width(130.dp))
         HeaderCell("Harga Maks", Modifier.width(130.dp))
-        HeaderCell("Pemenang", Modifier.weight(1.5f))
+        HeaderCell("Pemenang", Modifier.weight(1.5f).widthIn(min = 220.dp))
         HeaderCell("Harga Lelang", Modifier.width(150.dp))
         HeaderCell("Aksi", Modifier.width(60.dp))
     }
@@ -207,13 +203,13 @@ private fun AuctionRow(
 ) {
     Row(
         modifier = Modifier
-            .widthIn(min = 1100.dp).fillMaxWidth()
+            .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         BodyCell(item.codeItem.orEmpty(), Modifier.width(120.dp))
-        BodyCell(item.nameItem.orEmpty(), Modifier.weight(2f))
+        BodyCell(item.nameItem.orEmpty(), Modifier.weight(2f).widthIn(min = 250.dp))
         BodyCell(formatRupiah(item.basePrice), Modifier.width(130.dp))
         BodyCell(formatRupiah(item.maxPrice), Modifier.width(130.dp))
         
@@ -221,7 +217,7 @@ private fun AuctionRow(
             value = buyer,
             onValueChange = onBuyerChange,
             placeholder = { Text("Nama pemenang") },
-            modifier = Modifier.weight(1.5f).height(40.dp),
+            modifier = Modifier.weight(1.5f).widthIn(min = 220.dp).height(DesktopDimens.ControlHeight),
             singleLine = true,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
@@ -233,7 +229,7 @@ private fun AuctionRow(
             value = price,
             onValueChange = onPriceChange,
             placeholder = { Text("Harga") },
-            modifier = Modifier.width(150.dp).height(40.dp),
+            modifier = Modifier.width(150.dp).height(DesktopDimens.ControlHeight),
             singleLine = true,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
@@ -255,9 +251,8 @@ private fun AuctionRow(
     }
     Spacer(
         modifier = Modifier
-            .widthIn(min = 1100.dp).fillMaxWidth()
+            .fillMaxWidth()
             .height(1.dp)
             .background(MaterialTheme.colorScheme.outlineVariant)
     )
 }
-

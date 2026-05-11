@@ -2,7 +2,6 @@ package com.polytron.auctionapp.desktop.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,17 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,12 +43,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.polytron.auctionapp.desktop.components.BodyCell
+import com.polytron.auctionapp.desktop.components.DesktopButton as Button
+import com.polytron.auctionapp.desktop.components.DesktopDimens
+import com.polytron.auctionapp.desktop.components.DesktopOutlinedButton as OutlinedButton
+import com.polytron.auctionapp.desktop.components.DesktopTable
 import com.polytron.auctionapp.desktop.components.DesktopToolbar
 import com.polytron.auctionapp.desktop.components.HeaderCell
 import com.polytron.auctionapp.desktop.components.StatusBadge
 import com.polytron.auctionapp.desktop.components.StatusTone
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
+
+private val ItemsTableMinWidth = 1440.dp
 
 @Composable
 fun ItemsScreen(
@@ -93,9 +94,9 @@ fun ItemsScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Cari barang...") },
+                    placeholder = { Text("Cari barang...", style = MaterialTheme.typography.bodyMedium) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    modifier = Modifier.width(300.dp).height(40.dp),
+                    modifier = Modifier.width(300.dp).height(DesktopDimens.ControlHeight),
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -166,12 +167,7 @@ fun ItemsScreen(
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .verticalScroll(rememberScrollState())
-            ) {
+            DesktopTable(minWidth = ItemsTableMinWidth) {
                 ItemRowHeader(
                     allSelected = filteredItems.isNotEmpty() && selectedIds.size == filteredItems.size,
                     onToggleAll = {
@@ -239,8 +235,8 @@ private fun StatusFilterChip(
 ) {
     OutlinedButton(
         onClick = onClick,
-        modifier = Modifier.height(40.dp),
-        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.height(DesktopDimens.ControlHeight),
+        shape = MaterialTheme.shapes.small,
         colors = if (selected) {
             ButtonDefaults.outlinedButtonColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -267,7 +263,7 @@ private fun ItemRowHeader(
 ) {
     Row(
         modifier = Modifier
-            .widthIn(min = 1200.dp).fillMaxWidth()
+            .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 14.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -279,14 +275,14 @@ private fun ItemRowHeader(
             modifier = Modifier.size(36.dp)
         )
         HeaderCell("Kode", Modifier.width(100.dp))
-        HeaderCell("Nama", Modifier.weight(2f))
+        HeaderCell("Nama", Modifier.weight(2f).widthIn(min = 260.dp))
         HeaderCell("Status", Modifier.width(100.dp))
         HeaderCell("Harga Dasar", Modifier.width(120.dp))
         HeaderCell("Harga Maks", Modifier.width(120.dp))
-        HeaderCell("Pemenang", Modifier.weight(1.2f))
+        HeaderCell("Pemenang", Modifier.weight(1.2f).widthIn(min = 160.dp))
         HeaderCell("Harga Lelang", Modifier.width(120.dp))
         HeaderCell("Order ID", Modifier.width(140.dp))
-        HeaderCell("Aksi", Modifier.width(120.dp))
+        HeaderCell("Aksi", Modifier.width(132.dp))
     }
 }
 
@@ -301,7 +297,7 @@ private fun ItemRow(
 ) {
     Row(
         modifier = Modifier
-            .widthIn(min = 1200.dp).fillMaxWidth()
+            .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -312,16 +308,16 @@ private fun ItemRow(
             modifier = Modifier.size(36.dp)
         )
         BodyCell(item.codeItem.orEmpty(), Modifier.width(100.dp))
-        BodyCell(item.nameItem.orEmpty(), Modifier.weight(2f))
+        BodyCell(item.nameItem.orEmpty(), Modifier.weight(2f).widthIn(min = 260.dp))
         StatusCell(item.status, Modifier.width(100.dp))
         BodyCell(formatRupiah(item.basePrice), Modifier.width(120.dp))
         BodyCell(formatRupiah(item.maxPrice), Modifier.width(120.dp))
-        BodyCell(item.buyer.orEmpty(), Modifier.weight(1.2f))
+        BodyCell(item.buyer.orEmpty(), Modifier.weight(1.2f).widthIn(min = 160.dp))
         BodyCell(formatRupiah(item.price), Modifier.width(120.dp))
         BodyCell(item.orderID.orEmpty(), Modifier.width(140.dp))
         
         Row(
-            modifier = Modifier.width(120.dp),
+            modifier = Modifier.width(132.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             ActionIcon(Icons.Default.Info, "Detail", onDetail)
@@ -331,7 +327,7 @@ private fun ItemRow(
     }
     Spacer(
         modifier = Modifier
-            .widthIn(min = 1200.dp).fillMaxWidth()
+            .fillMaxWidth()
             .height(1.dp)
             .background(MaterialTheme.colorScheme.outlineVariant)
     )

@@ -2,7 +2,6 @@ package com.polytron.auctionapp.desktop.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
@@ -27,7 +24,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,6 +40,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.desktop.components.BodyCell
+import com.polytron.auctionapp.desktop.components.DesktopDimens
+import com.polytron.auctionapp.desktop.components.DesktopOutlinedButton as OutlinedButton
+import com.polytron.auctionapp.desktop.components.DesktopTable
 import com.polytron.auctionapp.desktop.components.DesktopToolbar
 import com.polytron.auctionapp.desktop.components.HeaderCell
 import com.polytron.auctionapp.desktop.components.MetricTile
@@ -51,6 +50,8 @@ import com.polytron.auctionapp.desktop.components.StatusBadge
 import com.polytron.auctionapp.desktop.components.StatusTone
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
+
+private val TransactionsTableMinWidth = 1080.dp
 
 @Composable
 fun TransactionsScreen(
@@ -115,9 +116,9 @@ fun TransactionsScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Cari Order ID atau Pemenang...") },
+                    placeholder = { Text("Cari Order ID atau Pemenang...", style = MaterialTheme.typography.bodyMedium) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    modifier = Modifier.width(350.dp).height(40.dp),
+                    modifier = Modifier.width(350.dp).height(DesktopDimens.ControlHeight),
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
@@ -154,12 +155,7 @@ fun TransactionsScreen(
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .verticalScroll(rememberScrollState())
-            ) {
+            DesktopTable(minWidth = TransactionsTableMinWidth) {
                 TransactionRowHeader()
                 if (transactions.isEmpty()) {
                     Text(
@@ -185,14 +181,14 @@ fun TransactionsScreen(
 private fun TransactionRowHeader() {
     Row(
         modifier = Modifier
-            .widthIn(min = 1000.dp).fillMaxWidth()
+            .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 14.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         HeaderCell("Order ID", Modifier.width(180.dp))
-        HeaderCell("Pemenang", Modifier.weight(1.5f))
+        HeaderCell("Pemenang", Modifier.weight(1.5f).widthIn(min = 280.dp))
         HeaderCell("Jumlah", Modifier.width(80.dp))
         HeaderCell("Total Harga", Modifier.width(150.dp))
         HeaderCell("Metode", Modifier.width(120.dp))
@@ -208,13 +204,13 @@ private fun TransactionRow(
 ) {
     Row(
         modifier = Modifier
-            .widthIn(min = 1000.dp).fillMaxWidth()
+            .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         BodyCell(summary.orderId, Modifier.width(180.dp))
-        BodyCell(summary.buyer, Modifier.weight(1.5f))
+        BodyCell(summary.buyer, Modifier.weight(1.5f).widthIn(min = 280.dp))
         BodyCell("${summary.totalItems} item", Modifier.width(80.dp))
         BodyCell(formatRupiah(summary.totalPrice.toString()), Modifier.width(150.dp))
         BodyCell(summary.paymentMethod, Modifier.width(120.dp))
@@ -239,7 +235,7 @@ private fun TransactionRow(
         }
     }
     HorizontalDivider(
-        modifier = Modifier.widthIn(min = 1000.dp).fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.outlineVariant
     )
 }
