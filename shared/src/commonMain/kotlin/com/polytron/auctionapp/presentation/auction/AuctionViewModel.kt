@@ -41,7 +41,7 @@ class AuctionViewModel {
 
     fun updateEditingBuyer(itemId: String, name: String) {
         _editingBuyers.update { current ->
-            current.toMutableMap().apply { put(itemId, name) }
+            current.toMutableMap().apply { put(itemId, name.toWinnerNameCase()) }
         }
     }
 
@@ -52,12 +52,39 @@ class AuctionViewModel {
         }
     }
 
+    fun updateAllEditingPrices(price: String) {
+        val clean = price.filter { it.isDigit() }
+        val selectedIds = _selectedItems.value.mapNotNull { it.id }
+        _editingPrices.update { current ->
+            current.toMutableMap().apply {
+                selectedIds.forEach { itemId -> put(itemId, clean) }
+            }
+        }
+    }
+
     fun clearEditingForItem(itemId: String) {
         _editingBuyers.update { current ->
             current.toMutableMap().apply { remove(itemId) }
         }
         _editingPrices.update { current ->
             current.toMutableMap().apply { remove(itemId) }
+        }
+    }
+
+    private fun String.toWinnerNameCase(): String {
+        val lower = lowercase()
+        var shouldCapitalize = true
+
+        return buildString(lower.length) {
+            lower.forEach { char ->
+                if (char.isLetter()) {
+                    append(if (shouldCapitalize) char.uppercaseChar() else char)
+                    shouldCapitalize = false
+                } else {
+                    append(char)
+                    shouldCapitalize = char.isWhitespace() || char == '-' || char == '\'' || char == '.'
+                }
+            }
         }
     }
 }

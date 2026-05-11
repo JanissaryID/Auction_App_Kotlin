@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
@@ -57,7 +58,7 @@ object DesktopDimens {
     val SideNavWidth = 260.dp
     val ContentPadding = 24.dp
     val PanelPadding = 18.dp
-    val ControlHeight = 56.dp
+    val ControlHeight = 64.dp
     val DialogSmallWidth = 720.dp
     val DialogMediumWidth = 900.dp
     val DialogMaxHeight = 800.dp
@@ -237,17 +238,24 @@ fun StatusBadge(
 ) {
     val colors = statusToneColors(tone)
     Surface(
-        modifier = modifier.widthIn(min = 84.dp),
+        modifier = modifier,
         shape = MaterialTheme.shapes.extraSmall,
         color = colors.container,
         border = BorderStroke(1.dp, colors.outline)
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = colors.content,
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
-        )
+        Box(
+            modifier = Modifier
+                .widthIn(min = 84.dp)
+                .padding(horizontal = 9.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.content,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 

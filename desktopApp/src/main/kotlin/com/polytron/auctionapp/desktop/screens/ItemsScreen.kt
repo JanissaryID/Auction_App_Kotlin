@@ -3,6 +3,7 @@ package com.polytron.auctionapp.desktop.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.IconButton
@@ -54,7 +55,17 @@ import com.polytron.auctionapp.desktop.components.StatusTone
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
 
-private val ItemsTableMinWidth = 1440.dp
+private val ItemsTableMinWidth = 1600.dp
+private val ItemsSelectColumn = 36.dp
+private val ItemsCodeColumn = 110.dp
+private val ItemsNameColumn = 300.dp
+private val ItemsStatusColumn = 110.dp
+private val ItemsBasePriceColumn = 130.dp
+private val ItemsMaxPriceColumn = 130.dp
+private val ItemsBuyerColumn = 200.dp
+private val ItemsAuctionPriceColumn = 130.dp
+private val ItemsOrderColumn = 170.dp
+private val ItemsActionsColumn = 128.dp
 
 @Composable
 fun ItemsScreen(
@@ -65,7 +76,9 @@ fun ItemsScreen(
     onEditItem: (String) -> Unit,
     onDeleteItem: (String) -> Unit,
     onItemDetail: (String) -> Unit,
-    onBulkDelete: (List<String>) -> Unit
+    onPrintItem: (ItemResponse) -> Unit,
+    onBulkDelete: (List<String>) -> Unit,
+    onBulkPrint: (List<ItemResponse>) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var statusFilter by remember { mutableStateOf<Int?>(null) }
@@ -117,6 +130,21 @@ fun ItemsScreen(
                 Spacer(Modifier.weight(1f))
 
                 if (selectedIds.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick = {
+                            val selectedItems = filteredItems.filter { item ->
+                                item.id != null && selectedIds.contains(item.id)
+                            }
+                            onBulkPrint(selectedItems)
+                        },
+                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Cetak Terpilih (${selectedIds.size})")
+                    }
+                    Spacer(Modifier.width(8.dp))
+
                     OutlinedButton(
                         onClick = {
                             onBulkDelete(selectedIds.toList())
@@ -201,7 +229,8 @@ fun ItemsScreen(
                             },
                             onDetail = { item.id?.let(onItemDetail) },
                             onEdit = { item.id?.let(onEditItem) },
-                            onDelete = { item.id?.let(onDeleteItem) }
+                            onDelete = { item.id?.let(onDeleteItem) },
+                            onPrint = { onPrintItem(item) }
                         )
                     }
                 }
@@ -272,17 +301,17 @@ private fun ItemRowHeader(
         Checkbox(
             checked = allSelected,
             onCheckedChange = { onToggleAll() },
-            modifier = Modifier.size(36.dp)
+            modifier = Modifier.size(ItemsSelectColumn)
         )
-        HeaderCell("Kode", Modifier.width(100.dp))
-        HeaderCell("Nama", Modifier.weight(2f).widthIn(min = 260.dp))
-        HeaderCell("Status", Modifier.width(100.dp))
-        HeaderCell("Harga Dasar", Modifier.width(120.dp))
-        HeaderCell("Harga Maks", Modifier.width(120.dp))
-        HeaderCell("Pemenang", Modifier.weight(1.2f).widthIn(min = 160.dp))
-        HeaderCell("Harga Lelang", Modifier.width(120.dp))
-        HeaderCell("Order ID", Modifier.width(140.dp))
-        HeaderCell("Aksi", Modifier.width(132.dp))
+        HeaderCell("Kode", Modifier.width(ItemsCodeColumn))
+        HeaderCell("Nama", Modifier.width(ItemsNameColumn))
+        HeaderCell("Status", Modifier.width(ItemsStatusColumn))
+        HeaderCell("Harga Dasar", Modifier.width(ItemsBasePriceColumn))
+        HeaderCell("Harga Maks", Modifier.width(ItemsMaxPriceColumn))
+        HeaderCell("Pemenang", Modifier.width(ItemsBuyerColumn))
+        HeaderCell("Harga Lelang", Modifier.width(ItemsAuctionPriceColumn))
+        HeaderCell("Order ID", Modifier.width(ItemsOrderColumn))
+        HeaderCell("Aksi", Modifier.width(ItemsActionsColumn))
     }
 }
 
@@ -293,7 +322,8 @@ private fun ItemRow(
     onToggleSelect: () -> Unit,
     onDetail: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onPrint: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -305,23 +335,24 @@ private fun ItemRow(
         Checkbox(
             checked = selected,
             onCheckedChange = { onToggleSelect() },
-            modifier = Modifier.size(36.dp)
+            modifier = Modifier.size(ItemsSelectColumn)
         )
-        BodyCell(item.codeItem.orEmpty(), Modifier.width(100.dp))
-        BodyCell(item.nameItem.orEmpty(), Modifier.weight(2f).widthIn(min = 260.dp))
-        StatusCell(item.status, Modifier.width(100.dp))
-        BodyCell(formatRupiah(item.basePrice), Modifier.width(120.dp))
-        BodyCell(formatRupiah(item.maxPrice), Modifier.width(120.dp))
-        BodyCell(item.buyer.orEmpty(), Modifier.weight(1.2f).widthIn(min = 160.dp))
-        BodyCell(formatRupiah(item.price), Modifier.width(120.dp))
-        BodyCell(item.orderID.orEmpty(), Modifier.width(140.dp))
+        BodyCell(item.codeItem.orEmpty(), Modifier.width(ItemsCodeColumn))
+        BodyCell(item.nameItem.orEmpty(), Modifier.width(ItemsNameColumn))
+        StatusCell(item.status, Modifier.width(ItemsStatusColumn))
+        BodyCell(formatRupiah(item.basePrice), Modifier.width(ItemsBasePriceColumn))
+        BodyCell(formatRupiah(item.maxPrice), Modifier.width(ItemsMaxPriceColumn))
+        BodyCell(item.buyer.orEmpty(), Modifier.width(ItemsBuyerColumn))
+        BodyCell(formatRupiah(item.price), Modifier.width(ItemsAuctionPriceColumn))
+        BodyCell(item.orderID.orEmpty(), Modifier.width(ItemsOrderColumn))
         
         Row(
-            modifier = Modifier.width(132.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier.width(ItemsActionsColumn),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             ActionIcon(Icons.Default.Info, "Detail", onDetail)
             ActionIcon(Icons.Default.Edit, "Edit", onEdit)
+            ActionIcon(Icons.Default.Print, "Cetak", onPrint)
             ActionIcon(Icons.Default.Delete, "Hapus", onDelete, color = MaterialTheme.colorScheme.error)
         }
     }
@@ -342,13 +373,13 @@ private fun ActionIcon(
 ) {
     IconButton(
         onClick = onClick,
-        modifier = Modifier.size(32.dp)
+        modifier = Modifier.size(30.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = color,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(17.dp)
         )
     }
 }
@@ -357,11 +388,15 @@ private fun ActionIcon(
 
 @Composable
 private fun StatusCell(status: Int?, modifier: Modifier) {
-    StatusBadge(
-        text = statusLabel(status),
-        tone = statusTone(status),
-        modifier = modifier
-    )
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        StatusBadge(
+            text = statusLabel(status),
+            tone = statusTone(status)
+        )
+    }
 }
 
 private fun statusLabel(status: Int?): String {

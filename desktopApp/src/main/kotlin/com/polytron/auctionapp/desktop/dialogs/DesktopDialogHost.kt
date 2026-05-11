@@ -83,6 +83,9 @@ fun DesktopDialogHost(
     auctionViewModel: AuctionViewModel,
     paymentViewModel: PaymentViewModel,
     pickupViewModel: PickupViewModel,
+    canPrintPaymentReceipt: Boolean,
+    onPrintPaymentReceipt: suspend (List<ItemResponse>, String, String) -> Result<Unit>,
+    onPaymentMessage: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     when (dialog) {
@@ -163,6 +166,9 @@ fun DesktopDialogHost(
         DesktopDialog.PaymentMethod -> PaymentMethodDialog(
             paymentViewModel = paymentViewModel,
             itemsViewModel = itemsViewModel,
+            canPrintReceipt = canPrintPaymentReceipt,
+            onPrintReceipt = onPrintPaymentReceipt,
+            onMessage = onPaymentMessage,
             onDismiss = onDismiss
         )
 
@@ -652,6 +658,9 @@ private fun BarcodeEntryDialog(
 private fun PaymentMethodDialog(
     paymentViewModel: PaymentViewModel,
     itemsViewModel: ItemsViewModel,
+    canPrintReceipt: Boolean,
+    onPrintReceipt: suspend (List<ItemResponse>, String, String) -> Result<Unit>,
+    onMessage: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val selectedItems by paymentViewModel.selectedItems.collectAsState()
@@ -675,7 +684,8 @@ private fun PaymentMethodDialog(
                     scope.launch {
                         try {
                             val orderId = "Order-${generateRandomAlphanumeric()}"
-                            selectedItems.forEach { item ->
+                            val itemsToPay = selectedItems
+                            itemsToPay.forEach { item ->
                                 itemsViewModel.patchItem(
                                     id = item.id!!,
                                     item = item.copy(
@@ -685,6 +695,18 @@ private fun PaymentMethodDialog(
                                     )
                                 )
                             }
+
+                            if (canPrintReceipt) {
+                                val printResult = onPrintReceipt(itemsToPay, orderId, selectedMethod.label)
+                                printResult.onSuccess {
+                                    onMessage("Pembayaran berhasil & struk dicetak.")
+                                }.onFailure { error ->
+                                    onMessage("Pembayaran berhasil, tapi gagal cetak struk: ${error.message ?: "printer tidak merespons"}")
+                                }
+                            } else {
+                                onMessage("Pembayaran berhasil disimpan. Pilih printer di Dashboard untuk cetak struk.")
+                            }
+
                             paymentViewModel.clearSelectedItems()
                             onDismiss()
                         } finally {
@@ -697,7 +719,7 @@ private fun PaymentMethodDialog(
                 if (isSubmitting) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 } else {
-                    Text("Konfirmasi Bayar")
+                    Text(if (canPrintReceipt) "Bayar & Cetak" else "Simpan Tanpa Cetak")
                 }
             }
         }
@@ -714,6 +736,14 @@ private fun PaymentMethodDialog(
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            if (!canPrintReceipt) {
+                Text(
+                    text = "Printer belum dipilih. Pembayaran tetap disimpan tanpa cetak.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Text("Pilih Metode:", style = MaterialTheme.typography.titleSmall)
             

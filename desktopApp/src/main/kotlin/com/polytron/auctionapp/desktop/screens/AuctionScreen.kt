@@ -3,8 +3,8 @@ package com.polytron.auctionapp.desktop.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,11 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -28,11 +29,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.desktop.components.BodyCell
 import com.polytron.auctionapp.desktop.components.DesktopButton as Button
@@ -46,7 +49,14 @@ import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.utils.formatRupiah
 
-private val AuctionTableMinWidth = 1180.dp
+private val AuctionTableMinWidth = 1280.dp
+private val AuctionCodeColumn = 130.dp
+private val AuctionNameColumn = 300.dp
+private val AuctionBasePriceColumn = 140.dp
+private val AuctionMaxPriceColumn = 140.dp
+private val AuctionBuyerColumn = 240.dp
+private val AuctionPriceColumn = 160.dp
+private val AuctionActionsColumn = 60.dp
 
 @Composable
 fun AuctionScreen(
@@ -60,8 +70,11 @@ fun AuctionScreen(
     onClearAll: () -> Unit,
     onBuyerChange: (String, String) -> Unit,
     onPriceChange: (String, String) -> Unit,
+    onApplyPriceToAll: (String) -> Unit,
+    onPrintReceipts: () -> Unit,
     onSubmit: () -> Unit
 ) {
+    var globalPrice by remember { mutableStateOf("") }
     val isReadyToSubmit = selectedItems.isNotEmpty() && selectedItems.all { item ->
         val itemId = item.id ?: ""
         editingBuyers[itemId]?.isNotBlank() == true && 
@@ -116,6 +129,28 @@ fun AuctionScreen(
             actions = {
                 Spacer(Modifier.weight(1f))
                 if (selectedItems.isNotEmpty()) {
+                    OutlinedTextField(
+                        value = formatCurrencyInput(globalPrice),
+                        onValueChange = { globalPrice = it.filter { char -> char.isDigit() } },
+                        placeholder = { Text("Harga semua") },
+                        modifier = Modifier.width(180.dp).height(DesktopDimens.ControlHeight),
+                        singleLine = true,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent
+                        )
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedButton(
+                        onClick = { onApplyPriceToAll(globalPrice) },
+                        enabled = globalPrice.isNotBlank(),
+                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Terapkan")
+                    }
+                    Spacer(Modifier.width(8.dp))
                     OutlinedButton(
                         onClick = onClearAll,
                         colors = ButtonDefaults.outlinedButtonColors(
@@ -126,6 +161,16 @@ fun AuctionScreen(
                         Icon(Icons.Default.ClearAll, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("Kosongkan")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedButton(
+                        onClick = onPrintReceipts,
+                        enabled = isReadyToSubmit,
+                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Cetak Nota")
                     }
                     Spacer(Modifier.width(8.dp))
                 }
@@ -182,13 +227,13 @@ private fun AuctionRowHeader() {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        HeaderCell("Kode", Modifier.width(120.dp))
-        HeaderCell("Nama Barang", Modifier.weight(2f).widthIn(min = 250.dp))
-        HeaderCell("Harga Dasar", Modifier.width(130.dp))
-        HeaderCell("Harga Maks", Modifier.width(130.dp))
-        HeaderCell("Pemenang", Modifier.weight(1.5f).widthIn(min = 220.dp))
-        HeaderCell("Harga Lelang", Modifier.width(150.dp))
-        HeaderCell("Aksi", Modifier.width(60.dp))
+        HeaderCell("Kode", Modifier.width(AuctionCodeColumn))
+        HeaderCell("Nama Barang", Modifier.width(AuctionNameColumn))
+        HeaderCell("Harga Dasar", Modifier.width(AuctionBasePriceColumn))
+        HeaderCell("Harga Maks", Modifier.width(AuctionMaxPriceColumn))
+        HeaderCell("Pemenang", Modifier.width(AuctionBuyerColumn))
+        HeaderCell("Harga Lelang", Modifier.width(AuctionPriceColumn))
+        HeaderCell("Aksi", Modifier.width(AuctionActionsColumn))
     }
 }
 
@@ -208,16 +253,16 @@ private fun AuctionRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BodyCell(item.codeItem.orEmpty(), Modifier.width(120.dp))
-        BodyCell(item.nameItem.orEmpty(), Modifier.weight(2f).widthIn(min = 250.dp))
-        BodyCell(formatRupiah(item.basePrice), Modifier.width(130.dp))
-        BodyCell(formatRupiah(item.maxPrice), Modifier.width(130.dp))
+        BodyCell(item.codeItem.orEmpty(), Modifier.width(AuctionCodeColumn))
+        BodyCell(item.nameItem.orEmpty(), Modifier.width(AuctionNameColumn))
+        BodyCell(formatRupiah(item.basePrice), Modifier.width(AuctionBasePriceColumn))
+        BodyCell(formatRupiah(item.maxPrice), Modifier.width(AuctionMaxPriceColumn))
         
         OutlinedTextField(
             value = buyer,
             onValueChange = onBuyerChange,
             placeholder = { Text("Nama pemenang") },
-            modifier = Modifier.weight(1.5f).widthIn(min = 220.dp).height(DesktopDimens.ControlHeight),
+            modifier = Modifier.width(AuctionBuyerColumn).height(DesktopDimens.ControlHeight),
             singleLine = true,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
@@ -229,7 +274,7 @@ private fun AuctionRow(
             value = price,
             onValueChange = onPriceChange,
             placeholder = { Text("Harga") },
-            modifier = Modifier.width(150.dp).height(DesktopDimens.ControlHeight),
+            modifier = Modifier.width(AuctionPriceColumn).height(DesktopDimens.ControlHeight),
             singleLine = true,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
@@ -237,16 +282,18 @@ private fun AuctionRow(
             )
         )
         
-        IconButton(
-            onClick = onRemove,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Hapus",
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(18.dp)
-            )
+        Box(modifier = Modifier.width(AuctionActionsColumn)) {
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Hapus",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
     Spacer(

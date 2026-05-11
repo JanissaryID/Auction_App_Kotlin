@@ -43,6 +43,34 @@ class AuctionViewModelTest {
     }
 
     @Test
+    fun updateEditingBuyerCapitalizesWinnerName() {
+        val viewModel = AuctionViewModel()
+
+        viewModel.updateEditingBuyer("item-1", "budi santoso")
+
+        assertEquals("Budi Santoso", viewModel.editingBuyers.value["item-1"])
+    }
+
+    @Test
+    fun updateAllEditingPricesAppliesCleanPriceToSelectedItems() {
+        val viewModel = AuctionViewModel()
+        viewModel.setSelectedItems(
+            listOf(
+                ItemResponse(id = "item-1"),
+                ItemResponse(id = "item-2"),
+                ItemResponse(id = null)
+            )
+        )
+        viewModel.updateEditingPrice("item-2", "1")
+
+        viewModel.updateAllEditingPrices("Rp 250.000")
+
+        assertEquals("250000", viewModel.editingPrices.value["item-1"])
+        assertEquals("250000", viewModel.editingPrices.value["item-2"])
+        assertEquals(2, viewModel.editingPrices.value.size)
+    }
+
+    @Test
     fun clearSelectedItemsClearsSelectionAndEditingState() {
         val viewModel = AuctionViewModel()
         viewModel.addSelectedItem(ItemResponse(id = "item-1"))

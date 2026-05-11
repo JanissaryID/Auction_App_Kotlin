@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
@@ -51,7 +50,14 @@ import com.polytron.auctionapp.desktop.components.StatusTone
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
 
-private val TransactionsTableMinWidth = 1080.dp
+private val TransactionsTableMinWidth = 1160.dp
+private val TransactionsOrderColumn = 190.dp
+private val TransactionsBuyerColumn = 300.dp
+private val TransactionsCountColumn = 90.dp
+private val TransactionsTotalColumn = 160.dp
+private val TransactionsMethodColumn = 130.dp
+private val TransactionsStatusColumn = 110.dp
+private val TransactionsActionsColumn = 60.dp
 
 @Composable
 fun TransactionsScreen(
@@ -187,13 +193,13 @@ private fun TransactionRowHeader() {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        HeaderCell("Order ID", Modifier.width(180.dp))
-        HeaderCell("Pemenang", Modifier.weight(1.5f).widthIn(min = 280.dp))
-        HeaderCell("Jumlah", Modifier.width(80.dp))
-        HeaderCell("Total Harga", Modifier.width(150.dp))
-        HeaderCell("Metode", Modifier.width(120.dp))
-        HeaderCell("Status", Modifier.width(100.dp))
-        HeaderCell("Aksi", Modifier.width(60.dp))
+        HeaderCell("Order ID", Modifier.width(TransactionsOrderColumn))
+        HeaderCell("Pemenang", Modifier.width(TransactionsBuyerColumn))
+        HeaderCell("Jumlah", Modifier.width(TransactionsCountColumn))
+        HeaderCell("Total Harga", Modifier.width(TransactionsTotalColumn))
+        HeaderCell("Metode", Modifier.width(TransactionsMethodColumn))
+        HeaderCell("Status", Modifier.width(TransactionsStatusColumn))
+        HeaderCell("Aksi", Modifier.width(TransactionsActionsColumn))
     }
 }
 
@@ -209,29 +215,31 @@ private fun TransactionRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BodyCell(summary.orderId, Modifier.width(180.dp))
-        BodyCell(summary.buyer, Modifier.weight(1.5f).widthIn(min = 280.dp))
-        BodyCell("${summary.totalItems} item", Modifier.width(80.dp))
-        BodyCell(formatRupiah(summary.totalPrice.toString()), Modifier.width(150.dp))
-        BodyCell(summary.paymentMethod, Modifier.width(120.dp))
+        BodyCell(summary.orderId, Modifier.width(TransactionsOrderColumn))
+        BodyCell(summary.buyer, Modifier.width(TransactionsBuyerColumn))
+        BodyCell("${summary.totalItems} item", Modifier.width(TransactionsCountColumn))
+        BodyCell(formatRupiah(summary.totalPrice.toString()), Modifier.width(TransactionsTotalColumn))
+        BodyCell(summary.paymentMethod, Modifier.width(TransactionsMethodColumn))
         
-        Box(modifier = Modifier.width(100.dp)) {
+        Box(modifier = Modifier.width(TransactionsStatusColumn)) {
             StatusBadge(
                 text = if (summary.isCompleted) "Selesai" else "Proses",
                 tone = if (summary.isCompleted) StatusTone.Complete else StatusTone.Warning
             )
         }
 
-        IconButton(
-            onClick = onDetail,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = "Detail",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
+        Box(modifier = Modifier.width(TransactionsActionsColumn)) {
+            IconButton(
+                onClick = onDetail,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Detail",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
     HorizontalDivider(

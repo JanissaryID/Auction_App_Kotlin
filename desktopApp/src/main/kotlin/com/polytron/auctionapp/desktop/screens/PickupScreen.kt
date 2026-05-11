@@ -3,6 +3,7 @@ package com.polytron.auctionapp.desktop.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ClearAll
@@ -42,7 +42,13 @@ import com.polytron.auctionapp.desktop.components.MetricTile
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
 
-private val PickupTableMinWidth = 1080.dp
+private val PickupTableMinWidth = 1140.dp
+private val PickupCodeColumn = 110.dp
+private val PickupNameColumn = 300.dp
+private val PickupBuyerColumn = 240.dp
+private val PickupOrderColumn = 190.dp
+private val PickupPaymentMethodColumn = 140.dp
+private val PickupActionsColumn = 60.dp
 
 @Composable
 fun PickupScreen(
@@ -165,12 +171,12 @@ private fun PickupRowHeader() {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        HeaderCell("Kode", Modifier.width(100.dp))
-        HeaderCell("Nama Barang", Modifier.weight(2f).widthIn(min = 280.dp))
-        HeaderCell("Pemenang", Modifier.weight(1.5f).widthIn(min = 220.dp))
-        HeaderCell("Order ID", Modifier.width(180.dp))
-        HeaderCell("Metode Bayar", Modifier.width(120.dp))
-        HeaderCell("Aksi", Modifier.width(60.dp))
+        HeaderCell("Kode", Modifier.width(PickupCodeColumn))
+        HeaderCell("Nama Barang", Modifier.width(PickupNameColumn))
+        HeaderCell("Pemenang", Modifier.width(PickupBuyerColumn))
+        HeaderCell("Order ID", Modifier.width(PickupOrderColumn))
+        HeaderCell("Metode Bayar", Modifier.width(PickupPaymentMethodColumn))
+        HeaderCell("Aksi", Modifier.width(PickupActionsColumn))
     }
 }
 
@@ -186,22 +192,24 @@ private fun PickupRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BodyCell(item.codeItem.orEmpty(), Modifier.width(100.dp))
-        BodyCell(item.nameItem.orEmpty(), Modifier.weight(2f).widthIn(min = 280.dp))
-        BodyCell(item.buyer.orEmpty(), Modifier.weight(1.5f).widthIn(min = 220.dp))
-        BodyCell(item.orderID.orEmpty(), Modifier.width(180.dp))
-        BodyCell(item.typePayment.orEmpty(), Modifier.width(120.dp))
+        BodyCell(item.codeItem.orEmpty(), Modifier.width(PickupCodeColumn))
+        BodyCell(item.nameItem.orEmpty(), Modifier.width(PickupNameColumn))
+        BodyCell(item.buyer.orEmpty(), Modifier.width(PickupBuyerColumn))
+        BodyCell(item.orderID.orEmpty(), Modifier.width(PickupOrderColumn))
+        BodyCell(item.typePayment.orEmpty(), Modifier.width(PickupPaymentMethodColumn))
         
-        IconButton(
-            onClick = onRemove,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Hapus",
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(18.dp)
-            )
+        Box(modifier = Modifier.width(PickupActionsColumn)) {
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Hapus",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
     HorizontalDivider(

@@ -3,6 +3,7 @@ package com.polytron.auctionapp.desktop.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ClearAll
@@ -43,7 +43,12 @@ import com.polytron.auctionapp.desktop.components.MetricTile
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
 
-private val PaymentTableMinWidth = 900.dp
+private val PaymentTableMinWidth = 920.dp
+private val PaymentCodeColumn = 110.dp
+private val PaymentNameColumn = 280.dp
+private val PaymentBuyerColumn = 220.dp
+private val PaymentPriceColumn = 160.dp
+private val PaymentActionsColumn = 60.dp
 
 @Composable
 fun PaymentScreen(
@@ -231,11 +236,11 @@ private fun PaymentRowHeader() {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        HeaderCell("Kode", Modifier.width(100.dp))
-        HeaderCell("Nama Barang", Modifier.weight(2f).widthIn(min = 260.dp))
-        HeaderCell("Pemenang", Modifier.weight(1.5f).widthIn(min = 200.dp))
-        HeaderCell("Harga Lelang", Modifier.width(150.dp))
-        HeaderCell("Aksi", Modifier.width(60.dp))
+        HeaderCell("Kode", Modifier.width(PaymentCodeColumn))
+        HeaderCell("Nama Barang", Modifier.width(PaymentNameColumn))
+        HeaderCell("Pemenang", Modifier.width(PaymentBuyerColumn))
+        HeaderCell("Harga Lelang", Modifier.width(PaymentPriceColumn))
+        HeaderCell("Aksi", Modifier.width(PaymentActionsColumn))
     }
 }
 
@@ -251,21 +256,23 @@ private fun PaymentRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BodyCell(item.codeItem.orEmpty(), Modifier.width(100.dp))
-        BodyCell(item.nameItem.orEmpty(), Modifier.weight(2f).widthIn(min = 260.dp))
-        BodyCell(item.buyer.orEmpty(), Modifier.weight(1.5f).widthIn(min = 200.dp))
-        BodyCell(formatRupiah(item.price), Modifier.width(150.dp))
+        BodyCell(item.codeItem.orEmpty(), Modifier.width(PaymentCodeColumn))
+        BodyCell(item.nameItem.orEmpty(), Modifier.width(PaymentNameColumn))
+        BodyCell(item.buyer.orEmpty(), Modifier.width(PaymentBuyerColumn))
+        BodyCell(formatRupiah(item.price), Modifier.width(PaymentPriceColumn))
         
-        IconButton(
-            onClick = onRemove,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Hapus",
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(18.dp)
-            )
+        Box(modifier = Modifier.width(PaymentActionsColumn)) {
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Hapus",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
     HorizontalDivider(
