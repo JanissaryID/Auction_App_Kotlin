@@ -27,6 +27,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -58,8 +64,11 @@ fun PickupScreen(
     onBarcodeEntry: () -> Unit,
     onRemoveItem: (ItemResponse) -> Unit,
     onClearAll: () -> Unit,
-    onPickupClick: () -> Unit
+    onPickupClick: suspend () -> Unit
 ) {
+    var isSubmitting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -122,12 +131,30 @@ fun PickupScreen(
                     Spacer(Modifier.width(8.dp))
                 }
                 Button(
-                    onClick = onPickupClick,
-                    enabled = selectedItems.isNotEmpty(),
+                    onClick = {
+                        isSubmitting = true
+                        scope.launch {
+                            try {
+                                onPickupClick()
+                            } finally {
+                                isSubmitting = false
+                            }
+                        }
+                    },
+                    enabled = selectedItems.isNotEmpty() && !isSubmitting,
                     contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                 ) {
-                    Icon(Icons.Default.Handyman, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
+                    if (isSubmitting) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    } else {
+                        Icon(Icons.Default.Handyman, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                    }
                     Text("Konfirmasi Pengambilan")
                 }
             }

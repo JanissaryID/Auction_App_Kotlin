@@ -15,8 +15,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -42,6 +45,9 @@ class ItemsViewModel(
     private val _items = MutableStateFlow<List<ItemResponse>>(emptyList())
     val items: StateFlow<List<ItemResponse>> = _items.asStateFlow()
 
+    private val _toastEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val toastEvent: SharedFlow<String> = _toastEvent.asSharedFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -66,6 +72,12 @@ class ItemsViewModel(
         }
     }
 
+    fun showToast(message: String) {
+        scope.launch {
+            _toastEvent.emit(message)
+        }
+    }
+
     fun fetchItems() {
         scope.launch {
             _isLoading.value = true
@@ -79,33 +91,33 @@ class ItemsViewModel(
         }
     }
 
-    fun createItem(item: ItemResponse) {
-        scope.launch {
-            try {
-                createItemUseCase(item)
-            } catch (e: Exception) {
-                logger.error(tag, "createItem error: ${e.message}", e)
-            }
+    suspend fun createItem(item: ItemResponse): Result<Unit> {
+        return try {
+            createItemUseCase(item)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            logger.error(tag, "createItem error: ${e.message}", e)
+            Result.failure(e)
         }
     }
 
-    fun patchItem(id: String, item: ItemResponse) {
-        scope.launch {
-            try {
-                updateItemUseCase(id = id, item = item)
-            } catch (e: Exception) {
-                logger.error(tag, "patchItem error: ${e.message}", e)
-            }
+    suspend fun patchItem(id: String, item: ItemResponse): Result<Unit> {
+        return try {
+            updateItemUseCase(id = id, item = item)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            logger.error(tag, "patchItem error: ${e.message}", e)
+            Result.failure(e)
         }
     }
 
-    fun deleteItem(id: String) {
-        scope.launch {
-            try {
-                deleteItemUseCase(id)
-            } catch (e: Exception) {
-                logger.error(tag, "deleteItem error: ${e.message}", e)
-            }
+    suspend fun deleteItem(id: String): Result<Unit> {
+        return try {
+            deleteItemUseCase(id)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            logger.error(tag, "deleteItem error: ${e.message}", e)
+            Result.failure(e)
         }
     }
 

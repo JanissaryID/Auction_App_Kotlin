@@ -84,7 +84,7 @@ fun DesktopDialogHost(
     paymentViewModel: PaymentViewModel,
     pickupViewModel: PickupViewModel,
     canPrintPaymentReceipt: Boolean,
-    onSubmitPayment: (PaymentMethod, Boolean) -> Unit,
+    onSubmitPayment: suspend (PaymentMethod, Boolean) -> Unit,
     onMissingPaymentPrinter: (PaymentMethod) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -659,7 +659,7 @@ private fun BarcodeEntryDialog(
 private fun PaymentMethodDialog(
     paymentViewModel: PaymentViewModel,
     canPrintReceipt: Boolean,
-    onSubmitPayment: (PaymentMethod, Boolean) -> Unit,
+    onSubmitPayment: suspend (PaymentMethod, Boolean) -> Unit,
     onMissingPrinter: (PaymentMethod) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -667,6 +667,7 @@ private fun PaymentMethodDialog(
     val totalAmount = selectedItems.sumOf { it.price?.toLongOrNull() ?: 0L }
     var selectedMethod by remember { mutableStateOf(PaymentMethod.Cash) }
     var isSubmitting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     BasicDialog(
         title = "Metode Pembayaran",
@@ -680,12 +681,18 @@ private fun PaymentMethodDialog(
             Button(
                 onClick = {
                     isSubmitting = true
-                    if (canPrintReceipt) {
-                        onSubmitPayment(selectedMethod, true)
-                    } else {
-                        onMissingPrinter(selectedMethod)
+                    scope.launch {
+                        try {
+                            if (canPrintReceipt) {
+                                onSubmitPayment(selectedMethod, true)
+                            } else {
+                                onMissingPrinter(selectedMethod)
+                            }
+                        } finally {
+                            isSubmitting = false
+                            onDismiss()
+                        }
                     }
-                    onDismiss()
                 },
                 enabled = !isSubmitting && selectedItems.isNotEmpty()
             ) {

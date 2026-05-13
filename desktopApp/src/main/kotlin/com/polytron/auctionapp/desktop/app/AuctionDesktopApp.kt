@@ -266,74 +266,76 @@ fun AuctionDesktopApp() {
             }
         }
 
-        fun submitAuction(shouldPrint: Boolean) {
-            appScope.launch {
-                val itemsToSave = selectedAuctionItems
-                val receipts = buildAuctionReceipts(itemsToSave)
+        suspend fun submitAuction(shouldPrint: Boolean) {
+            val itemsToSave = selectedAuctionItems
+            val receipts = buildAuctionReceipts(itemsToSave)
 
-                itemsToSave.forEach { item ->
-                    val itemId = item.id ?: return@forEach
-                    val buyer = editingBuyers[itemId].orEmpty().ifBlank { item.buyer.orEmpty() }
-                    val price = editingPrices[itemId].orEmpty().ifBlank { item.price.orEmpty() }
-                    itemsViewModel.patchItem(
-                        id = itemId,
-                        item = item.copy(
-                            status = 1,
-                            buyer = buyer,
-                            price = price
-                        )
+            itemsToSave.forEach { item ->
+                val itemId = item.id ?: return@forEach
+                val buyer = editingBuyers[itemId].orEmpty().ifBlank { item.buyer.orEmpty() }
+                val price = editingPrices[itemId].orEmpty().ifBlank { item.price.orEmpty() }
+                itemsViewModel.patchItem(
+                    id = itemId,
+                    item = item.copy(
+                        status = 1,
+                        buyer = buyer,
+                        price = price
                     )
-                }
-
-                if (shouldPrint) {
-                    val printResult = printAuctionReceipts(receipts)
-                    printResult.onSuccess {
-                        snackbarHostState.showSnackbar("Lelang berhasil disimpan & nota dicetak.")
-                    }.onFailure { error ->
-                        snackbarHostState.showSnackbar("Lelang berhasil disimpan, tapi gagal cetak nota: ${error.message ?: "printer tidak merespons"}")
-                    }
-                } else {
-                    snackbarHostState.showSnackbar("Lelang berhasil disimpan tanpa cetak.")
-                }
-
-                auctionViewModel.clearSelectedItems()
+                )
             }
+
+            if (shouldPrint) {
+                val printResult = printAuctionReceipts(receipts)
+                printResult.onSuccess {
+                    snackbarHostState.showSnackbar("Lelang berhasil disimpan & nota dicetak.")
+                }.onFailure { error ->
+                    snackbarHostState.showSnackbar("Lelang berhasil disimpan, tapi gagal cetak nota: ${error.message ?: "printer tidak merespons"}")
+                }
+            } else {
+                snackbarHostState.showSnackbar("Lelang berhasil disimpan tanpa cetak.")
+            }
+
+            auctionViewModel.clearSelectedItems()
         }
 
-        fun submitPayment(paymentMethod: PaymentMethod, shouldPrint: Boolean) {
-            appScope.launch {
-                val itemsToPay = selectedPaymentItems
-                val orderId = "Order-${generateRandomAlphanumeric()}"
+        suspend fun submitPayment(paymentMethod: PaymentMethod, shouldPrint: Boolean) {
+            val itemsToPay = selectedPaymentItems
+            val orderId = "Order-${generateRandomAlphanumeric()}"
 
-                itemsToPay.forEach { item ->
-                    val itemId = item.id ?: return@forEach
-                    itemsViewModel.patchItem(
-                        id = itemId,
-                        item = item.copy(
-                            status = 2,
-                            orderID = orderId,
-                            typePayment = paymentMethod.label
-                        )
+            itemsToPay.forEach { item ->
+                val itemId = item.id ?: return@forEach
+                itemsViewModel.patchItem(
+                    id = itemId,
+                    item = item.copy(
+                        status = 2,
+                        orderID = orderId,
+                        typePayment = paymentMethod.label
                     )
-                }
-
-                if (shouldPrint) {
-                    val printResult = printPaymentReceipt(itemsToPay, orderId, paymentMethod.label)
-                    printResult.onSuccess {
-                        snackbarHostState.showSnackbar("Pembayaran berhasil & struk dicetak.")
-                    }.onFailure { error ->
-                        snackbarHostState.showSnackbar("Pembayaran berhasil, tapi gagal cetak struk: ${error.message ?: "printer tidak merespons"}")
-                    }
-                } else {
-                    snackbarHostState.showSnackbar("Pembayaran berhasil disimpan tanpa cetak.")
-                }
-
-                paymentViewModel.clearSelectedItems()
+                )
             }
+
+            if (shouldPrint) {
+                val printResult = printPaymentReceipt(itemsToPay, orderId, paymentMethod.label)
+                printResult.onSuccess {
+                    snackbarHostState.showSnackbar("Pembayaran berhasil & struk dicetak.")
+                }.onFailure { error ->
+                    snackbarHostState.showSnackbar("Pembayaran berhasil, tapi gagal cetak struk: ${error.message ?: "printer tidak merespons"}")
+                }
+            } else {
+                snackbarHostState.showSnackbar("Pembayaran berhasil disimpan tanpa cetak.")
+            }
+
+            paymentViewModel.clearSelectedItems()
         }
 
         LaunchedEffect(authViewModel) {
             authViewModel.toastEvent.collect { message ->
+                snackbarHostState.showSnackbar(message)
+            }
+        }
+
+        LaunchedEffect(itemsViewModel) {
+            itemsViewModel.toastEvent.collect { message ->
                 snackbarHostState.showSnackbar(message)
             }
         }
@@ -413,7 +415,9 @@ fun AuctionDesktopApp() {
                         onReprintAuctionReceipt = ::reprintAuctionReceipt,
                         onSubmit = {
                             if (selectedPrinterName == null) {
-                                showNoPrinterDialog { submitAuction(shouldPrint = false) }
+                                showNoPrinterDialog { 
+                                    appScope.launch { submitAuction(shouldPrint = false) }
+                                }
                             } else {
                                 submitAuction(shouldPrint = true)
                             }
@@ -490,7 +494,7 @@ fun AuctionDesktopApp() {
                 },
                 onMissingPaymentPrinter = { paymentMethod ->
                     showNoPrinterDialog {
-                        submitPayment(paymentMethod, shouldPrint = false)
+                        appScope.launch { submitPayment(paymentMethod, shouldPrint = false) }
                     }
                 },
                 onDismiss = navigator::closeDialog

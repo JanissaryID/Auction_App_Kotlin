@@ -33,7 +33,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -83,9 +85,12 @@ fun AuctionScreen(
     onApplyPriceToAll: (String) -> Unit,
     onPrintReceipts: () -> Unit,
     onReprintAuctionReceipt: (ItemResponse) -> Unit,
-    onSubmit: () -> Unit
+    onSubmit: suspend () -> Unit
 ) {
     var globalPrice by remember { mutableStateOf("") }
+    var isSubmitting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
     val auctionHistory = remember(items) {
         items.filter { item ->
             (item.status ?: -1) >= 1 &&
@@ -183,7 +188,7 @@ fun AuctionScreen(
                     Spacer(Modifier.width(8.dp))
                     OutlinedButton(
                         onClick = onPrintReceipts,
-                        enabled = isReadyToSubmit,
+                        enabled = isReadyToSubmit && !isSubmitting,
                         contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                     ) {
                         Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -193,10 +198,27 @@ fun AuctionScreen(
                     Spacer(Modifier.width(8.dp))
                 }
                 Button(
-                    onClick = onSubmit,
-                    enabled = isReadyToSubmit,
+                    onClick = {
+                        isSubmitting = true
+                        scope.launch {
+                            try {
+                                onSubmit()
+                            } finally {
+                                isSubmitting = false
+                            }
+                        }
+                    },
+                    enabled = isReadyToSubmit && !isSubmitting,
                     contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                 ) {
+                    if (isSubmitting) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
                     Text("Simpan & Cetak")
                 }
             }
