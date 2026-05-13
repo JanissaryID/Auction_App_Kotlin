@@ -405,7 +405,6 @@ fun AuctionDesktopApp() {
                         editingBuyers = editingBuyers,
                         editingPrices = editingPrices,
                         onAddItem = { navigator.showDialog(DesktopDialog.SelectAuctionItems) },
-                        onBarcodeEntry = { navigator.showDialog(DesktopDialog.BarcodeEntry) },
                         onRemoveItem = auctionViewModel::removeSelectedItem,
                         onClearAll = auctionViewModel::clearSelectedItems,
                         onBuyerChange = auctionViewModel::updateEditingBuyer,
@@ -428,7 +427,6 @@ fun AuctionDesktopApp() {
                         items = items,
                         selectedItems = selectedPaymentItems,
                         onAddItem = { navigator.showDialog(DesktopDialog.SelectPaymentItems) },
-                        onBarcodeEntry = { navigator.showDialog(DesktopDialog.BarcodeEntry) },
                         onRemoveItem = paymentViewModel::removeSelectedItem,
                         onClearAll = paymentViewModel::clearSelectedItems,
                         onPayClick = { navigator.showDialog(DesktopDialog.PaymentMethod) },
@@ -438,20 +436,17 @@ fun AuctionDesktopApp() {
                         items = items,
                         selectedItems = selectedPickupItems,
                         onAddItem = { navigator.showDialog(DesktopDialog.SelectPickupItems) },
-                        onBarcodeEntry = { navigator.showDialog(DesktopDialog.BarcodeEntry) },
                         onRemoveItem = pickupViewModel::removeSelectedItem,
                         onClearAll = pickupViewModel::clearSelectedItems,
                         onPickupClick = {
-                            appScope.launch {
-                                selectedPickupItems.forEach { item ->
-                                    itemsViewModel.patchItem(
-                                        id = item.id!!,
-                                        item = item.copy(status = 3)
-                                    )
-                                }
-                                pickupViewModel.clearSelectedItems()
-                                snackbarHostState.showSnackbar("Pengambilan berhasil dikonfirmasi")
+                            selectedPickupItems.forEach { item ->
+                                itemsViewModel.patchItem(
+                                    id = item.id!!,
+                                    item = item.copy(status = 3)
+                                )
                             }
+                            pickupViewModel.clearSelectedItems()
+                            snackbarHostState.showSnackbar("Pengambilan berhasil dikonfirmasi")
                         }
                     )
                     DesktopDestination.Transactions -> TransactionsScreen(

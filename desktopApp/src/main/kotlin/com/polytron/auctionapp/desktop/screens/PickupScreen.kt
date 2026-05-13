@@ -61,7 +61,6 @@ fun PickupScreen(
     items: List<ItemResponse>,
     selectedItems: List<ItemResponse>,
     onAddItem: () -> Unit,
-    onBarcodeEntry: () -> Unit,
     onRemoveItem: (ItemResponse) -> Unit,
     onClearAll: () -> Unit,
     onPickupClick: suspend () -> Unit
@@ -103,15 +102,6 @@ fun PickupScreen(
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Pilih Barang")
-                }
-                Spacer(Modifier.width(8.dp))
-                OutlinedButton(
-                    onClick = onBarcodeEntry,
-                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding
-                ) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Input Kode")
                 }
             },
             actions = {
