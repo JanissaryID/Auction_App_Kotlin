@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.polytron.auctionapp.desktop.dialogs.DesktopDialogHost
+import com.polytron.auctionapp.desktop.dialogs.DesktopNoPrinterDialog
 import com.polytron.auctionapp.desktop.layout.DesktopShell
 import com.polytron.auctionapp.desktop.navigation.DesktopDestination
 import com.polytron.auctionapp.desktop.navigation.DesktopDialog
@@ -25,12 +26,14 @@ import com.polytron.auctionapp.desktop.screens.TransactionsScreen
 import com.polytron.auctionapp.desktop.theme.DesktopTheme
 import com.polytron.auctionapp.desktop.utils.DesktopThermalPrinter
 import com.polytron.auctionapp.domain.model.ItemResponse
+import com.polytron.auctionapp.domain.model.PaymentMethod
 import com.polytron.auctionapp.presentation.auction.AuctionViewModel
 import com.polytron.auctionapp.presentation.auth.AuthViewModel
 import com.polytron.auctionapp.presentation.items.ItemsViewModel
 import com.polytron.auctionapp.presentation.payment.PaymentViewModel
 import com.polytron.auctionapp.presentation.pickup.PickupViewModel
 import com.polytron.auctionapp.desktop.utils.exportItemsToExcelDesktop
+import com.polytron.auctionapp.utils.generateRandomAlphanumeric
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -82,14 +85,41 @@ fun AuctionDesktopApp() {
         }
         var printerNames by remember { mutableStateOf(initialPrinterConfig.first) }
         var selectedPrinterName by remember { mutableStateOf(initialPrinterConfig.second) }
+        var pendingNoPrinterSaveOnly by remember { mutableStateOf<(() -> Unit)?>(null) }
+        var showPrintOnlyNoPrinterDialog by remember { mutableStateOf(false) }
 
-        fun refreshPrinters() {
+        fun refreshPrinters(): List<String> {
             val names = DesktopThermalPrinter.availablePrinterNames()
             printerNames = names
             selectedPrinterName = selectedPrinterName
                 ?.takeIf { it in names }
                 ?: DesktopThermalPrinter.defaultPrinterName()?.takeIf { it in names }
                 ?: names.firstOrNull()
+            return names
+        }
+
+        fun showNoPrinterDialog(onSaveOnly: (() -> Unit)? = null) {
+            if (onSaveOnly == null) {
+                showPrintOnlyNoPrinterDialog = true
+            } else {
+                pendingNoPrinterSaveOnly = onSaveOnly
+            }
+        }
+
+        fun openPrinterSelectionFromDialog() {
+            val names = refreshPrinters()
+            pendingNoPrinterSaveOnly = null
+            showPrintOnlyNoPrinterDialog = false
+            navigator.navigate(DesktopDestination.Dashboard)
+            appScope.launch {
+                snackbarHostState.showSnackbar(
+                    if (names.isEmpty()) {
+                        "Tidak ada printer Windows yang terdeteksi."
+                    } else {
+                        "Pilih printer thermal di Dashboard, lalu ulangi proses cetak."
+                    }
+                )
+            }
         }
 
         fun printItemLabels(itemsToPrint: List<ItemResponse>) {
@@ -137,14 +167,8 @@ fun AuctionDesktopApp() {
             }
         }
 
-        fun printAuctionReceipts() {
-            val printerName = selectedPrinterName
-            if (printerName == null) {
-                appScope.launch { snackbarHostState.showSnackbar("Pilih printer thermal di Dashboard dulu.") }
-                return
-            }
-
-            val receipts = selectedAuctionItems.mapNotNull { item ->
+        fun buildAuctionReceipts(itemsToPrint: List<ItemResponse>): List<DesktopThermalPrinter.AuctionReceiptItem> {
+            return itemsToPrint.mapNotNull { item ->
                 val itemId = item.id ?: return@mapNotNull null
                 val buyer = editingBuyers[itemId].orEmpty().ifBlank { item.buyer.orEmpty() }
                 val auctionPrice = editingPrices[itemId].orEmpty().ifBlank { item.price.orEmpty() }
@@ -158,23 +182,153 @@ fun AuctionDesktopApp() {
                     itemCode = item.codeItem.orEmpty()
                 )
             }
+        }
 
+        suspend fun printAuctionReceipts(
+            receipts: List<DesktopThermalPrinter.AuctionReceiptItem>
+        ): Result<Unit> {
+            val printerName = selectedPrinterName
+                ?: return Result.failure(IllegalStateException("Pilih printer thermal di Dashboard dulu."))
+
+            return runCatching {
+                withContext(Dispatchers.IO) {
+                    DesktopThermalPrinter.printAuctionReceipts(printerName, receipts)
+                }
+            }
+        }
+
+        fun printAuctionReceipts() {
+            val receipts = buildAuctionReceipts(selectedAuctionItems)
             if (receipts.isEmpty()) {
                 appScope.launch { snackbarHostState.showSnackbar("Lengkapi nama pemenang dan harga lelang dulu.") }
                 return
             }
+            if (selectedPrinterName == null) {
+                showNoPrinterDialog()
+                return
+            }
 
             appScope.launch {
-                val result = runCatching {
-                    withContext(Dispatchers.IO) {
-                        DesktopThermalPrinter.printAuctionReceipts(printerName, receipts)
-                    }
-                }
+                val result = printAuctionReceipts(receipts)
                 result.onSuccess {
                     snackbarHostState.showSnackbar("Nota lelang Android-style dicetak 2 slip untuk ${receipts.size} barang.")
                 }.onFailure { error ->
                     snackbarHostState.showSnackbar("Gagal cetak nota: ${error.message ?: "printer tidak merespons"}")
                 }
+            }
+        }
+
+        fun reprintAuctionReceipt(item: ItemResponse) {
+            if (selectedPrinterName == null) {
+                showNoPrinterDialog()
+                return
+            }
+
+            val receipts = buildAuctionReceipts(listOf(item))
+            if (receipts.isEmpty()) {
+                appScope.launch { snackbarHostState.showSnackbar("Data lelang belum lengkap untuk dicetak ulang.") }
+                return
+            }
+
+            appScope.launch {
+                val result = printAuctionReceipts(receipts)
+                result.onSuccess {
+                    snackbarHostState.showSnackbar("Nota lelang dicetak ulang.")
+                }.onFailure { error ->
+                    snackbarHostState.showSnackbar("Gagal cetak ulang nota: ${error.message ?: "printer tidak merespons"}")
+                }
+            }
+        }
+
+        fun reprintPaymentReceipt(orderId: String) {
+            if (selectedPrinterName == null) {
+                showNoPrinterDialog()
+                return
+            }
+
+            val orderItems = items.filter { it.orderID == orderId }
+            if (orderItems.isEmpty()) {
+                appScope.launch { snackbarHostState.showSnackbar("Data pembayaran tidak ditemukan.") }
+                return
+            }
+
+            appScope.launch {
+                val result = printPaymentReceipt(
+                    itemsToPrint = orderItems,
+                    orderId = orderId,
+                    paymentMethod = orderItems.first().typePayment.orEmpty()
+                )
+                result.onSuccess {
+                    snackbarHostState.showSnackbar("Struk pembayaran dicetak ulang.")
+                }.onFailure { error ->
+                    snackbarHostState.showSnackbar("Gagal cetak ulang struk: ${error.message ?: "printer tidak merespons"}")
+                }
+            }
+        }
+
+        fun submitAuction(shouldPrint: Boolean) {
+            appScope.launch {
+                val itemsToSave = selectedAuctionItems
+                val receipts = buildAuctionReceipts(itemsToSave)
+
+                itemsToSave.forEach { item ->
+                    val itemId = item.id ?: return@forEach
+                    val buyer = editingBuyers[itemId].orEmpty().ifBlank { item.buyer.orEmpty() }
+                    val price = editingPrices[itemId].orEmpty().ifBlank { item.price.orEmpty() }
+                    itemsViewModel.patchItem(
+                        id = itemId,
+                        item = item.copy(
+                            status = 1,
+                            buyer = buyer,
+                            price = price
+                        )
+                    )
+                }
+
+                if (shouldPrint) {
+                    val printResult = printAuctionReceipts(receipts)
+                    printResult.onSuccess {
+                        snackbarHostState.showSnackbar("Lelang berhasil disimpan & nota dicetak.")
+                    }.onFailure { error ->
+                        snackbarHostState.showSnackbar("Lelang berhasil disimpan, tapi gagal cetak nota: ${error.message ?: "printer tidak merespons"}")
+                    }
+                } else {
+                    snackbarHostState.showSnackbar("Lelang berhasil disimpan tanpa cetak.")
+                }
+
+                auctionViewModel.clearSelectedItems()
+            }
+        }
+
+        fun submitPayment(paymentMethod: PaymentMethod, shouldPrint: Boolean) {
+            appScope.launch {
+                val itemsToPay = selectedPaymentItems
+                val orderId = "Order-${generateRandomAlphanumeric()}"
+
+                itemsToPay.forEach { item ->
+                    val itemId = item.id ?: return@forEach
+                    itemsViewModel.patchItem(
+                        id = itemId,
+                        item = item.copy(
+                            status = 2,
+                            orderID = orderId,
+                            typePayment = paymentMethod.label
+                        )
+                    )
+                }
+
+                if (shouldPrint) {
+                    val printResult = printPaymentReceipt(itemsToPay, orderId, paymentMethod.label)
+                    printResult.onSuccess {
+                        snackbarHostState.showSnackbar("Pembayaran berhasil & struk dicetak.")
+                    }.onFailure { error ->
+                        snackbarHostState.showSnackbar("Pembayaran berhasil, tapi gagal cetak struk: ${error.message ?: "printer tidak merespons"}")
+                    }
+                } else {
+                    snackbarHostState.showSnackbar("Pembayaran berhasil disimpan tanpa cetak.")
+                }
+
+                paymentViewModel.clearSelectedItems()
             }
         }
 
@@ -256,23 +410,12 @@ fun AuctionDesktopApp() {
                         onPriceChange = auctionViewModel::updateEditingPrice,
                         onApplyPriceToAll = auctionViewModel::updateAllEditingPrices,
                         onPrintReceipts = ::printAuctionReceipts,
+                        onReprintAuctionReceipt = ::reprintAuctionReceipt,
                         onSubmit = {
-                            appScope.launch {
-                                selectedAuctionItems.forEach { item ->
-                                    val itemId = item.id ?: ""
-                                    val buyer = editingBuyers[itemId] ?: ""
-                                    val price = editingPrices[itemId] ?: ""
-                                    itemsViewModel.patchItem(
-                                        id = itemId,
-                                        item = item.copy(
-                                            status = 1,
-                                            buyer = buyer,
-                                            price = price
-                                        )
-                                    )
-                                }
-                                auctionViewModel.clearSelectedItems()
-                                snackbarHostState.showSnackbar("Lelang berhasil disimpan")
+                            if (selectedPrinterName == null) {
+                                showNoPrinterDialog { submitAuction(shouldPrint = false) }
+                            } else {
+                                submitAuction(shouldPrint = true)
                             }
                         }
                     )
@@ -284,7 +427,8 @@ fun AuctionDesktopApp() {
                         onBarcodeEntry = { navigator.showDialog(DesktopDialog.BarcodeEntry) },
                         onRemoveItem = paymentViewModel::removeSelectedItem,
                         onClearAll = paymentViewModel::clearSelectedItems,
-                        onPayClick = { navigator.showDialog(DesktopDialog.PaymentMethod) }
+                        onPayClick = { navigator.showDialog(DesktopDialog.PaymentMethod) },
+                        onReprintPaymentReceipt = ::reprintPaymentReceipt
                     )
                     DesktopDestination.Pickup -> PickupScreen(
                         items = items,
@@ -341,12 +485,34 @@ fun AuctionDesktopApp() {
                 paymentViewModel = paymentViewModel,
                 pickupViewModel = pickupViewModel,
                 canPrintPaymentReceipt = selectedPrinterName != null,
-                onPrintPaymentReceipt = ::printPaymentReceipt,
-                onPaymentMessage = { message ->
-                    appScope.launch { snackbarHostState.showSnackbar(message) }
+                onSubmitPayment = { paymentMethod, shouldPrint ->
+                    submitPayment(paymentMethod, shouldPrint)
+                },
+                onMissingPaymentPrinter = { paymentMethod ->
+                    showNoPrinterDialog {
+                        submitPayment(paymentMethod, shouldPrint = false)
+                    }
                 },
                 onDismiss = navigator::closeDialog
             )
+
+            pendingNoPrinterSaveOnly?.let { saveOnly ->
+                DesktopNoPrinterDialog(
+                    onDismiss = { pendingNoPrinterSaveOnly = null },
+                    onSelectPrinter = ::openPrinterSelectionFromDialog,
+                    onSaveOnly = {
+                        pendingNoPrinterSaveOnly = null
+                        saveOnly()
+                    }
+                )
+            }
+
+            if (showPrintOnlyNoPrinterDialog) {
+                DesktopNoPrinterDialog(
+                    onDismiss = { showPrintOnlyNoPrinterDialog = false },
+                    onSelectPrinter = ::openPrinterSelectionFromDialog
+                )
+            }
         }
     }
 }

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -27,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +42,8 @@ import com.polytron.auctionapp.desktop.components.DesktopTable
 import com.polytron.auctionapp.desktop.components.DesktopToolbar
 import com.polytron.auctionapp.desktop.components.HeaderCell
 import com.polytron.auctionapp.desktop.components.MetricTile
+import com.polytron.auctionapp.desktop.components.StatusBadge
+import com.polytron.auctionapp.desktop.components.StatusTone
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatRupiah
 
@@ -49,6 +53,14 @@ private val PaymentNameColumn = 280.dp
 private val PaymentBuyerColumn = 220.dp
 private val PaymentPriceColumn = 160.dp
 private val PaymentActionsColumn = 60.dp
+private val PaymentHistoryTableMinWidth = 1120.dp
+private val PaymentHistoryOrderColumn = 190.dp
+private val PaymentHistoryBuyerColumn = 260.dp
+private val PaymentHistoryCountColumn = 90.dp
+private val PaymentHistoryTotalColumn = 160.dp
+private val PaymentHistoryMethodColumn = 130.dp
+private val PaymentHistoryStatusColumn = 120.dp
+private val PaymentHistoryActionsColumn = 80.dp
 
 @Composable
 fun PaymentScreen(
@@ -58,9 +70,27 @@ fun PaymentScreen(
     onBarcodeEntry: () -> Unit,
     onRemoveItem: (ItemResponse) -> Unit,
     onClearAll: () -> Unit,
-    onPayClick: () -> Unit
+    onPayClick: () -> Unit,
+    onReprintPaymentReceipt: (String) -> Unit
 ) {
     val totalAmount = selectedItems.sumOf { it.price?.toLongOrNull() ?: 0L }
+    val paymentHistory = remember(items) {
+        items.filter { !it.orderID.isNullOrBlank() && (it.status ?: -1) >= 2 }
+            .groupBy { it.orderID.orEmpty() }
+            .map { (orderId, orderItems) ->
+                val representativeItem = orderItems.first()
+                PaymentHistorySummary(
+                    orderId = orderId,
+                    buyer = representativeItem.buyer.orEmpty(),
+                    totalItems = orderItems.size,
+                    totalPrice = orderItems.sumOf { it.price?.toLongOrNull() ?: 0L },
+                    paymentMethod = representativeItem.typePayment.orEmpty(),
+                    isCompleted = orderItems.all { it.status == 3 },
+                    date = representativeItem.updated ?: representativeItem.created.orEmpty()
+                )
+            }
+            .sortedByDescending { it.date }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -136,7 +166,7 @@ fun PaymentScreen(
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth().weight(1f),
+            modifier = Modifier.fillMaxWidth().weight(1.05f),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Surface(
@@ -223,6 +253,44 @@ fun PaymentScreen(
                 }
             }
         }
+
+        Surface(
+            modifier = Modifier.fillMaxWidth().weight(0.95f),
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Daftar Pembayaran",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                DesktopTable(
+                    minWidth = PaymentHistoryTableMinWidth,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    PaymentHistoryRowHeader()
+                    if (paymentHistory.isEmpty()) {
+                        Text(
+                            text = "Belum ada pembayaran tersimpan.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(18.dp)
+                        )
+                    } else {
+                        paymentHistory.forEach { summary ->
+                            PaymentHistoryRow(
+                                summary = summary,
+                                onPrint = { onReprintPaymentReceipt(summary.orderId) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -284,3 +352,76 @@ private fun PaymentRow(
 
 @Composable
 private fun MaterialTheme.outlineVariant() = colorScheme.outlineVariant
+
+@Composable
+private fun PaymentHistoryRowHeader() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        HeaderCell("Order ID", Modifier.width(PaymentHistoryOrderColumn))
+        HeaderCell("Pemenang", Modifier.width(PaymentHistoryBuyerColumn))
+        HeaderCell("Jumlah", Modifier.width(PaymentHistoryCountColumn))
+        HeaderCell("Total", Modifier.width(PaymentHistoryTotalColumn))
+        HeaderCell("Metode", Modifier.width(PaymentHistoryMethodColumn))
+        HeaderCell("Status", Modifier.width(PaymentHistoryStatusColumn))
+        HeaderCell("Aksi", Modifier.width(PaymentHistoryActionsColumn))
+    }
+}
+
+@Composable
+private fun PaymentHistoryRow(
+    summary: PaymentHistorySummary,
+    onPrint: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BodyCell(summary.orderId, Modifier.width(PaymentHistoryOrderColumn))
+        BodyCell(summary.buyer, Modifier.width(PaymentHistoryBuyerColumn))
+        BodyCell("${summary.totalItems} item", Modifier.width(PaymentHistoryCountColumn))
+        BodyCell(formatRupiah(summary.totalPrice.toString()), Modifier.width(PaymentHistoryTotalColumn))
+        BodyCell(summary.paymentMethod, Modifier.width(PaymentHistoryMethodColumn))
+        Box(modifier = Modifier.width(PaymentHistoryStatusColumn)) {
+            StatusBadge(
+                text = if (summary.isCompleted) "Diambil" else "Dibayar",
+                tone = if (summary.isCompleted) StatusTone.Complete else StatusTone.Paid
+            )
+        }
+        Box(modifier = Modifier.width(PaymentHistoryActionsColumn)) {
+            IconButton(
+                onClick = onPrint,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Print,
+                    contentDescription = "Cetak ulang struk pembayaran",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+    HorizontalDivider(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
+}
+
+private data class PaymentHistorySummary(
+    val orderId: String,
+    val buyer: String,
+    val totalItems: Int,
+    val totalPrice: Long,
+    val paymentMethod: String,
+    val isCompleted: Boolean,
+    val date: String
+)

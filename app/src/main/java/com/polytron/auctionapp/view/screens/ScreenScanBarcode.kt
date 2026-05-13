@@ -92,7 +92,7 @@ fun ScreenScanBarcode(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBarCustom(title = "Scan Barcode", onBack = navBack)
+            TopAppBarCustom(title = "Scan QR Code", onBack = navBack)
         },
         bottomBar = {
             SelectedItemsBottomBar(
@@ -117,7 +117,7 @@ fun ScreenScanBarcode(
 
             if (selectedItems.isEmpty()) {
                 Text(
-                    text = "Belum ada hasil scan",
+                    text = "Belum ada QR code yang dipindai",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray,
                     modifier = Modifier.align(Alignment.CenterHorizontally)

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +46,8 @@ import com.polytron.auctionapp.desktop.components.DesktopTable
 import com.polytron.auctionapp.desktop.components.DesktopToolbar
 import com.polytron.auctionapp.desktop.components.HeaderCell
 import com.polytron.auctionapp.desktop.components.MetricTile
+import com.polytron.auctionapp.desktop.components.StatusBadge
+import com.polytron.auctionapp.desktop.components.StatusTone
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.utils.formatRupiah
@@ -57,6 +60,13 @@ private val AuctionMaxPriceColumn = 140.dp
 private val AuctionBuyerColumn = 240.dp
 private val AuctionPriceColumn = 160.dp
 private val AuctionActionsColumn = 60.dp
+private val AuctionHistoryTableMinWidth = 1180.dp
+private val AuctionHistoryCodeColumn = 120.dp
+private val AuctionHistoryNameColumn = 280.dp
+private val AuctionHistoryBuyerColumn = 240.dp
+private val AuctionHistoryPriceColumn = 160.dp
+private val AuctionHistoryStatusColumn = 130.dp
+private val AuctionHistoryActionsColumn = 80.dp
 
 @Composable
 fun AuctionScreen(
@@ -72,9 +82,17 @@ fun AuctionScreen(
     onPriceChange: (String, String) -> Unit,
     onApplyPriceToAll: (String) -> Unit,
     onPrintReceipts: () -> Unit,
+    onReprintAuctionReceipt: (ItemResponse) -> Unit,
     onSubmit: () -> Unit
 ) {
     var globalPrice by remember { mutableStateOf("") }
+    val auctionHistory = remember(items) {
+        items.filter { item ->
+            (item.status ?: -1) >= 1 &&
+                !item.buyer.isNullOrBlank() &&
+                !item.price.isNullOrBlank()
+        }.sortedByDescending { it.updated ?: it.created.orEmpty() }
+    }
     val isReadyToSubmit = selectedItems.isNotEmpty() && selectedItems.all { item ->
         val itemId = item.id ?: ""
         editingBuyers[itemId]?.isNotBlank() == true && 
@@ -179,13 +197,13 @@ fun AuctionScreen(
                     enabled = isReadyToSubmit,
                     contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                 ) {
-                    Text("Simpan Lelang")
+                    Text("Simpan & Cetak")
                 }
             }
         )
 
         Surface(
-            modifier = Modifier.fillMaxWidth().weight(1f),
+            modifier = Modifier.fillMaxWidth().weight(1.1f),
             shape = MaterialTheme.shapes.small,
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
@@ -210,6 +228,44 @@ fun AuctionScreen(
                             onPriceChange = { onPriceChange(itemId, it) },
                             onRemove = { onRemoveItem(item) }
                         )
+                    }
+                }
+            }
+        }
+
+        Surface(
+            modifier = Modifier.fillMaxWidth().weight(0.9f),
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Daftar Lelang",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                DesktopTable(
+                    minWidth = AuctionHistoryTableMinWidth,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    AuctionHistoryRowHeader()
+                    if (auctionHistory.isEmpty()) {
+                        Text(
+                            text = "Belum ada data lelang tersimpan.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(18.dp)
+                        )
+                    } else {
+                        auctionHistory.forEach { item ->
+                            AuctionHistoryRow(
+                                item = item,
+                                onPrint = { onReprintAuctionReceipt(item) }
+                            )
+                        }
                     }
                 }
             }
@@ -302,4 +358,83 @@ private fun AuctionRow(
             .height(1.dp)
             .background(MaterialTheme.colorScheme.outlineVariant)
     )
+}
+
+@Composable
+private fun AuctionHistoryRowHeader() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        HeaderCell("Kode", Modifier.width(AuctionHistoryCodeColumn))
+        HeaderCell("Nama Barang", Modifier.width(AuctionHistoryNameColumn))
+        HeaderCell("Pemenang", Modifier.width(AuctionHistoryBuyerColumn))
+        HeaderCell("Harga Lelang", Modifier.width(AuctionHistoryPriceColumn))
+        HeaderCell("Status", Modifier.width(AuctionHistoryStatusColumn))
+        HeaderCell("Aksi", Modifier.width(AuctionHistoryActionsColumn))
+    }
+}
+
+@Composable
+private fun AuctionHistoryRow(
+    item: ItemResponse,
+    onPrint: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BodyCell(item.codeItem.orEmpty(), Modifier.width(AuctionHistoryCodeColumn))
+        BodyCell(item.nameItem.orEmpty(), Modifier.width(AuctionHistoryNameColumn))
+        BodyCell(item.buyer.orEmpty(), Modifier.width(AuctionHistoryBuyerColumn))
+        BodyCell(formatRupiah(item.price), Modifier.width(AuctionHistoryPriceColumn))
+        Box(modifier = Modifier.width(AuctionHistoryStatusColumn)) {
+            StatusBadge(
+                text = auctionStatusLabel(item.status),
+                tone = auctionStatusTone(item.status)
+            )
+        }
+        Box(modifier = Modifier.width(AuctionHistoryActionsColumn)) {
+            IconButton(
+                onClick = onPrint,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Print,
+                    contentDescription = "Cetak ulang nota lelang",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+    HorizontalDivider(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
+}
+
+private fun auctionStatusLabel(status: Int?): String {
+    return when (status) {
+        1 -> "Lelang"
+        2 -> "Dibayar"
+        3 -> "Diambil"
+        else -> "-"
+    }
+}
+
+private fun auctionStatusTone(status: Int?): StatusTone {
+    return when (status) {
+        1 -> StatusTone.Warning
+        2 -> StatusTone.Paid
+        3 -> StatusTone.Complete
+        else -> StatusTone.Neutral
+    }
 }

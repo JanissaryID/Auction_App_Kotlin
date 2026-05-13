@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PrintDisabled
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -69,7 +70,6 @@ import com.polytron.auctionapp.presentation.payment.PaymentViewModel
 import com.polytron.auctionapp.presentation.pickup.PickupViewModel
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.utils.formatRupiah
-import com.polytron.auctionapp.utils.generateRandomAlphanumeric
 import com.polytron.auctionapp.domain.model.PaymentMethod
 import com.polytron.auctionapp.desktop.components.StatusBadge
 import com.polytron.auctionapp.desktop.components.StatusTone
@@ -84,8 +84,8 @@ fun DesktopDialogHost(
     paymentViewModel: PaymentViewModel,
     pickupViewModel: PickupViewModel,
     canPrintPaymentReceipt: Boolean,
-    onPrintPaymentReceipt: suspend (List<ItemResponse>, String, String) -> Result<Unit>,
-    onPaymentMessage: (String) -> Unit,
+    onSubmitPayment: (PaymentMethod, Boolean) -> Unit,
+    onMissingPaymentPrinter: (PaymentMethod) -> Unit,
     onDismiss: () -> Unit
 ) {
     when (dialog) {
@@ -101,6 +101,7 @@ fun DesktopDialogHost(
 
         DesktopDialog.AddItem -> AddEditItemDialog(
             itemsViewModel = itemsViewModel,
+            authViewModel = authViewModel,
             onDismiss = onDismiss
         )
 
@@ -111,6 +112,7 @@ fun DesktopDialogHost(
                 AddEditItemDialog(
                     itemToEdit = item,
                     itemsViewModel = itemsViewModel,
+                    authViewModel = authViewModel,
                     onDismiss = onDismiss
                 )
             } else {
@@ -165,10 +167,9 @@ fun DesktopDialogHost(
 
         DesktopDialog.PaymentMethod -> PaymentMethodDialog(
             paymentViewModel = paymentViewModel,
-            itemsViewModel = itemsViewModel,
             canPrintReceipt = canPrintPaymentReceipt,
-            onPrintReceipt = onPrintPaymentReceipt,
-            onMessage = onPaymentMessage,
+            onSubmitPayment = onSubmitPayment,
+            onMissingPrinter = onMissingPaymentPrinter,
             onDismiss = onDismiss
         )
 
@@ -624,7 +625,7 @@ private fun BarcodeEntryDialog(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
-                text = "Masukkan kode barang secara manual atau gunakan scanner barcode.",
+                text = "Masukkan kode barang secara manual atau gunakan scanner QR code.",
                 style = MaterialTheme.typography.bodyMedium
             )
             OutlinedTextField(
@@ -657,17 +658,15 @@ private fun BarcodeEntryDialog(
 @Composable
 private fun PaymentMethodDialog(
     paymentViewModel: PaymentViewModel,
-    itemsViewModel: ItemsViewModel,
     canPrintReceipt: Boolean,
-    onPrintReceipt: suspend (List<ItemResponse>, String, String) -> Result<Unit>,
-    onMessage: (String) -> Unit,
+    onSubmitPayment: (PaymentMethod, Boolean) -> Unit,
+    onMissingPrinter: (PaymentMethod) -> Unit,
     onDismiss: () -> Unit
 ) {
     val selectedItems by paymentViewModel.selectedItems.collectAsState()
     val totalAmount = selectedItems.sumOf { it.price?.toLongOrNull() ?: 0L }
     var selectedMethod by remember { mutableStateOf(PaymentMethod.Cash) }
     var isSubmitting by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     BasicDialog(
         title = "Metode Pembayaran",
@@ -681,45 +680,19 @@ private fun PaymentMethodDialog(
             Button(
                 onClick = {
                     isSubmitting = true
-                    scope.launch {
-                        try {
-                            val orderId = "Order-${generateRandomAlphanumeric()}"
-                            val itemsToPay = selectedItems
-                            itemsToPay.forEach { item ->
-                                itemsViewModel.patchItem(
-                                    id = item.id!!,
-                                    item = item.copy(
-                                        status = 2,
-                                        orderID = orderId,
-                                        typePayment = selectedMethod.label
-                                    )
-                                )
-                            }
-
-                            if (canPrintReceipt) {
-                                val printResult = onPrintReceipt(itemsToPay, orderId, selectedMethod.label)
-                                printResult.onSuccess {
-                                    onMessage("Pembayaran berhasil & struk dicetak.")
-                                }.onFailure { error ->
-                                    onMessage("Pembayaran berhasil, tapi gagal cetak struk: ${error.message ?: "printer tidak merespons"}")
-                                }
-                            } else {
-                                onMessage("Pembayaran berhasil disimpan. Pilih printer di Dashboard untuk cetak struk.")
-                            }
-
-                            paymentViewModel.clearSelectedItems()
-                            onDismiss()
-                        } finally {
-                            isSubmitting = false
-                        }
+                    if (canPrintReceipt) {
+                        onSubmitPayment(selectedMethod, true)
+                    } else {
+                        onMissingPrinter(selectedMethod)
                     }
+                    onDismiss()
                 },
-                enabled = !isSubmitting
+                enabled = !isSubmitting && selectedItems.isNotEmpty()
             ) {
                 if (isSubmitting) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 } else {
-                    Text(if (canPrintReceipt) "Bayar & Cetak" else "Simpan Tanpa Cetak")
+                    Text("Bayar & Cetak")
                 }
             }
         }
@@ -739,7 +712,7 @@ private fun PaymentMethodDialog(
 
             if (!canPrintReceipt) {
                 Text(
-                    text = "Printer belum dipilih. Pembayaran tetap disimpan tanpa cetak.",
+                    text = "Printer belum dipilih. Saat dibayar, Anda bisa memilih printer atau menyimpan tanpa cetak.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -787,8 +760,10 @@ private fun PaymentMethodDialog(
 private fun AddEditItemDialog(
     itemToEdit: ItemResponse? = null,
     itemsViewModel: ItemsViewModel,
+    authViewModel: AuthViewModel,
     onDismiss: () -> Unit
 ) {
+    val idUser by authViewModel.idUser.collectAsState()
     val isEditMode = itemToEdit != null
     val scope = rememberCoroutineScope()
 
@@ -874,7 +849,9 @@ private fun AddEditItemDialog(
                                                 codeItem = finalCode,
                                                 basePrice = base.toString(),
                                                 maxPrice = max.toString(),
-                                                status = 0
+                                                status = 0,
+                                                admin = "admin",
+                                                user = idUser
                                             )
                                         )
                                     }
@@ -1011,9 +988,6 @@ private fun ItemDetailDialog(
             DetailRow("Harga Lelang", formatRupiah(item.price))
             DetailRow("Order ID", item.orderID.orEmpty())
             DetailRow("Metode Bayar", item.typePayment.orEmpty())
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            DetailRow("Dibuat", item.created.orEmpty())
-            DetailRow("Diperbarui", item.updated.orEmpty())
         }
     }
 }
@@ -1453,6 +1427,56 @@ private fun BasicDialog(
                     content = actions
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun DesktopNoPrinterDialog(
+    onDismiss: () -> Unit,
+    onSelectPrinter: () -> Unit,
+    onSaveOnly: (() -> Unit)? = null
+) {
+    BasicDialog(
+        title = "Printer Belum Terhubung",
+        onDismiss = onDismiss,
+        maxWidth = 520.dp,
+        actions = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+            Spacer(Modifier.weight(1f))
+            onSaveOnly?.let { saveOnly ->
+                OutlinedButton(onClick = saveOnly) {
+                    Text("Simpan Saja")
+                }
+                Spacer(Modifier.width(12.dp))
+            }
+            Button(onClick = onSelectPrinter) {
+                Text("Pilih Printer")
+            }
+        }
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.PrintDisabled,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = if (onSaveOnly == null) {
+                    "Pilih printer agar nota bisa dicetak ulang."
+                } else {
+                    "Data siap disimpan. Pilih printer agar nota bisa dicetak, atau simpan saja tanpa cetak."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

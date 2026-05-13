@@ -10,6 +10,7 @@ import javax.print.attribute.HashPrintRequestAttributeSet
 
 object DesktopThermalPrinter {
     private const val PAPER_WIDTH = 32
+    private const val MAX_QR_CODE_CHARS = 255
 
     data class AuctionReceiptItem(
         val buyerName: String,
@@ -56,7 +57,7 @@ object DesktopThermalPrinter {
                 write(EscPos.alignCenter)
                 writeText(itemName)
                 write(EscPos.newLine(2))
-                writeBarcode(itemCode)
+                writeQrCode(itemCode)
                 write(EscPos.strip())
                 write(EscPos.newLine(2))
             }
@@ -111,7 +112,7 @@ object DesktopThermalPrinter {
             writeText("LUNAS\n")
             write(EscPos.fontNormal)
             writeText("$paymentMethod\n\n")
-            writeBarcode(orderId)
+            writeQrCode(orderId)
             write(EscPos.strip())
             write(EscPos.newLine(4))
         }
@@ -140,7 +141,7 @@ object DesktopThermalPrinter {
         writeText("Harga  : ${formatRupiah(receipt.auctionPrice)}\n\n")
 
         write(EscPos.alignCenter)
-        writeBarcode(receipt.itemCode)
+        writeQrCode(receipt.itemCode)
         write(EscPos.strip())
         write(EscPos.newLine(2))
     }
@@ -185,14 +186,17 @@ object DesktopThermalPrinter {
             .forEach { writeText("$it\n") }
     }
 
-    private fun ByteArrayOutputStream.writeBarcode(code: String) {
-        val cleanCode = code.take(255)
+    private fun ByteArrayOutputStream.writeQrCode(code: String) {
+        val cleanCode = code.trim().ifBlank { "-" }.take(MAX_QR_CODE_CHARS)
+        val data = cleanCode.toByteArray(Charsets.UTF_8)
+
         write(EscPos.alignCenter)
-        write(EscPos.barcodeHeight)
-        write(EscPos.barcodeWidth)
-        write(EscPos.showBarcodeText)
-        write(EscPos.barcodeType)
-        write(cleanCode.length)
+        write(EscPos.qrModel)
+        write(EscPos.qrSize())
+        write(EscPos.qrErrorCorrection)
+        write(EscPos.qrStoreData(data))
+        write(EscPos.qrPrint)
+        write(EscPos.newLine())
         writeText(cleanCode)
         write(EscPos.newLine(2))
     }
@@ -214,10 +218,19 @@ object DesktopThermalPrinter {
         val alignCenter = byteArrayOf(ESC, 0x61, 0x01)
         val fontNormal = byteArrayOf(ESC, 0x21, 0x00)
         val fontBig = byteArrayOf(ESC, 0x21, 0x30)
-        val barcodeHeight = byteArrayOf(GS, 0x68, 100)
-        val barcodeWidth = byteArrayOf(GS, 0x77, 3)
-        val showBarcodeText = byteArrayOf(GS, 0x48, 0x02)
-        val barcodeType = byteArrayOf(GS, 0x6B, 0x49)
+        val qrModel = byteArrayOf(GS, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00)
+        val qrErrorCorrection = byteArrayOf(GS, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31)
+        val qrPrint = byteArrayOf(GS, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30)
+
+        fun qrSize(size: Int = 6): ByteArray =
+            byteArrayOf(GS, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, size.coerceIn(1, 16).toByte())
+
+        fun qrStoreData(data: ByteArray): ByteArray {
+            val length = data.size + 3
+            val pL = (length and 0xFF).toByte()
+            val pH = ((length shr 8) and 0xFF).toByte()
+            return byteArrayOf(GS, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30) + data
+        }
 
         fun newLine(count: Int = 1): ByteArray = "\n".repeat(count).toByteArray()
         fun strip(width: Int = PAPER_WIDTH): ByteArray = "-".repeat(width).toByteArray()

@@ -41,6 +41,13 @@ class ItemsRepositoryImpl(
     private val collectionUsers: String = "users"
 ) : ItemsRepository {
     private val json = Json { ignoreUnknownKeys = true }
+    /** Encoder that omits null fields – used for create/update requests
+     *  so PocketBase does not receive read-only fields (id, collectionId, etc.). */
+    private val jsonForWrite = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = false
+        explicitNulls = false
+    }
     private var authToken: String? = null
 
     override suspend fun loginWithEmailPassword(email: String, password: String): AuthResult {
@@ -102,7 +109,7 @@ class ItemsRepositoryImpl(
         return request(
             method = HttpMethod.Post,
             pathSegments = listOf("api", "collections", collectionItems, "records"),
-            body = json.encodeToString(item)
+            body = jsonForWrite.encodeToString(item)
         ).decode()
     }
 
@@ -110,7 +117,7 @@ class ItemsRepositoryImpl(
         return request(
             method = HttpMethod.Patch,
             pathSegments = listOf("api", "collections", collectionItems, "records", id),
-            body = json.encodeToString(item)
+            body = jsonForWrite.encodeToString(item)
         ).decode()
     }
 

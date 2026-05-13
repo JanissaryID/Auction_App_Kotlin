@@ -78,7 +78,7 @@ fun FabWithSubmenu(
                     .align(Alignment.BottomEnd)
                     .padding(bottom = 72.dp)
             ) {
-                FabWithLabel("Scan Barcode", Icons.Default.CameraAlt) {
+                FabWithLabel("Scan QR Code", Icons.Default.CameraAlt) {
                     requestCameraPermission()
                 }
                 FabWithLabel("Daftar Item", Icons.AutoMirrored.Filled.List) {

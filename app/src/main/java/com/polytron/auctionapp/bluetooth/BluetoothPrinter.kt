@@ -5,13 +5,14 @@ import android.bluetooth.BluetoothDevice
 import androidx.annotation.RequiresPermission
 import com.polytron.auctionapp.bluetooth.EscPosCommands.alignCenter
 import com.polytron.auctionapp.bluetooth.EscPosCommands.alignLeft
-import com.polytron.auctionapp.bluetooth.EscPosCommands.barcodeHeight
-import com.polytron.auctionapp.bluetooth.EscPosCommands.barcodeType
-import com.polytron.auctionapp.bluetooth.EscPosCommands.barcodeWidth
 import com.polytron.auctionapp.bluetooth.EscPosCommands.fontBig
 import com.polytron.auctionapp.bluetooth.EscPosCommands.fontNormal
 import com.polytron.auctionapp.bluetooth.EscPosCommands.newLine
-import com.polytron.auctionapp.bluetooth.EscPosCommands.showBarcodeText
+import com.polytron.auctionapp.bluetooth.EscPosCommands.qrErrorCorrection
+import com.polytron.auctionapp.bluetooth.EscPosCommands.qrModel
+import com.polytron.auctionapp.bluetooth.EscPosCommands.qrPrint
+import com.polytron.auctionapp.bluetooth.EscPosCommands.qrSize
+import com.polytron.auctionapp.bluetooth.EscPosCommands.qrStoreData
 import com.polytron.auctionapp.bluetooth.EscPosCommands.strip
 import com.polytron.auctionapp.domain.model.ItemResponse
 import java.io.OutputStream
@@ -20,6 +21,10 @@ import java.util.UUID
 class BluetoothPrinter {
 
     private val footer = 32
+
+    private companion object {
+        const val MAX_QR_CODE_CHARS = 255
+    }
 
     // === CETAK TEST PRINTER ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -44,7 +49,7 @@ class BluetoothPrinter {
         }
     }
 
-    // === CETAK STRUK PEMBAYARAN DENGAN BARCODE ===
+    // === CETAK STRUK PEMBAYARAN DENGAN QR CODE ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeReceipt(
         device: BluetoothDevice,
@@ -90,8 +95,8 @@ class BluetoothPrinter {
                     os.write(fontNormal)
                     os.write("$payment\n\n".toByteArray())
 
-                    // Barcode
-                    os.writeBarcode(orderID)
+                    // QR Code
+                    os.writeQrCode(orderID)
 
                     // Footer
                     os.write(strip(footer))
@@ -104,7 +109,7 @@ class BluetoothPrinter {
         }
     }
 
-    // === CETAK LABEL BARCODE SEDERHANA ===
+    // === CETAK LABEL QR CODE SEDERHANA ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeLabel(device: BluetoothDevice, itemName: String, itemCode: String) {
         val uuid = device.uuids?.firstOrNull()?.uuid
@@ -117,7 +122,7 @@ class BluetoothPrinter {
                     os.write(alignCenter)
                     os.write(itemName.toByteArray())
                     os.write(newLine(2))
-                    os.writeBarcode(itemCode)
+                    os.writeQrCode(itemCode)
                     os.write(strip(footer))
                     os.write(newLine(2))
                     os.flush()
@@ -128,7 +133,7 @@ class BluetoothPrinter {
         }
     }
 
-    // === CETAK BARCODE UNTUK LELANG ===
+    // === CETAK QR CODE UNTUK LELANG ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeAuction(
         device: BluetoothDevice,
@@ -154,7 +159,7 @@ class BluetoothPrinter {
                     os.write("Harga  : $price\n\n".toByteArray())
 
                     os.write(alignCenter)
-                    os.writeBarcode(code)
+                    os.writeQrCode(code)
                     os.write(strip(footer))
                     os.write(newLine(2))
                     os.flush()
@@ -165,7 +170,7 @@ class BluetoothPrinter {
         }
     }
 
-    // === CETAK LABEL LELANG TANPA BARCODE ===
+    // === CETAK LABEL LELANG TANPA QR CODE ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeAuctionItems(
         device: BluetoothDevice,
@@ -202,16 +207,19 @@ class BluetoothPrinter {
         }
     }
 
-    // === EXTENSION UNTUK CETAK BARCODE ===
-    private fun OutputStream.writeBarcode(code: String) {
+    // === EXTENSION UNTUK CETAK QR CODE ===
+    private fun OutputStream.writeQrCode(code: String) {
+        val cleanCode = code.trim().ifBlank { "-" }.take(MAX_QR_CODE_CHARS)
+        val data = cleanCode.toByteArray(Charsets.UTF_8)
+
         write(alignCenter)
-        write(barcodeHeight)
-        write(barcodeWidth)
-        write(showBarcodeText)
-        write(barcodeType)
-        write(code.length)
-        write(code.toByteArray())
+        write(qrModel)
+        write(qrSize())
+        write(qrErrorCorrection)
+        write(qrStoreData(data))
+        write(qrPrint)
+        write(newLine())
+        write(cleanCode.toByteArray(Charsets.UTF_8))
         write(newLine(2))
     }
 }
-
