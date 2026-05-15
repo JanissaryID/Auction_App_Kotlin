@@ -771,6 +771,7 @@ private fun AddEditItemDialog(
     onDismiss: () -> Unit
 ) {
     val idUser by authViewModel.idUser.collectAsState()
+    val allItems by itemsViewModel.items.collectAsState()
     val isEditMode = itemToEdit != null
     val scope = rememberCoroutineScope()
 
@@ -847,9 +848,43 @@ private fun AddEditItemDialog(
                                 } else {
                                     val baseName = name.trim()
                                     val baseCode = code.trim()
-                                    for (i in 1..qty) {
-                                        val finalName = if (qty > 1) "$baseName $i" else baseName
-                                        val finalCode = if (qty > 1) "$baseCode-$i" else baseCode
+                                    
+                                    val escapedBaseName = Regex.escape(baseName)
+                                    val escapedBaseCode = Regex.escape(baseCode)
+                                    val nameRegex = Regex("^$escapedBaseName(?: (\\d+))?$", RegexOption.IGNORE_CASE)
+                                    val codeRegex = Regex("^$escapedBaseCode(?:-(\\d+))?$", RegexOption.IGNORE_CASE)
+                                    
+                                    val usedIndices = allItems.mapNotNull { item ->
+                                        if (item.basePrice != base.toString()) return@mapNotNull null
+                                        
+                                        val nameMatch = nameRegex.matchEntire(item.nameItem?.trim() ?: "")
+                                        val codeMatch = codeRegex.matchEntire(item.codeItem?.trim() ?: "")
+                                        
+                                        if (nameMatch != null && codeMatch != null) {
+                                            val nameIdx = nameMatch.groupValues.getOrNull(1)?.takeIf { it.isNotEmpty() }?.toIntOrNull() ?: 1
+                                            val codeIdx = codeMatch.groupValues.getOrNull(1)?.takeIf { it.isNotEmpty() }?.toIntOrNull() ?: 1
+                                            maxOf(nameIdx, codeIdx)
+                                        } else {
+                                            null
+                                        }
+                                    }.toSet()
+                                    
+                                    val indicesToUse = mutableListOf<Int>()
+                                    var currIdx = 1
+                                    while (indicesToUse.size < qty) {
+                                        if (!usedIndices.contains(currIdx)) {
+                                            indicesToUse.add(currIdx)
+                                        }
+                                        currIdx++
+                                    }
+                                    
+                                    val hasMultiple = usedIndices.isNotEmpty() || qty > 1
+
+                                    for (idx in indicesToUse) {
+                                        val appendIndex = hasMultiple || idx > 1
+                                        val finalName = if (appendIndex) "$baseName $idx" else baseName
+                                        val finalCode = if (appendIndex) "$baseCode-$idx" else baseCode
+                                        
                                         itemsViewModel.createItem(
                                             ItemResponse(
                                                 nameItem = finalName,

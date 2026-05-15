@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -156,16 +157,29 @@ fun DesktopTable(
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val tableWidth = if (maxWidth < minWidth) minWidth else maxWidth
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(horizontalScrollState)
-        ) {
-            Column(
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
                 modifier = Modifier
-                    .width(tableWidth)
-                    .verticalScroll(verticalScrollState),
-                content = content
+                    .fillMaxWidth()
+                    .padding(bottom = 14.dp, end = 14.dp)
+                    .horizontalScroll(horizontalScrollState)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .width(tableWidth)
+                        .verticalScroll(verticalScrollState),
+                    content = content
+                )
+            }
+            
+            androidx.compose.foundation.VerticalScrollbar(
+                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().padding(bottom = 14.dp),
+                adapter = androidx.compose.foundation.rememberScrollbarAdapter(verticalScrollState)
+            )
+            
+            androidx.compose.foundation.HorizontalScrollbar(
+                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(end = 14.dp),
+                adapter = androidx.compose.foundation.rememberScrollbarAdapter(horizontalScrollState)
             )
         }
     }

@@ -52,11 +52,17 @@ object DesktopThermalPrinter {
             items.forEach { item ->
                 val itemName = item.nameItem.orEmpty()
                 val itemCode = item.codeItem.orEmpty()
+                val basePrice = formatRupiah(item.basePrice)
+                val maxPrice = formatRupiah(item.maxPrice)
 
                 write(EscPos.init)
                 write(EscPos.alignCenter)
                 writeText(itemName)
-                write(EscPos.newLine(2))
+                write(EscPos.newLine(1))
+                write(EscPos.fontNormal)
+                writeText("Dasar : $basePrice\n")
+                writeText("Maks  : $maxPrice\n")
+                write(EscPos.newLine(1))
                 writeQrCode(itemCode)
                 write(EscPos.strip())
                 write(EscPos.newLine(2))
