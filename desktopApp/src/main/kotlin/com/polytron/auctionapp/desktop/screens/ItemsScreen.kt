@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Print
@@ -167,8 +168,8 @@ fun ItemsScreen(
                     onClick = { onExportExcel(filteredItems) },
                     contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                 ) {
-                    // Let's just use the Refresh icon or Info icon, since we don't have a specific Excel icon imported. 
-                    // Let's use Info or List. Wait, what icons are imported? Add, Delete, Edit, Info, Print, Search, Refresh. Let's use Info or we can just not use an icon.
+                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text("Export Excel")
                 }
 
