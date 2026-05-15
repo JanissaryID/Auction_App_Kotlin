@@ -101,6 +101,14 @@ class FakeItemsRepository : ItemsRepository {
         itemsToReturn.removeAll { it.id == id }
     }
 
+    override suspend fun getAuctionUsers(page: Int, perPage: Int): List<com.polytron.auctionapp.domain.model.ItemsUserAuction> {
+        return emptyList()
+    }
+
+    override suspend fun createAuctionUser(user: com.polytron.auctionapp.domain.model.ItemsUserAuction): com.polytron.auctionapp.domain.model.ItemsUserAuction {
+        return user.copy(id = "fake-user-${System.currentTimeMillis()}")
+    }
+
     override suspend fun withRealtimeEvents(onEvent: suspend (RealtimeSse) -> Unit) {
         withRealtimeEventsCount++
         // No-op: SSE simulation done through separate mechanism

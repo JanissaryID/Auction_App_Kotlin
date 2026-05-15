@@ -74,6 +74,7 @@ private val AuctionHistoryActionsColumn = 80.dp
 fun AuctionScreen(
     items: List<ItemResponse>,
     selectedItems: List<ItemResponse>,
+    auctionUsers: List<com.polytron.auctionapp.domain.model.ItemsUserAuction>,
     editingBuyers: Map<String, String>,
     editingPrices: Map<String, String>,
     onAddItem: () -> Unit,
@@ -236,6 +237,7 @@ fun AuctionScreen(
                             item = item,
                             buyer = editingBuyers[itemId] ?: "",
                             price = formatCurrencyInput(editingPrices[itemId] ?: ""),
+                            auctionUsers = auctionUsers,
                             onBuyerChange = { onBuyerChange(itemId, it) },
                             onPriceChange = { onPriceChange(itemId, it) },
                             onRemove = { onRemoveItem(item) }
@@ -310,10 +312,20 @@ private fun AuctionRow(
     item: ItemResponse,
     buyer: String,
     price: String,
+    auctionUsers: List<com.polytron.auctionapp.domain.model.ItemsUserAuction>,
     onBuyerChange: (String) -> Unit,
     onPriceChange: (String) -> Unit,
     onRemove: () -> Unit
 ) {
+    var isBuyerDropdownExpanded by remember { mutableStateOf(false) }
+    val filteredUsers = remember(buyer, auctionUsers) {
+        if (buyer.isBlank()) emptyList()
+        else auctionUsers
+            .filter { it.name?.contains(buyer, ignoreCase = true) == true }
+            .distinctBy { it.name?.lowercase() }
+            .take(5)
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -326,17 +338,39 @@ private fun AuctionRow(
         BodyCell(formatRupiah(item.basePrice), Modifier.width(AuctionBasePriceColumn))
         BodyCell(formatRupiah(item.maxPrice), Modifier.width(AuctionMaxPriceColumn))
         
-        OutlinedTextField(
-            value = buyer,
-            onValueChange = onBuyerChange,
-            placeholder = { Text("Nama pemenang") },
-            modifier = Modifier.width(AuctionBuyerColumn).height(DesktopDimens.ControlHeight),
-            singleLine = true,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent
+        Box(modifier = Modifier.width(AuctionBuyerColumn)) {
+            OutlinedTextField(
+                value = buyer,
+                onValueChange = { 
+                    onBuyerChange(it)
+                    isBuyerDropdownExpanded = true
+                },
+                placeholder = { Text("Nama pemenang") },
+                modifier = Modifier.fillMaxWidth().height(DesktopDimens.ControlHeight),
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent
+                )
             )
-        )
+
+            androidx.compose.material3.DropdownMenu(
+                expanded = isBuyerDropdownExpanded && filteredUsers.isNotEmpty(),
+                onDismissRequest = { isBuyerDropdownExpanded = false },
+                modifier = Modifier.width(AuctionBuyerColumn),
+                properties = androidx.compose.ui.window.PopupProperties(focusable = false)
+            ) {
+                filteredUsers.forEach { user ->
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(user.name.orEmpty()) },
+                        onClick = {
+                            onBuyerChange(user.name.orEmpty())
+                            isBuyerDropdownExpanded = false
+                        }
+                    )
+                }
+            }
+        }
 
         OutlinedTextField(
             value = price,

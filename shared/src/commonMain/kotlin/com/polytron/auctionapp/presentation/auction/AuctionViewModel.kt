@@ -1,14 +1,54 @@
 package com.polytron.auctionapp.presentation.auction
 
 import com.polytron.auctionapp.domain.model.ItemResponse
+import com.polytron.auctionapp.domain.model.ItemsUserAuction
+import com.polytron.auctionapp.domain.repository.ItemsRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-class AuctionViewModel {
+class AuctionViewModel(
+    private val repository: ItemsRepository,
+    private val scope: CoroutineScope
+) {
     private val _selectedItems = MutableStateFlow<List<ItemResponse>>(emptyList())
     val selectedItems: StateFlow<List<ItemResponse>> = _selectedItems.asStateFlow()
+
+    private val _auctionUsers = MutableStateFlow<List<ItemsUserAuction>>(emptyList())
+    val auctionUsers: StateFlow<List<ItemsUserAuction>> = _auctionUsers.asStateFlow()
+
+    init {
+        fetchAuctionUsers()
+    }
+
+    fun fetchAuctionUsers() {
+        scope.launch {
+            try {
+                val users = repository.getAuctionUsers()
+                _auctionUsers.value = users
+            } catch (e: Exception) {
+                // Ignore or log
+            }
+        }
+    }
+
+    suspend fun saveNewAuctionUsers(names: List<String>, userId: String) {
+        val currentUsers = _auctionUsers.value
+        names.distinct().forEach { name ->
+            val cleanName = name.trim()
+            if (cleanName.isNotBlank() && currentUsers.none { it.name.equals(cleanName, ignoreCase = true) }) {
+                try {
+                    val newUser = repository.createAuctionUser(ItemsUserAuction(name = cleanName, user = userId.takeIf { it.isNotBlank() }))
+                    _auctionUsers.update { it + newUser }
+                } catch (e: Exception) {
+                    // ignore
+                }
+            }
+        }
+    }
 
     private val _editingBuyers = MutableStateFlow<Map<String, String>>(emptyMap())
     val editingBuyers: StateFlow<Map<String, String>> = _editingBuyers.asStateFlow()

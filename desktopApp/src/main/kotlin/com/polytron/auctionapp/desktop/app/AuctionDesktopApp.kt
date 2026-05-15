@@ -51,8 +51,8 @@ fun AuctionDesktopApp() {
         val itemsViewModel = remember(appScope) {
             koin.get<ItemsViewModel> { parametersOf(appScope) }
         }
-        val auctionViewModel = remember {
-            koin.get<AuctionViewModel>()
+        val auctionViewModel = remember(appScope) {
+            koin.get<AuctionViewModel> { parametersOf(appScope) }
         }
         val paymentViewModel = remember {
             koin.get<PaymentViewModel>()
@@ -283,6 +283,8 @@ fun AuctionDesktopApp() {
                     )
                 )
             }
+            
+            auctionViewModel.saveNewAuctionUsers(editingBuyers.values.toList(), idUser.orEmpty())
 
             if (shouldPrint) {
                 val printResult = printAuctionReceipts(receipts)
@@ -412,6 +414,7 @@ fun AuctionDesktopApp() {
                     DesktopDestination.Auction -> AuctionScreen(
                         items = items,
                         selectedItems = selectedAuctionItems,
+                        auctionUsers = auctionViewModel.auctionUsers.collectAsState().value,
                         editingBuyers = editingBuyers,
                         editingPrices = editingPrices,
                         onAddItem = { navigator.showDialog(DesktopDialog.SelectAuctionItems) },

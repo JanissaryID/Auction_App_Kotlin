@@ -15,6 +15,9 @@ interface ItemsRepository : Repository {
     suspend fun updateItem(id: String, item: ItemResponse): ItemResponse
     suspend fun deleteItem(id: String)
 
+    suspend fun getAuctionUsers(page: Int = 1, perPage: Int = 500): List<com.polytron.auctionapp.domain.model.ItemsUserAuction>
+    suspend fun createAuctionUser(user: com.polytron.auctionapp.domain.model.ItemsUserAuction): com.polytron.auctionapp.domain.model.ItemsUserAuction
+
     suspend fun withRealtimeEvents(onEvent: suspend (RealtimeSse) -> Unit)
     suspend fun subscribeRealtime(clientId: String, collections: List<String>): Boolean
 }

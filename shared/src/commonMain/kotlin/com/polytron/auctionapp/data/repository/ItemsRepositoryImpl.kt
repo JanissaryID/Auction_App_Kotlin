@@ -128,6 +128,26 @@ class ItemsRepositoryImpl(
         ).ensureSuccess()
     }
 
+    override suspend fun getAuctionUsers(page: Int, perPage: Int): List<com.polytron.auctionapp.domain.model.ItemsUserAuction> {
+        val response = request(
+            method = HttpMethod.Get,
+            pathSegments = listOf("api", "collections", "ItemsUserAuction", "records"),
+            queryParameters = mapOf(
+                "page" to page.toString(),
+                "perPage" to perPage.toString()
+            )
+        ).decode<PocketBaseListResponse<com.polytron.auctionapp.domain.model.ItemsUserAuction>>()
+        return response.items
+    }
+
+    override suspend fun createAuctionUser(user: com.polytron.auctionapp.domain.model.ItemsUserAuction): com.polytron.auctionapp.domain.model.ItemsUserAuction {
+        return request(
+            method = HttpMethod.Post,
+            pathSegments = listOf("api", "collections", "ItemsUserAuction", "records"),
+            body = jsonForWrite.encodeToString(user)
+        ).decode()
+    }
+
     override suspend fun withRealtimeEvents(onEvent: suspend (RealtimeSse) -> Unit) {
         try {
             httpClient.sse(

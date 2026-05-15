@@ -33,7 +33,7 @@ val presentationModule = module {
             logger = get()
         )
     }
-    factory { AuctionViewModel() }
+    factory { (scope: CoroutineScope) -> AuctionViewModel(get(), scope) }
     factory { PaymentViewModel() }
     factory { PickupViewModel() }
 }
