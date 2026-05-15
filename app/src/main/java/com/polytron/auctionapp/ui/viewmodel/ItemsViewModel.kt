@@ -39,8 +39,8 @@ class ItemsViewModel(
     val isLoading = delegate.isLoading
 
     fun fetchItems() = delegate.fetchItems()
-    fun createItem(item: ItemResponse) = delegate.createItem(item)
-    fun patchItem(id: String, item: ItemResponse) = delegate.patchItem(id, item)
-    fun deleteItem(id: String) = delegate.deleteItem(id)
+    suspend fun createItem(item: ItemResponse) = delegate.createItem(item)
+    suspend fun patchItem(id: String, item: ItemResponse) = delegate.patchItem(id, item)
+    suspend fun deleteItem(id: String) = delegate.deleteItem(id)
     fun startRealtimeItems() = delegate.startRealtimeItems()
 }

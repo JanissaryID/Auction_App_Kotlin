@@ -25,7 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "auction_database"
                 )
-                    .fallbackToDestructiveMigration() // Hapus data lama jika versi db naik
+                    .fallbackToDestructiveMigration(dropAllTables = true) // Hapus data lama jika versi db naik
                     .build()
                 INSTANCE = instance
                 instance

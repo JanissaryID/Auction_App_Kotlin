@@ -36,6 +36,6 @@ val appModule = module {
             logger = get()
         )
     }
-    viewModel { AuctionViewModel(delegate = get()) }
+    viewModel { AuctionViewModel(repository = get()) }
     viewModel { PrinterViewModel() }
 }
