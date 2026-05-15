@@ -78,7 +78,8 @@ fun ItemsScreen(
     onItemDetail: (String) -> Unit,
     onPrintItem: (ItemResponse) -> Unit,
     onBulkDelete: (List<String>) -> Unit,
-    onBulkPrint: (List<ItemResponse>) -> Unit
+    onBulkPrint: (List<ItemResponse>) -> Unit,
+    onExportExcel: (List<ItemResponse>) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var statusFilter by remember { mutableStateOf<Int?>(null) }
@@ -161,6 +162,17 @@ fun ItemsScreen(
                     }
                     Spacer(Modifier.width(8.dp))
                 }
+
+                OutlinedButton(
+                    onClick = { onExportExcel(filteredItems) },
+                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+                ) {
+                    // Let's just use the Refresh icon or Info icon, since we don't have a specific Excel icon imported. 
+                    // Let's use Info or List. Wait, what icons are imported? Add, Delete, Edit, Info, Print, Search, Refresh. Let's use Info or we can just not use an icon.
+                    Text("Export Excel")
+                }
+
+                Spacer(Modifier.width(8.dp))
 
                 OutlinedButton(
                     onClick = onRefresh,

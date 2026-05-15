@@ -39,7 +39,7 @@ fun exportItemsToExcelDesktop(items: List<ItemResponse>): Result<String> {
         }
 
         // Header
-        val headers = listOf("Name", "Code", "Base Price", "Max Price", "Price", "Type Payment", "Buyer")
+        val headers = listOf("Nama", "Kode", "Harga Dasar", "Harga Maks", "Harga Lelang", "Tipe Pembayaran", "Pemenang")
         val headerRow = sheet.createRow(0)
         headers.forEachIndexed { i, title ->
             headerRow.createCell(i).apply {

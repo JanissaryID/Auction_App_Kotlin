@@ -396,7 +396,17 @@ fun AuctionDesktopApp() {
                         onItemDetail = { id -> navigator.showDialog(DesktopDialog.ItemDetail(id)) },
                         onPrintItem = { item -> printItemLabels(listOf(item)) },
                         onBulkDelete = { ids -> navigator.showDialog(DesktopDialog.ConfirmDelete(ids)) },
-                        onBulkPrint = ::printItemLabels
+                        onBulkPrint = ::printItemLabels,
+                        onExportExcel = { itemsToExport ->
+                            appScope.launch {
+                                val result = exportItemsToExcelDesktop(itemsToExport)
+                                result.onSuccess { path ->
+                                    snackbarHostState.showSnackbar("Berhasil: $path")
+                                }.onFailure { error ->
+                                    snackbarHostState.showSnackbar("Gagal mengekspor: ${error.message}")
+                                }
+                            }
+                        }
                     )
 
                     DesktopDestination.Auction -> AuctionScreen(
