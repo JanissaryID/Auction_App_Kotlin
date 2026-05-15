@@ -20,6 +20,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,12 +77,17 @@ fun ScreenAuction(
     val editingPrices by auctionViewModel.editingPrices.collectAsState()
     val printerDevice by printerViewModel.selectedPrinter.collectAsState()
     val showBluetoothDevice by printerViewModel.showBluetoothDevice.collectAsState()
+    val auctionUsers by auctionViewModel.auctionUsers.collectAsState()
 
     var rawAuctionPrice by remember { mutableStateOf("") }
     var auctionPrice by remember { mutableStateOf(formatCurrencyInput(rawAuctionPrice)) }
     var isSubmitting by remember { mutableStateOf(false) }
     var isFabExpanded by remember { mutableStateOf(false) }
     var showNoPrinterDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        auctionViewModel.fetchAuctionUsers()
+    }
 
     val isPriceFilledProperly = selectedItems.isNotEmpty() && selectedItems.all { item ->
         val hasManualPrice = !editingPrices[item.id].isNullOrBlank()
@@ -114,6 +120,12 @@ fun ScreenAuction(
                         delay(400)
                     }
                 }
+
+                // Simpan nama pembeli baru ke database saran
+                val newBuyers = selectedItems.map { item ->
+                    editingBuyers[item.id].orEmpty().ifBlank { item.buyer.orEmpty() }
+                }.filter { it.isNotBlank() }
+                auctionViewModel.saveNewAuctionUsers(newBuyers, "")
 
                 auctionViewModel.clearSelectedItems()
                 rawAuctionPrice = ""
@@ -183,6 +195,7 @@ fun ScreenAuction(
                             item = item,
                             currentBuyer = editingBuyers[item.id].orEmpty(),
                             currentPrice = editingPrices[item.id].orEmpty(),
+                            auctionUsers = auctionUsers,
                             onNameChanged = { name -> auctionViewModel.updateEditingBuyer(item.id!!, name) },
                             onPriceChanged = { price -> auctionViewModel.updateEditingPrice(item.id!!, price) },
                             onCancelPriceInput = { auctionViewModel.clearEditingForItem(item.id!!) },

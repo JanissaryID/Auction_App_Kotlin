@@ -41,24 +41,44 @@ import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.utils.formatCurrencyInput
 import com.polytron.auctionapp.utils.formatRupiah
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import com.polytron.auctionapp.domain.model.ItemsUserAuction
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.toSize
+
 @Composable
 fun ItemCardAuction(
     modifier: Modifier = Modifier,
     item: ItemResponse,
     currentBuyer: String,
     currentPrice: String,
+    auctionUsers: List<ItemsUserAuction> = emptyList(),
     onNameChanged: (String) -> Unit,
     onPriceChanged: (String) -> Unit,
     onCancelPriceInput: () -> Unit,
     onClickDelete: () -> Unit = {}
 ) {
     var expanded by remember { mutableStateOf(currentPrice.isNotBlank()) }
+    var isDropdownExpanded by remember { mutableStateOf(false) }
+    var textFieldSize by remember { mutableStateOf(Size.Zero) }
 
     val backgroundColor = Color(0xFFFDFDFD)
     val formattedPrice = remember(item.basePrice) { formatRupiah(item.basePrice) }
 
     var rawPrice by remember { mutableStateOf("") }
     var formattedInput by remember { mutableStateOf("") }
+
+    val filteredUsers = remember(currentBuyer, auctionUsers) {
+        if (currentBuyer.isBlank()) emptyList()
+        else auctionUsers
+            .filter { it.name?.contains(currentBuyer, ignoreCase = true) == true }
+            .distinctBy { it.name?.lowercase() }
+            .take(5)
+    }
 
     // Sinkronisasi saat currentPrice berubah dari luar
     LaunchedEffect(currentPrice) {
@@ -117,18 +137,44 @@ fun ItemCardAuction(
             )
 
             // Input Nama Pemenang
-            OutlinedTextField(
-                value = currentBuyer,
-                onValueChange = { input ->
-                    val capitalized = input
-                        .split(" ")
-                        .joinToString(" ") { it.lowercase().replaceFirstChar { c -> c.titlecase() } }
-                    onNameChanged(capitalized)
-                },
-                label = { Text("Nama Pemenang") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        textFieldSize = coordinates.size.toSize()
+                    }
+            ) {
+                OutlinedTextField(
+                    value = currentBuyer,
+                    onValueChange = { input ->
+                        val capitalized = input
+                            .split(" ")
+                            .joinToString(" ") { it.lowercase().replaceFirstChar { c -> c.titlecase() } }
+                        onNameChanged(capitalized)
+                        isDropdownExpanded = true
+                    },
+                    label = { Text("Nama Pemenang") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                DropdownMenu(
+                    expanded = isDropdownExpanded && filteredUsers.isNotEmpty(),
+                    onDismissRequest = { isDropdownExpanded = false },
+                    modifier = Modifier.width(with(LocalDensity.current) { textFieldSize.width.toDp() }),
+                    properties = androidx.compose.ui.window.PopupProperties(focusable = false)
+                ) {
+                    filteredUsers.forEach { user ->
+                        DropdownMenuItem(
+                            text = { Text(user.name.orEmpty()) },
+                            onClick = {
+                                onNameChanged(user.name.orEmpty())
+                                isDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
