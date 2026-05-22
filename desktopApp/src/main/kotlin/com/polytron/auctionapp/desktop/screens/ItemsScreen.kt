@@ -13,11 +13,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -48,7 +51,7 @@ import com.polytron.auctionapp.desktop.components.BodyCell
 import com.polytron.auctionapp.desktop.components.DesktopButton as Button
 import com.polytron.auctionapp.desktop.components.DesktopDimens
 import com.polytron.auctionapp.desktop.components.DesktopOutlinedButton as OutlinedButton
-import com.polytron.auctionapp.desktop.components.DesktopTable
+import com.polytron.auctionapp.desktop.components.DesktopLazyTable
 import com.polytron.auctionapp.desktop.components.DesktopToolbar
 import com.polytron.auctionapp.desktop.components.HeaderCell
 import com.polytron.auctionapp.desktop.components.StatusBadge
@@ -67,6 +70,19 @@ private val ItemsBuyerColumn = 200.dp
 private val ItemsAuctionPriceColumn = 130.dp
 private val ItemsOrderColumn = 170.dp
 private val ItemsActionsColumn = 128.dp
+
+private data class StatusFilterOption(
+    val status: Int?,
+    val label: String
+)
+
+private val StatusFilterOptions = listOf(
+    StatusFilterOption(null, "Semua"),
+    StatusFilterOption(0, "Tersedia"),
+    StatusFilterOption(1, "Lelang"),
+    StatusFilterOption(2, "Dibayar"),
+    StatusFilterOption(3, "Diambil")
+)
 
 @Composable
 fun ItemsScreen(
@@ -123,7 +139,7 @@ fun ItemsScreen(
 
                 Spacer(Modifier.width(8.dp))
 
-                StatusFilterRow(
+                StatusFilterDropdown(
                     selectedStatus = statusFilter,
                     onStatusSelected = { statusFilter = it }
                 )
@@ -203,31 +219,38 @@ fun ItemsScreen(
         )
 
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().weight(1f),
             shape = MaterialTheme.shapes.small,
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
-            DesktopTable(minWidth = ItemsTableMinWidth) {
-                ItemRowHeader(
-                    allSelected = filteredItems.isNotEmpty() && selectedIds.size == filteredItems.size,
-                    onToggleAll = {
-                        selectedIds = if (selectedIds.size == filteredItems.size) {
-                            emptySet()
-                        } else {
-                            filteredItems.mapNotNull { it.id }.toSet()
+            DesktopLazyTable(minWidth = ItemsTableMinWidth) {
+                item {
+                    ItemRowHeader(
+                        allSelected = filteredItems.isNotEmpty() && selectedIds.size == filteredItems.size,
+                        onToggleAll = {
+                            selectedIds = if (selectedIds.size == filteredItems.size) {
+                                emptySet()
+                            } else {
+                                filteredItems.mapNotNull { it.id }.toSet()
+                            }
                         }
-                    }
-                )
-                if (filteredItems.isEmpty()) {
-                    Text(
-                        text = if (items.isEmpty()) "Belum ada data barang." else "Tidak ada barang yang cocok.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(18.dp)
                     )
+                }
+                if (filteredItems.isEmpty()) {
+                    item {
+                        Text(
+                            text = if (items.isEmpty()) "Belum ada data barang." else "Tidak ada barang yang cocok.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(18.dp)
+                        )
+                    }
                 } else {
-                    filteredItems.forEach { item ->
+                    lazyItems(
+                        items = filteredItems,
+                        key = { item -> item.id ?: item.codeItem ?: item.hashCode().toString() }
+                    ) { item ->
                         ItemRow(
                             item = item,
                             selected = selectedIds.contains(item.id),
@@ -253,48 +276,54 @@ fun ItemsScreen(
 }
 
 @Composable
-private fun StatusFilterRow(
+private fun StatusFilterDropdown(
     selectedStatus: Int?,
     onStatusSelected: (Int?) -> Unit
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        StatusFilterChip("Semua", selectedStatus == null) { onStatusSelected(null) }
-        StatusFilterChip("Tersedia", selectedStatus == 0) { onStatusSelected(0) }
-        StatusFilterChip("Lelang", selectedStatus == 1) { onStatusSelected(1) }
-        StatusFilterChip("Dibayar", selectedStatus == 2) { onStatusSelected(2) }
-        StatusFilterChip("Diambil", selectedStatus == 3) { onStatusSelected(3) }
-    }
-}
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = StatusFilterOptions
+        .firstOrNull { it.status == selectedStatus }
+        ?.label
+        ?: "Semua"
 
-@Composable
-private fun StatusFilterChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier.height(DesktopDimens.ControlHeight),
-        shape = MaterialTheme.shapes.small,
-        colors = if (selected) {
-            ButtonDefaults.outlinedButtonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    Box {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier
+                .width(180.dp)
+                .height(DesktopDimens.ControlHeight),
+            shape = MaterialTheme.shapes.small,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+        ) {
+            Text(
+                text = "Status: $selectedLabel",
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-        } else {
-            ButtonDefaults.outlinedButtonColors()
-        },
-        border = if (selected) {
-            BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-        } else {
-            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        },
-        contentPadding = PaddingValues(horizontal = 12.dp)
-    ) {
-        Text(label, style = MaterialTheme.typography.labelMedium)
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            StatusFilterOptions.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    onClick = {
+                        onStatusSelected(option.status)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }
 

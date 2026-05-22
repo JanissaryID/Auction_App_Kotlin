@@ -401,7 +401,10 @@ fun AuctionDesktopApp() {
                         onBulkPrint = ::printItemLabels,
                         onExportExcel = { itemsToExport ->
                             appScope.launch {
-                                val result = exportItemsToExcelDesktop(itemsToExport)
+                                val result = exportItemsToExcelDesktop(
+                                    items = itemsToExport,
+                                    includePaymentDetails = false
+                                )
                                 result.onSuccess { path ->
                                     snackbarHostState.showSnackbar("Berhasil: $path")
                                 }.onFailure { error ->
@@ -473,7 +476,10 @@ fun AuctionDesktopApp() {
                                     snackbarHostState.showSnackbar("Tidak ada data transaksi untuk di-export.")
                                     return@launch
                                 }
-                                val result = exportItemsToExcelDesktop(transactionItems)
+                                val result = exportItemsToExcelDesktop(
+                                    items = transactionItems,
+                                    enableColumnFilters = true
+                                )
                                 result.onSuccess { message ->
                                     snackbarHostState.showSnackbar(message)
                                 }.onFailure { error ->

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.polytron.auctionapp.desktop.components.BodyCell
 import com.polytron.auctionapp.desktop.components.DesktopButton as Button
 import com.polytron.auctionapp.desktop.components.DesktopDimens
+import com.polytron.auctionapp.desktop.components.DesktopLazyTable
 import com.polytron.auctionapp.desktop.components.DesktopOutlinedButton as OutlinedButton
 import com.polytron.auctionapp.desktop.components.DesktopTable
 import com.polytron.auctionapp.desktop.components.DesktopToolbar
@@ -261,20 +263,25 @@ fun AuctionScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                DesktopTable(
+                DesktopLazyTable(
                     minWidth = AuctionHistoryTableMinWidth,
                     modifier = Modifier.weight(1f)
                 ) {
-                    AuctionHistoryRowHeader()
+                    item { AuctionHistoryRowHeader() }
                     if (auctionHistory.isEmpty()) {
-                        Text(
-                            text = "Belum ada data lelang tersimpan.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(18.dp)
-                        )
+                        item {
+                            Text(
+                                text = "Belum ada data lelang tersimpan.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(18.dp)
+                            )
+                        }
                     } else {
-                        auctionHistory.forEach { item ->
+                        lazyItems(
+                            items = auctionHistory,
+                            key = { item -> item.id ?: item.codeItem ?: item.hashCode().toString() }
+                        ) { item ->
                             AuctionHistoryRow(
                                 item = item,
                                 onPrint = { onReprintAuctionReceipt(item) }

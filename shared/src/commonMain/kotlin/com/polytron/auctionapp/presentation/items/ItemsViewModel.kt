@@ -12,6 +12,7 @@ import com.polytron.auctionapp.domain.usecase.items.UpdateItemUseCase
 import com.polytron.auctionapp.domain.usecase.realtime.ObserveItemsRealtimeUseCase
 import com.polytron.auctionapp.domain.usecase.realtime.SubscribeItemsRealtimeUseCase
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -53,6 +54,8 @@ class ItemsViewModel(
 
     private val _sseConnected = MutableStateFlow(false)
     private val _sseId = MutableStateFlow<String?>(null)
+    private var fetchItemsJob: Job? = null
+    private var realtimeRefreshJob: Job? = null
     private var sseJob: Job? = null
 
     init {
@@ -64,7 +67,11 @@ class ItemsViewModel(
                 } else {
                     _items.value = emptyList()
                     sseJob?.cancel()
+                    fetchItemsJob?.cancel()
+                    realtimeRefreshJob?.cancel()
                     sseJob = null
+                    fetchItemsJob = null
+                    realtimeRefreshJob = null
                     _sseConnected.value = false
                     _sseId.value = null
                 }
@@ -79,16 +86,23 @@ class ItemsViewModel(
     }
 
     fun fetchItems() {
-        scope.launch {
+        fetchItemsJob?.cancel()
+        val nextJob = scope.launch(start = CoroutineStart.LAZY) {
             _isLoading.value = true
             try {
                 _items.value = fetchItemsUseCase(page = 1, perPage = 500)
             } catch (e: Exception) {
-                logger.error(tag, "fetchItems error: ${e.message}", e)
+                if (e !is CancellationException) {
+                    logger.error(tag, "fetchItems error: ${e.message}", e)
+                }
             } finally {
-                _isLoading.value = false
+                if (fetchItemsJob == coroutineContext[Job]) {
+                    _isLoading.value = false
+                }
             }
         }
+        fetchItemsJob = nextJob
+        nextJob.start()
     }
 
     suspend fun createItem(item: ItemResponse): Result<Unit> {
@@ -163,11 +177,19 @@ class ItemsViewModel(
             if (element.jsonObject.containsKey("record")) {
                 val event = json.decodeFromJsonElement<RealtimeEvent>(element)
                 when (event.action) {
-                    "create", "update", "delete" -> fetchItems()
+                    "create", "update", "delete" -> scheduleRealtimeRefresh()
                     else -> Unit
                 }
             }
         } catch (_: Exception) {
+        }
+    }
+
+    private fun scheduleRealtimeRefresh() {
+        realtimeRefreshJob?.cancel()
+        realtimeRefreshJob = scope.launch {
+            delay(350)
+            fetchItems()
         }
     }
 }

@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonColors
@@ -177,6 +180,44 @@ fun DesktopTable(
                 adapter = androidx.compose.foundation.rememberScrollbarAdapter(verticalScrollState)
             )
             
+            androidx.compose.foundation.HorizontalScrollbar(
+                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(end = 14.dp),
+                adapter = androidx.compose.foundation.rememberScrollbarAdapter(horizontalScrollState)
+            )
+        }
+    }
+}
+
+@Composable
+fun DesktopLazyTable(
+    minWidth: Dp,
+    modifier: Modifier = Modifier,
+    content: LazyListScope.() -> Unit
+) {
+    val horizontalScrollState = rememberScrollState()
+    val verticalListState = rememberLazyListState()
+
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val tableWidth = if (maxWidth < minWidth) minWidth else maxWidth
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 14.dp, end = 14.dp)
+                    .horizontalScroll(horizontalScrollState)
+            ) {
+                LazyColumn(
+                    state = verticalListState,
+                    modifier = Modifier.width(tableWidth),
+                    content = content
+                )
+            }
+
+            androidx.compose.foundation.VerticalScrollbar(
+                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().padding(bottom = 14.dp),
+                adapter = androidx.compose.foundation.rememberScrollbarAdapter(verticalListState)
+            )
+
             androidx.compose.foundation.HorizontalScrollbar(
                 modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(end = 14.dp),
                 adapter = androidx.compose.foundation.rememberScrollbarAdapter(horizontalScrollState)

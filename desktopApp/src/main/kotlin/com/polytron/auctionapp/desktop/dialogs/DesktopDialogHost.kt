@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -259,16 +261,21 @@ private fun SelectAuctionItemsDialog(
                 shape = MaterialTheme.shapes.small,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                LazyColumn {
                     if (availableItems.isEmpty()) {
-                        Text(
-                            text = "Tidak ada barang tersedia.",
-                            modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        item {
+                            Text(
+                                text = "Tidak ada barang tersedia.",
+                                modifier = Modifier.padding(16.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     } else {
-                        availableItems.forEach { item ->
+                        lazyItems(
+                            items = availableItems,
+                            key = { item -> item.id ?: item.codeItem ?: item.hashCode().toString() }
+                        ) { item ->
                             val itemId = item.id ?: ""
                             val isSelected = tempSelectedIds.contains(itemId)
                             
@@ -377,16 +384,21 @@ private fun SelectPickupItemsDialog(
                 shape = MaterialTheme.shapes.small,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                LazyColumn {
                     if (availableItems.isEmpty()) {
-                        Text(
-                            text = "Tidak ada barang siap diambil.",
-                            modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        item {
+                            Text(
+                                text = "Tidak ada barang siap diambil.",
+                                modifier = Modifier.padding(16.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     } else {
-                        availableItems.forEach { item ->
+                        lazyItems(
+                            items = availableItems,
+                            key = { item -> item.id ?: item.codeItem ?: item.hashCode().toString() }
+                        ) { item ->
                             val itemId = item.id ?: ""
                             val isSelected = tempSelectedIds.contains(itemId)
                             
@@ -508,16 +520,21 @@ private fun SelectPaymentItemsDialog(
                 shape = MaterialTheme.shapes.small,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                LazyColumn {
                     if (availableItems.isEmpty()) {
-                        Text(
-                            text = "Tidak ada barang menunggu pembayaran.",
-                            modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        item {
+                            Text(
+                                text = "Tidak ada barang menunggu pembayaran.",
+                                modifier = Modifier.padding(16.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     } else {
-                        availableItems.forEach { item ->
+                        lazyItems(
+                            items = availableItems,
+                            key = { item -> item.id ?: item.codeItem ?: item.hashCode().toString() }
+                        ) { item ->
                             val itemId = item.id ?: ""
                             val isSelected = tempSelectedIds.contains(itemId)
                             
