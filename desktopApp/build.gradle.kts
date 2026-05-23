@@ -25,6 +25,7 @@ dependencies {
     implementation(libs.koin.core)
     implementation(libs.slf4j.nop)
     implementation(libs.poi.ooxml)
+    implementation(libs.jserialcomm)
 }
 
 compose.desktop {
@@ -34,7 +35,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Exe, TargetFormat.Msi)
             packageName = "GKJ Lelang"
-            packageVersion = "1.0.1"
+            packageVersion = "1.0.3"
 
             windows {
                 iconFile.set(project.file("src/main/resources/icon_app.ico"))

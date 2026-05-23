@@ -79,33 +79,57 @@ object ThermalPrintFormatter {
 
         val total = items.sumOf { it.price?.toLongOrNull() ?: 0L }
         return buildBytes {
-            write(EscPos.init)
-            write(EscPos.alignCenter)
-            write(EscPos.fontBig)
-            writeText("NOTA PEMBAYARAN\n")
-            write(EscPos.fontNormal)
-            writeText("\n$orderId\n\n")
-
-            write(EscPos.alignLeft)
-            items.forEach { item ->
-                val name = item.nameItem.orEmpty().ifBlank { "-" }.take(20).padEnd(20)
-                val price = formatRupiah(item.price).take(11).padStart(11)
-                writeText("$name $price\n")
-            }
-
-            write(EscPos.strip())
-            writeLabeledValue("Total", formatRupiah(total.toString()))
-            write(EscPos.newLine())
-
-            write(EscPos.alignCenter)
-            write(EscPos.fontBig)
-            writeText("LUNAS\n")
-            write(EscPos.fontNormal)
-            writeText("$paymentMethod\n\n")
-            writeQrCode(orderId)
-            write(EscPos.strip())
-            write(EscPos.newLine(4))
+            writePaymentReceiptSlip(
+                items = items,
+                orderId = orderId,
+                paymentMethod = paymentMethod,
+                total = total,
+                copyLabel = "PELANGGAN"
+            )
+            writePaymentReceiptSlip(
+                items = items,
+                orderId = orderId,
+                paymentMethod = paymentMethod,
+                total = total,
+                copyLabel = "AUDIT"
+            )
         }
+    }
+
+    private fun ByteWriter.writePaymentReceiptSlip(
+        items: List<ItemResponse>,
+        orderId: String,
+        paymentMethod: String,
+        total: Long,
+        copyLabel: String
+    ) {
+        write(EscPos.init)
+        write(EscPos.alignCenter)
+        write(EscPos.fontBig)
+        writeText("NOTA PEMBAYARAN\n")
+        write(EscPos.fontNormal)
+        writeText("$copyLabel\n")
+        writeText("\n$orderId\n\n")
+
+        write(EscPos.alignLeft)
+        items.forEach { item ->
+            val name = item.nameItem.orEmpty().ifBlank { "-" }.take(20).padEnd(20)
+            val price = formatRupiah(item.price).take(11).padStart(11)
+            writeText("$name $price\n")
+        }
+
+        write(EscPos.strip())
+        writeLabeledValue("Total", formatRupiah(total.toString()))
+        write(EscPos.newLine())
+
+        write(EscPos.alignCenter)
+        write(EscPos.fontBig)
+        writeText("LUNAS\n")
+        write(EscPos.fontNormal)
+        writeText("$paymentMethod\n\n")
+        writeQrCode(orderId)
+        write(EscPos.strip())
+        write(EscPos.newLine(4))
     }
 
     private fun ByteWriter.writeAuctionBuyerSlip(receipt: AuctionReceiptItem) {

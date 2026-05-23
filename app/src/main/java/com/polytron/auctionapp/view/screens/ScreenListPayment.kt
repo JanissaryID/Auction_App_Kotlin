@@ -146,7 +146,7 @@ fun ScreenListPayment(
                                                 isPrintingMap[orderId] = false
                                                 Toast.makeText(
                                                     context,
-                                                    if (success) "Struk selesai dicetak" else "Gagal mencetak struk",
+                                                    if (success) "2 struk selesai dicetak" else "Gagal mencetak struk",
                                                     Toast.LENGTH_SHORT
                                                 ).show()
                                             }

@@ -2,6 +2,7 @@ package com.polytron.auctionapp.printing
 
 import com.polytron.auctionapp.domain.model.ItemResponse
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -38,7 +39,9 @@ class ThermalPrintFormatterTest {
             paymentMethod = "Tunai"
         ).decodeToString()
 
-        assertTrue(text.contains("NOTA PEMBAYARAN\n"))
+        assertEquals(2, text.split("NOTA PEMBAYARAN\n").size - 1)
+        assertTrue(text.contains("PELANGGAN\n"))
+        assertTrue(text.contains("AUDIT\n"))
         assertTrue(text.contains("Order-ABC123"))
         assertTrue(text.contains("Barang Satu"))
         assertTrue(text.contains("Rp 10.000"))

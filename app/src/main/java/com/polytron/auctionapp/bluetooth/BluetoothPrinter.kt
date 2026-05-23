@@ -14,6 +14,7 @@ class BluetoothPrinter {
 
     private companion object {
         val SERIAL_PORT_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
+        const val SERIAL_PORT_CHANNEL = 1
         const val WRITE_CHUNK_SIZE = 256
         const val WRITE_CHUNK_DELAY_MS = 20L
         const val CLOSE_DELAY_MS = 250L
@@ -136,23 +137,54 @@ class BluetoothPrinter {
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun BluetoothDevice.openPrinterSocket(): BluetoothSocket {
         val uuid = printerUuid()
-        val secureSocket = createRfcommSocketToServiceRecord(uuid)
+        val errors = mutableListOf<Throwable>()
+
+        val secureSocket = connectSocket { createRfcommSocketToServiceRecord(uuid) }
+        secureSocket.socket?.let { return it }
+        errors.add(secureSocket.error ?: IOException("Secure RFCOMM gagal"))
+
+        val insecureSocket = connectSocket { createInsecureRfcommSocketToServiceRecord(uuid) }
+        insecureSocket.socket?.let { return it }
+        errors.add(insecureSocket.error ?: IOException("Insecure RFCOMM gagal"))
+
+        val fallbackSocket = connectSocket { createRfcommSocketChannel(SERIAL_PORT_CHANNEL) }
+        fallbackSocket.socket?.let { return it }
+        errors.add(fallbackSocket.error ?: IOException("Fallback RFCOMM channel gagal"))
+
+        throw IOException("Tidak bisa terhubung ke printer Bluetooth ${safeDeviceLabel()}.").apply {
+            errors.forEach(::addSuppressed)
+        }
+    }
+
+    private data class SocketAttempt(
+        val socket: BluetoothSocket?,
+        val error: Throwable?
+    )
+
+    private fun connectSocket(createSocket: () -> BluetoothSocket): SocketAttempt {
+        val socket = try {
+            createSocket()
+        } catch (error: Exception) {
+            return SocketAttempt(socket = null, error = error)
+        }
 
         return try {
-            secureSocket.connect()
-            secureSocket
-        } catch (secureError: IOException) {
-            runCatching { secureSocket.close() }
-            val insecureSocket = createInsecureRfcommSocketToServiceRecord(uuid)
-            try {
-                insecureSocket.connect()
-                insecureSocket
-            } catch (insecureError: IOException) {
-                runCatching { insecureSocket.close() }
-                secureError.addSuppressed(insecureError)
-                throw secureError
-            }
+            socket.connect()
+            SocketAttempt(socket = socket, error = null)
+        } catch (error: Exception) {
+            runCatching { socket.close() }
+            SocketAttempt(socket = null, error = error)
         }
+    }
+
+    private fun BluetoothDevice.createRfcommSocketChannel(channel: Int): BluetoothSocket {
+        val method = javaClass.getMethod("createRfcommSocket", Integer.TYPE)
+        return method.invoke(this, channel) as BluetoothSocket
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    private fun BluetoothDevice.safeDeviceLabel(): String {
+        return name?.takeIf { it.isNotBlank() } ?: address ?: "tidak dikenal"
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)

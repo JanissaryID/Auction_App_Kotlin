@@ -106,7 +106,7 @@ fun ScreenPayment(
                 auctionViewModel.clearSelectedItems()
                 snackbarHostState.showSnackbar(
                     when {
-                        shouldPrint && printSuccess -> "Pembayaran Berhasil & Struk Dicetak"
+                        shouldPrint && printSuccess -> "Pembayaran Berhasil & 2 Struk Dicetak"
                         shouldPrint -> "Pembayaran tersimpan, struk gagal dicetak"
                         else -> "Pembayaran Berhasil Disimpan"
                     }

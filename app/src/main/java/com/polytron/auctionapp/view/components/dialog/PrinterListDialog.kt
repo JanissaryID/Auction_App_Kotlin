@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
+import com.polytron.auctionapp.bluetooth.displayNameWithAddressSuffix
 import com.polytron.auctionapp.view.components.itemcard.ItemPrinter
 
 @SuppressLint("MissingPermission")
@@ -99,7 +100,7 @@ fun PrinterListDialog(
                         ) {
                             items(devices) { device ->
                                 ItemPrinter(
-                                    name = device.name ?: "Unknown Device",
+                                    name = device.displayNameWithAddressSuffix(),
                                     address = device.address,
                                     onClick = { onPrinterSelected(device) }
                                 )

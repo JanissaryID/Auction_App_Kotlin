@@ -48,6 +48,9 @@ class AuthViewModel(
     private val _toastEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val toastEvent: SharedFlow<String> = _toastEvent.asSharedFlow()
 
+    private val _loginRequiredEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val loginRequiredEvent: SharedFlow<Unit> = _loginRequiredEvent.asSharedFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -83,6 +86,7 @@ class AuthViewModel(
             sessionManager.sessionExpiredEvent.collect { message ->
                 _toastEvent.emit(message)
                 clearProfile()
+                _loginRequiredEvent.emit(Unit)
             }
         }
     }

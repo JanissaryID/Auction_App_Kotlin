@@ -117,7 +117,7 @@ fun AuctionDesktopApp() {
             appScope.launch {
                 snackbarHostState.showSnackbar(
                     if (names.isEmpty()) {
-                        "Tidak ada printer Windows yang terdeteksi."
+                        "Tidak ada printer Windows atau port COM Bluetooth yang terdeteksi."
                     } else {
                         "Pilih printer thermal di Dashboard, lalu ulangi proses cetak."
                     }
@@ -262,7 +262,7 @@ fun AuctionDesktopApp() {
                     paymentMethod = orderItems.first().typePayment.orEmpty()
                 )
                 result.onSuccess {
-                    snackbarHostState.showSnackbar("Struk pembayaran dicetak ulang.")
+                    snackbarHostState.showSnackbar("2 struk pembayaran dicetak ulang.")
                 }.onFailure { error ->
                     snackbarHostState.showSnackbar("Gagal cetak ulang struk: ${error.message ?: "printer tidak merespons"}")
                 }
@@ -322,7 +322,7 @@ fun AuctionDesktopApp() {
             if (shouldPrint) {
                 val printResult = printPaymentReceipt(itemsToPay, orderId, paymentMethod.label)
                 printResult.onSuccess {
-                    snackbarHostState.showSnackbar("Pembayaran berhasil & struk dicetak.")
+                    snackbarHostState.showSnackbar("Pembayaran berhasil & 2 struk dicetak.")
                 }.onFailure { error ->
                     snackbarHostState.showSnackbar("Pembayaran berhasil, tapi gagal cetak struk: ${error.message ?: "printer tidak merespons"}")
                 }
@@ -336,6 +336,13 @@ fun AuctionDesktopApp() {
         LaunchedEffect(authViewModel) {
             authViewModel.toastEvent.collect { message ->
                 snackbarHostState.showSnackbar(message)
+            }
+        }
+
+        LaunchedEffect(authViewModel, navigator) {
+            authViewModel.loginRequiredEvent.collect {
+                navigator.navigate(DesktopDestination.Dashboard)
+                navigator.showDialog(DesktopDialog.Login)
             }
         }
 

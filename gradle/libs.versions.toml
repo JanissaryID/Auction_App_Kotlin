@@ -30,6 +30,7 @@ room = "2.8.4"
 ksp = "2.3.0"
 gson = "2.13.2"
 slf4j = "2.0.17"
+jSerialComm = "2.11.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -90,6 +91,7 @@ androidx-room-paging = { group = "androidx.room", name = "room-paging", version.
 
 google-gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 slf4j-nop = { group = "org.slf4j", name = "slf4j-nop", version.ref = "slf4j" }
+jserialcomm = { group = "com.fazecast", name = "jSerialComm", version.ref = "jSerialComm" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

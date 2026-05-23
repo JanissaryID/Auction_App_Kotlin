@@ -36,6 +36,7 @@ class AuthViewModel(
     val userName = delegate.userName
     val avatarFileName = delegate.avatarFileName
     val toastEvent = delegate.toastEvent
+    val loginRequiredEvent = delegate.loginRequiredEvent
     val isLoading = delegate.isLoading
 
     fun onEmailChange(value: String) = delegate.onEmailChange(value)

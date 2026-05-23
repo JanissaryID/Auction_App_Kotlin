@@ -195,7 +195,7 @@ private fun PrinterSelectionPanel(
 
         if (printerNames.isEmpty()) {
             Text(
-                text = "Tidak ada printer Windows yang terdeteksi.",
+                text = "Tidak ada printer Windows atau port COM Bluetooth yang terdeteksi.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)

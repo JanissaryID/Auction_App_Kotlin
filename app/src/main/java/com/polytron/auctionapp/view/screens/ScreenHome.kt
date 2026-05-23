@@ -31,6 +31,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
+import com.polytron.auctionapp.bluetooth.displayNameWithAddressSuffix
 import com.polytron.auctionapp.ui.viewmodel.AuthViewModel
 import com.polytron.auctionapp.ui.viewmodel.AuctionViewModel
 import com.polytron.auctionapp.ui.viewmodel.PrinterViewModel
@@ -213,7 +214,7 @@ fun ScreenHome(
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(text = if (isBluetoothConnected) "Printer Siap Cetak" else "Printer Belum Siap", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (isBluetoothConnected) Color(0xFF2E7D32) else Color(0xFFE65100))
-                            Text(text = if (isBluetoothConnected) (selectedPrinter?.name ?: "Connected") else "Hubungkan printer bluetooth", style = MaterialTheme.typography.bodySmall, color = if (isBluetoothConnected) Color(0xFF388E3C) else Color(0xFFEF6C00))
+                            Text(text = if (isBluetoothConnected) (selectedPrinter?.displayNameWithAddressSuffix() ?: "Connected") else "Hubungkan printer bluetooth", style = MaterialTheme.typography.bodySmall, color = if (isBluetoothConnected) Color(0xFF388E3C) else Color(0xFFEF6C00))
                         }
                     }
                 }
