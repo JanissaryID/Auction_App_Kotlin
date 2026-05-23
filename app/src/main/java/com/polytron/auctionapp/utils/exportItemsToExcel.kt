@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.polytron.auctionapp.domain.model.ItemResponse
@@ -112,9 +113,8 @@ fun exportItemsToExcel(context: Context, items: List<ItemResponse>): Boolean {
         Toast.makeText(context, "Excel disimpan di folder Documents", Toast.LENGTH_LONG).show()
         true
     } catch (e: Exception) {
-        e.printStackTrace()
-//        Log.i("Excel", "exportItemsToExcel: ${e.message}")
-        Toast.makeText(context, "Gagal ekspor: ${e.message}", Toast.LENGTH_LONG).show()
+        Log.e("ExportItemsToExcel", "export failed", e)
+        Toast.makeText(context, "Gagal mengekspor Excel. Coba lagi.", Toast.LENGTH_LONG).show()
         false
     }
 }

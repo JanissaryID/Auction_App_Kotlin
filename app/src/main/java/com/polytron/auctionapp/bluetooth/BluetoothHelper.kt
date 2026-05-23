@@ -30,7 +30,7 @@ class BluetoothHelper(private val activity: ComponentActivity) {
             if (allGranted) {
                 checkAndEnableBluetooth()
             } else {
-                onBluetoothFailure?.invoke("Permission denied")
+                onBluetoothFailure?.invoke("Izin Bluetooth ditolak")
             }
         }
 
@@ -40,7 +40,7 @@ class BluetoothHelper(private val activity: ComponentActivity) {
                 onBluetoothReady?.invoke()
                 clearCallbacks()
             } else {
-                onBluetoothFailure?.invoke("User refused to enable Bluetooth")
+                onBluetoothFailure?.invoke("Bluetooth belum diaktifkan")
                 clearCallbacks()
             }
         }
@@ -53,7 +53,7 @@ class BluetoothHelper(private val activity: ComponentActivity) {
         this.onBluetoothFailure = onFailure
 
         if (bluetoothAdapter == null) {
-            onFailure?.invoke("Device does not support Bluetooth")
+            onFailure?.invoke("Perangkat ini tidak mendukung Bluetooth")
             clearCallbacks()
             return
         }

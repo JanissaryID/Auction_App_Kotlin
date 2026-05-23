@@ -1,5 +1,6 @@
 package com.polytron.auctionapp.view.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,7 @@ import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.itemcard.ItemCardPayment
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
@@ -126,8 +128,11 @@ fun ScreenTakeItems(
                                                 delay(300)
                                             }
                                             itemsViewModel.fetchItems()
+                                        } catch (e: CancellationException) {
+                                            throw e
                                         } catch (e: Exception) {
-                                            Toast.makeText(context, "Gagal menyimpan: ${e.message}", Toast.LENGTH_LONG).show()
+                                            Log.e("ScreenTakeItems", "save pickup failed", e)
+                                            Toast.makeText(context, "Pengambilan gagal disimpan. Coba lagi.", Toast.LENGTH_LONG).show()
                                         } finally {
                                             isSubmittingMap[orderId] = false
                                         }

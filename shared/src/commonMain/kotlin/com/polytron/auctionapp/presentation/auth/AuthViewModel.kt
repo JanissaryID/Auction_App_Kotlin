@@ -113,7 +113,7 @@ class AuthViewModel(
             } catch (e: Exception) {
                 logger.error(tag, "Login failed: ${e.message}", e)
                 _toastEvent.emit("Login gagal")
-                onError("Login gagal: ${e.message}")
+                onError("Email atau password salah")
             } finally {
                 _isLoading.value = false
             }

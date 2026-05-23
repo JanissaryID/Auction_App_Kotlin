@@ -1,6 +1,7 @@
 package com.polytron.auctionapp.view.screens
 
 import android.annotation.SuppressLint
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import com.polytron.auctionapp.view.components.bottomsheet.PaymentBottomSheet
 import com.polytron.auctionapp.view.components.dialog.NoPrinterDialog
 import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -109,8 +111,11 @@ fun ScreenPayment(
                         else -> "Pembayaran Berhasil Disimpan"
                     }
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Toast.makeText(context, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_LONG).show()
+                Log.e("ScreenPayment", "process payment failed", e)
+                Toast.makeText(context, "Pembayaran gagal diproses. Coba lagi.", Toast.LENGTH_LONG).show()
             } finally {
                 isSubmitting = false
             }

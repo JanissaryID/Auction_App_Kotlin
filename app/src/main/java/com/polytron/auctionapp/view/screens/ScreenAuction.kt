@@ -46,6 +46,7 @@ import com.polytron.auctionapp.view.components.dialog.NoPrinterDialog
 import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
 import com.polytron.auctionapp.view.components.itemcard.ItemCardAuction
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -163,9 +164,11 @@ fun ScreenAuction(
                         else -> "Berhasil disimpan tanpa cetak"
                     }
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Log.e("ScreenAuction", "Error: $e")
-                Toast.makeText(context, "Gagal: ${e.message}", Toast.LENGTH_LONG).show()
+                Log.e("ScreenAuction", "save auction failed", e)
+                Toast.makeText(context, "Lelang gagal disimpan. Coba lagi.", Toast.LENGTH_LONG).show()
             } finally {
                 isSubmitting = false
             }
