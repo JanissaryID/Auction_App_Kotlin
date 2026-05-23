@@ -2,7 +2,11 @@ package com.polytron.auctionapp.view.screens
 
 import android.annotation.SuppressLint
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,14 +14,24 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -30,14 +44,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
@@ -53,7 +68,10 @@ import com.polytron.auctionapp.view.components.bottomsheet.AddOrEditItemBottomSh
 import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.fab.FabWithDelete
 import com.polytron.auctionapp.view.components.itemcard.ItemCard
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.viewmodel.koinViewModel
 
 private fun normalizeItemGroupName(name: String?): String {
@@ -80,6 +98,7 @@ fun ScreenItemList(
     val context = LocalContext.current
     val idUser by authViewModel.idUser.collectAsState()
     val items by itemsViewModel.items.collectAsState()
+    val isLoading by itemsViewModel.isLoading.collectAsState()
     val printerDevice by printerViewModel.selectedPrinter.collectAsState()
     val showBluetoothDevice by printerViewModel.showBluetoothDevice.collectAsState()
 
@@ -90,6 +109,54 @@ fun ScreenItemList(
     val selectedItems = remember { mutableStateListOf<ItemResponse>() }
     val isSelectionMode = selectedItems.isNotEmpty()
     var isDeleting by remember { mutableStateOf(false) }
+    var isPrinting by remember { mutableStateOf(false) }
+    var printingItemId by remember { mutableStateOf<String?>(null) }
+    var showSelectionMenu by remember { mutableStateOf(false) }
+    var expandedGroupName by remember { mutableStateOf<String?>(null) }
+    var showPrintConfirmDialog by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    fun requestPrinterConnection() {
+        Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
+        bluetoothHelper.requestBluetooth(
+            onReady = { printerViewModel.showBluetoothDevice(true) },
+            onFailure = { Toast.makeText(context, "Bluetooth gagal: $it", Toast.LENGTH_SHORT).show() }
+        )
+    }
+
+    fun printItems(itemsToPrint: List<ItemResponse>) {
+        if (isPrinting) return
+        if (itemsToPrint.isEmpty()) {
+            Toast.makeText(context, "Pilih barang yang ingin dicetak", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val device = printerDevice
+        if (device == null) {
+            requestPrinterConnection()
+            return
+        }
+
+        coroutineScope.launch {
+            isPrinting = true
+            printingItemId = itemsToPrint.singleOrNull()?.id
+            val success = try {
+                withContext(Dispatchers.IO) {
+                    BluetoothPrinter().printBarcodeLabels(device = device, items = itemsToPrint)
+                }
+            } catch (_: Exception) {
+                false
+            }
+            isPrinting = false
+            printingItemId = null
+
+            Toast.makeText(
+                context,
+                if (success) "${itemsToPrint.size} label berhasil dicetak" else "Gagal mencetak label",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
 
     val totalBase = items.sumOf {
         it.basePrice?.replace(Regex("\\D"), "")?.toLongOrNull() ?: 0L
@@ -103,7 +170,22 @@ fun ScreenItemList(
                 it.codeItem?.contains(searchQuery, ignoreCase = true) == true
     }
     val groupedItems = filteredItems.groupBy { normalizeItemGroupName(it.nameItem) }
-    val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
+    val sortedGroups = groupedItems.toSortedMap().entries.toList()
+    val selectionMenuItemCount = sortedGroups.size + 1
+    val selectionMenuVisibleItems = selectionMenuItemCount.coerceAtMost(4).coerceAtLeast(1)
+    val selectionMenuItemHeight = 48.dp
+    val selectionMenuHeight = selectionMenuItemHeight * selectionMenuVisibleItems.toFloat()
+    val showSelectionScrollbar = selectionMenuItemCount > 4
+    val selectionMenuScrollState = rememberScrollState()
+    val scrollbarTrackHeight = selectionMenuHeight - 12.dp
+    val scrollbarThumbHeight = (scrollbarTrackHeight * (selectionMenuVisibleItems.toFloat() / selectionMenuItemCount.toFloat())).coerceAtLeast(32.dp)
+    val scrollbarProgress = if (showSelectionScrollbar) {
+        val maxScroll = selectionMenuScrollState.maxValue.coerceAtLeast(1)
+        (selectionMenuScrollState.value.toFloat() / maxScroll).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val scrollbarThumbOffset = (scrollbarTrackHeight - scrollbarThumbHeight) * scrollbarProgress
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -112,6 +194,7 @@ fun ScreenItemList(
                 title = "${items.size} Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
+                isRefreshing = isLoading,
                 onRefresh = { itemsViewModel.fetchItems() },
             )
         },
@@ -132,24 +215,48 @@ fun ScreenItemList(
             }
         },
         floatingActionButton = {
-            FabWithDelete(
-                isSelectionMode = isSelectionMode,
-                isDeleting = isDeleting,
-                onDelete = {
-                    isDeleting = true
-                    selectedItems.forEach {
-                        itemsViewModel.deleteItem(it.id!!)
-                        delay(500)
-                    }
-                    selectedItems.clear()
-                    itemsViewModel.fetchItems()
-                    isDeleting = false
-                },
-                onAddClick = {
-                    showAddEditBottomSheet = true
-                    selectedItem = null
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (isSelectionMode) {
+                    ExtendedFloatingActionButton(
+                        onClick = { if (!isPrinting) showPrintConfirmDialog = true },
+                        icon = {
+                            if (isPrinting) {
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            } else {
+                                Icon(Icons.Default.Print, contentDescription = "Cetak")
+                            }
+                        },
+                        text = { Text(if (isPrinting) "Mencetak..." else "Cetak") },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 }
-            )
+                FabWithDelete(
+                    isSelectionMode = isSelectionMode,
+                    isDeleting = isDeleting,
+                    onDelete = {
+                        isDeleting = true
+                        selectedItems.forEach {
+                            itemsViewModel.deleteItem(it.id!!)
+                            delay(500)
+                        }
+                        selectedItems.clear()
+                        itemsViewModel.fetchItems()
+                        isDeleting = false
+                    },
+                    onAddClick = {
+                        showAddEditBottomSheet = true
+                        selectedItem = null
+                    }
+                )
+            }
         }
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
@@ -162,8 +269,96 @@ fun ScreenItemList(
                 singleLine = true
             )
             if (isSelectionMode) {
-                TextButton(onClick = { selectedItems.clear() }, modifier = Modifier.align(Alignment.End)) {
-                    Text("Batal Seleksi")
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${selectedItems.size} barang dipilih",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box {
+                                TextButton(onClick = { showSelectionMenu = true }) {
+                                    Text("Pilih")
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                }
+                                DropdownMenu(
+                                    expanded = showSelectionMenu,
+                                    onDismissRequest = { showSelectionMenu = false }
+                                ) {
+                                    Box(modifier = Modifier.height(selectionMenuHeight)) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(end = if (showSelectionScrollbar) 8.dp else 0.dp)
+                                                .verticalScroll(selectionMenuScrollState)
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text("Pilih Semua (${filteredItems.size})") },
+                                                onClick = {
+                                                    selectedItems.clear()
+                                                    selectedItems.addAll(filteredItems)
+                                                    showSelectionMenu = false
+                                                }
+                                            )
+                                            sortedGroups.forEach { (groupName, groupedItemList) ->
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Text(
+                                                            text = "Group: $groupName (${groupedItemList.size})",
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                    },
+                                                    onClick = {
+                                                        selectedItems.clear()
+                                                        selectedItems.addAll(groupedItemList)
+                                                        expandedGroupName = groupName
+                                                        showSelectionMenu = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                        if (showSelectionScrollbar) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.CenterEnd)
+                                                    .padding(end = 4.dp)
+                                                    .width(3.dp)
+                                                    .height(scrollbarTrackHeight)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                                        shape = MaterialTheme.shapes.extraSmall
+                                                    )
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .padding(top = 6.dp, end = 4.dp)
+                                                    .offset(y = scrollbarThumbOffset)
+                                                    .width(3.dp)
+                                                    .height(scrollbarThumbHeight)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+                                                        shape = MaterialTheme.shapes.extraSmall
+                                                    )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            TextButton(onClick = { selectedItems.clear() }) {
+                                Text("Batal")
+                            }
+                        }
+                    }
                 }
             }
             if (filteredItems.isEmpty()) {
@@ -174,9 +369,9 @@ fun ScreenItemList(
                     contentPadding = PaddingValues(vertical = 16.dp),
                     modifier = Modifier.fillMaxWidth().weight(1f)
                 ) {
-                    groupedItems.toSortedMap().forEach { (groupName, groupedItemList) ->
+                    sortedGroups.forEach { (groupName, groupedItemList) ->
                         item(key = groupName) {
-                            val isExpanded = expandedGroups[groupName] ?: false
+                            val isExpanded = expandedGroupName == groupName
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -199,7 +394,14 @@ fun ScreenItemList(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                    TextButton(onClick = { expandedGroups[groupName] = !isExpanded }) {
+                                    TextButton(
+                                        onClick = {
+                                            if (isSelectionMode) {
+                                                selectedItems.clear()
+                                            }
+                                            expandedGroupName = if (isExpanded) null else groupName
+                                        }
+                                    ) {
                                         Icon(
                                             imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                                             contentDescription = null
@@ -215,6 +417,7 @@ fun ScreenItemList(
                                             ItemCard(
                                                 item = item,
                                                 isSelected = selectedItems.contains(item),
+                                                isPrinting = printingItemId == item.id,
                                                 onClick = {
                                                     if (isSelectionMode) {
                                                         if (selectedItems.contains(item)) selectedItems.remove(item) else selectedItems.add(item)
@@ -224,18 +427,9 @@ fun ScreenItemList(
                                                     }
                                                 },
                                                 onLongClick = { if (!selectedItems.contains(item)) selectedItems.add(item) },
-                                                onPrintClick = {
-                                                    val device = printerDevice
-                                                    if (device != null) {
-                                                        BluetoothPrinter().printBarcodeLabel(device = device, itemName = item.nameItem.orEmpty(), itemCode = item.codeItem.orEmpty())
-                                                    } else {
-                                                        Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
-                                                        bluetoothHelper.requestBluetooth(
-                                                            onReady = { printerViewModel.showBluetoothDevice(true) },
-                                                            onFailure = { Toast.makeText(context, "Bluetooth gagal: $it", Toast.LENGTH_SHORT).show() }
-                                                        )
-                                                    }
-                                                }
+                                                onPrintClick = if (isSelectionMode) null else ({
+                                                    printItems(listOf(item))
+                                                })
                                             )
                                         }
                                     }
@@ -276,6 +470,30 @@ fun ScreenItemList(
             bluetoothHelper = bluetoothHelper,
             onPrinterSelected = { device -> printerViewModel.setSelectedPrinter(device); printerViewModel.showBluetoothDevice(false) },
             onDismiss = { printerViewModel.showBluetoothDevice(false) }
+        )
+    }
+
+    if (showPrintConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showPrintConfirmDialog = false },
+            icon = { Icon(Icons.Default.Print, contentDescription = null) },
+            title = { Text("Cetak Label?") },
+            text = { Text("${selectedItems.size} barang terpilih akan dicetak.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPrintConfirmDialog = false
+                        printItems(selectedItems.toList())
+                    }
+                ) {
+                    Text("Cetak")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPrintConfirmDialog = false }) {
+                    Text("Batal")
+                }
+            }
         )
     }
 }

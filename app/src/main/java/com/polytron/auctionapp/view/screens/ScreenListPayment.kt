@@ -25,8 +25,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +42,9 @@ import com.polytron.auctionapp.ui.viewmodel.PrinterViewModel
 import com.polytron.auctionapp.view.components.TopAppBarCustom
 import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.itemcard.ItemCardPayment
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.viewmodel.koinViewModel
 
 @SuppressLint("MissingPermission")
@@ -57,11 +62,14 @@ fun ScreenListPayment(
 ) {
     val context = LocalContext.current
     val items by itemsViewModel.items.collectAsState()
+    val isLoading by itemsViewModel.isLoading.collectAsState()
     val filteredItemsStatTwo = items.filter { it.status == 2 }
     val printerDevice by printerViewModel.selectedPrinter.collectAsState()
     val showBluetoothDevice by printerViewModel.showBluetoothDevice.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
+    val isPrintingMap = remember { mutableStateMapOf<String, Boolean>() }
+    val coroutineScope = rememberCoroutineScope()
 
     val filteredItems = filteredItemsStatTwo.filter {
         it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
@@ -78,6 +86,7 @@ fun ScreenListPayment(
                 title = "Daftar Pembayaran",
                 onBack = { navBack() },
                 showRefresh = true,
+                isRefreshing = isLoading,
                 onRefresh = { itemsViewModel.fetchItems() },
             )
         },
@@ -91,7 +100,7 @@ fun ScreenListPayment(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Cari berdasarkan nama atau kode") },
+                label = { Text("Cari nama, kode, atau pembeli") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 singleLine = true
@@ -120,10 +129,28 @@ fun ScreenListPayment(
                                 orderId = orderId,
                                 items = itemList,
                                 takeItemScreen = false,
+                                isSubmitting = isPrintingMap[orderId] == true,
                                 onClick = {
                                     val device = printerDevice
                                     if (device != null) {
-                                        BluetoothPrinter().printBarcodeReceipt(items = itemList, payment = itemList[0].typePayment.orEmpty(), orderID = orderId, device = device)
+                                        if (!isPrintingMap.values.any { it }) {
+                                            isPrintingMap[orderId] = true
+                                            coroutineScope.launch {
+                                                val success = try {
+                                                    withContext(Dispatchers.IO) {
+                                                        BluetoothPrinter().printBarcodeReceipt(items = itemList, payment = itemList[0].typePayment.orEmpty(), orderID = orderId, device = device)
+                                                    }
+                                                } catch (_: Exception) {
+                                                    false
+                                                }
+                                                isPrintingMap[orderId] = false
+                                                Toast.makeText(
+                                                    context,
+                                                    if (success) "Struk selesai dicetak" else "Gagal mencetak struk",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        }
                                     } else {
                                         Toast.makeText(context, "Belum ada printer yang terhubung", Toast.LENGTH_SHORT).show()
                                         bluetoothHelper.requestBluetooth(

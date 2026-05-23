@@ -33,8 +33,12 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Exe, TargetFormat.Msi)
-            packageName = "AuctionApp"
+            packageName = "GKJ Lelang"
             packageVersion = "1.0.1"
+
+            windows {
+                iconFile.set(project.file("src/main/resources/icon_app.ico"))
+            }
         }
     }
 }

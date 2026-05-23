@@ -57,6 +57,7 @@ fun ScreenItemListSelectPayment(
     navBack: () -> Unit,
 ) {
     val items by itemsViewModel.items.collectAsState()
+    val isLoading by itemsViewModel.isLoading.collectAsState()
     val filteredItemsStatOne = items.filter { it.status == 1 }
     var searchQuery by remember { mutableStateOf("") }
 
@@ -65,7 +66,8 @@ fun ScreenItemListSelectPayment(
 
     val filteredItems = filteredItemsStatOne.filter {
         it.nameItem?.contains(searchQuery, ignoreCase = true) == true ||
-                it.codeItem?.contains(searchQuery, ignoreCase = true) == true
+                it.codeItem?.contains(searchQuery, ignoreCase = true) == true ||
+                it.buyer?.contains(searchQuery, ignoreCase = true) == true
     }
 
     Scaffold(
@@ -75,6 +77,7 @@ fun ScreenItemListSelectPayment(
                 title = "Daftar Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
+                isRefreshing = isLoading,
                 onRefresh = { itemsViewModel.fetchItems() },
             )
         },
@@ -94,7 +97,7 @@ fun ScreenItemListSelectPayment(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Cari berdasarkan nama atau kode") },
+                label = { Text("Cari nama, kode, atau pembeli") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 singleLine = true

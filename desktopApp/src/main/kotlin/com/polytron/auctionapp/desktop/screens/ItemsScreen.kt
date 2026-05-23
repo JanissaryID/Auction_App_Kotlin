@@ -38,10 +38,12 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -96,11 +98,14 @@ fun ItemsScreen(
     onPrintItem: (ItemResponse) -> Unit,
     onBulkDelete: (List<String>) -> Unit,
     onBulkPrint: (List<ItemResponse>) -> Unit,
-    onExportExcel: (List<ItemResponse>) -> Unit
+    onExportExcel: (List<ItemResponse>) -> Unit,
+    onImportExcel: () -> Unit,
+    isImportingExcel: Boolean = false
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var statusFilter by remember { mutableStateOf<Int?>(null) }
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
+    val itemIds = remember(items) { items.mapNotNull { it.id }.toSet() }
 
     val filteredItems = remember(items, searchQuery, statusFilter) {
         items.filter { item ->
@@ -115,108 +120,87 @@ fun ItemsScreen(
             matchesSearch && matchesStatus
         }
     }
+    val filteredItemIds = remember(filteredItems) { filteredItems.mapNotNull { it.id }.toSet() }
+    val selectedItemsForActions = remember(items, selectedIds) {
+        items.filter { item ->
+            item.id != null && selectedIds.contains(item.id)
+        }
+    }
+    val selectedCount = selectedItemsForActions.size
+
+    LaunchedEffect(itemIds) {
+        val validSelectedIds = selectedIds.intersect(itemIds)
+        if (validSelectedIds != selectedIds) {
+            selectedIds = validSelectedIds
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        DesktopToolbar(
-            leading = {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Cari barang...", style = MaterialTheme.typography.bodyMedium) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    modifier = Modifier.width(300.dp).height(DesktopDimens.ControlHeight),
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+        if (selectedCount > 0) {
+            SelectedItemsToolbar(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                statusFilter = statusFilter,
+                onStatusSelected = { statusFilter = it },
+                selectedCount = selectedCount,
+                onBulkPrint = { onBulkPrint(selectedItemsForActions) },
+                onBulkDelete = {
+                    onBulkDelete(selectedItemsForActions.mapNotNull { it.id })
+                    selectedIds = emptySet()
+                },
+                onClearSelection = { selectedIds = emptySet() }
+            )
+        } else {
+            DesktopToolbar(
+                leading = {
+                    ItemSearchAndStatusFilters(
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { searchQuery = it },
+                        statusFilter = statusFilter,
+                        onStatusSelected = { statusFilter = it }
                     )
-                )
+                },
+                actions = {
+                    Spacer(Modifier.weight(1f))
 
-                Spacer(Modifier.width(8.dp))
+                    ExcelActionsDropdown(
+                        isImportingExcel = isImportingExcel,
+                        onImportExcel = onImportExcel,
+                        onExportExcel = { onExportExcel(filteredItems) }
+                    )
 
-                StatusFilterDropdown(
-                    selectedStatus = statusFilter,
-                    onStatusSelected = { statusFilter = it }
-                )
-            },
-            actions = {
-                Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
 
-                if (selectedIds.isNotEmpty()) {
                     OutlinedButton(
-                        onClick = {
-                            val selectedItems = filteredItems.filter { item ->
-                                item.id != null && selectedIds.contains(item.id)
-                            }
-                            onBulkPrint(selectedItems)
-                        },
+                        onClick = onRefresh,
+                        enabled = !isLoading,
                         contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                     ) {
-                        Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Spacer(Modifier.width(8.dp))
-                        Text("Cetak Terpilih (${selectedIds.size})")
+                        Text("Refresh")
                     }
+
                     Spacer(Modifier.width(8.dp))
 
-                    OutlinedButton(
-                        onClick = {
-                            onBulkDelete(selectedIds.toList())
-                            selectedIds = emptySet()
-                        },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                    Button(
+                        onClick = onAddItem,
+                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                     ) {
-                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Hapus Terpilih (${selectedIds.size})")
+                        Text("Tambah Barang")
                     }
-                    Spacer(Modifier.width(8.dp))
                 }
-
-                OutlinedButton(
-                    onClick = { onExportExcel(filteredItems) },
-                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding
-                ) {
-                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Export Excel")
-                }
-
-                Spacer(Modifier.width(8.dp))
-
-                OutlinedButton(
-                    onClick = onRefresh,
-                    enabled = !isLoading,
-                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Refresh")
-                }
-
-                Spacer(Modifier.width(8.dp))
-
-                Button(
-                    onClick = onAddItem,
-                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Tambah Barang")
-                }
-            }
-        )
+            )
+        }
 
         Surface(
             modifier = Modifier.fillMaxWidth().weight(1f),
@@ -227,12 +211,12 @@ fun ItemsScreen(
             DesktopLazyTable(minWidth = ItemsTableMinWidth) {
                 item {
                     ItemRowHeader(
-                        allSelected = filteredItems.isNotEmpty() && selectedIds.size == filteredItems.size,
+                        allSelected = filteredItemIds.isNotEmpty() && filteredItemIds.all { it in selectedIds },
                         onToggleAll = {
-                            selectedIds = if (selectedIds.size == filteredItems.size) {
-                                emptySet()
+                            selectedIds = if (filteredItemIds.isNotEmpty() && filteredItemIds.all { it in selectedIds }) {
+                                selectedIds - filteredItemIds
                             } else {
-                                filteredItems.mapNotNull { it.id }.toSet()
+                                selectedIds + filteredItemIds
                             }
                         }
                     )
@@ -271,6 +255,176 @@ fun ItemsScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ItemSearchAndStatusFilters(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    statusFilter: Int?,
+    onStatusSelected: (Int?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            placeholder = { Text("Cari barang...", style = MaterialTheme.typography.bodyMedium) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            modifier = Modifier.width(300.dp).height(DesktopDimens.ControlHeight),
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+            )
+        )
+
+        StatusFilterDropdown(
+            selectedStatus = statusFilter,
+            onStatusSelected = onStatusSelected
+        )
+    }
+}
+
+@Composable
+private fun SelectedItemsToolbar(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    statusFilter: Int?,
+    onStatusSelected: (Int?) -> Unit,
+    selectedCount: Int,
+    onBulkPrint: () -> Unit,
+    onBulkDelete: () -> Unit,
+    onClearSelection: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                placeholder = { Text("Cari barang...", style = MaterialTheme.typography.bodyMedium) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                modifier = Modifier.weight(1f).height(DesktopDimens.ControlHeight),
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
+                )
+            )
+            StatusFilterDropdown(
+                selectedStatus = statusFilter,
+                onStatusSelected = onStatusSelected
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$selectedCount barang dipilih",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            OutlinedButton(
+                onClick = onBulkPrint,
+                contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+            ) {
+                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Cetak ($selectedCount)")
+            }
+            OutlinedButton(
+                onClick = onBulkDelete,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Hapus Terpilih ($selectedCount)")
+            }
+            OutlinedButton(
+                onClick = onClearSelection,
+                contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+            ) {
+                Text("Batal")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExcelActionsDropdown(
+    isImportingExcel: Boolean,
+    onImportExcel: () -> Unit,
+    onExportExcel: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        OutlinedButton(
+            onClick = { if (!isImportingExcel) expanded = true },
+            enabled = !isImportingExcel,
+            contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+        ) {
+            if (isImportingExcel) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(if (isImportingExcel) "Import..." else "Excel")
+            Spacer(Modifier.width(4.dp))
+            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Import Excel") },
+                leadingIcon = { Icon(Icons.Default.UploadFile, contentDescription = null) },
+                onClick = {
+                    expanded = false
+                    onImportExcel()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Export Excel") },
+                leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) },
+                onClick = {
+                    expanded = false
+                    onExportExcel()
+                }
+            )
         }
     }
 }

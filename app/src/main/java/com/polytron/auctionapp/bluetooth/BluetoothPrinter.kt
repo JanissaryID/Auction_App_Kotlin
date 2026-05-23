@@ -56,11 +56,11 @@ class BluetoothPrinter {
         items: List<ItemResponse>,
         orderID: String,
         payment: String
-    ) {
+    ): Boolean {
         val uuid = device.uuids?.firstOrNull()?.uuid
             ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
-        try {
+        return try {
             device.createRfcommSocketToServiceRecord(uuid).use { socket ->
                 socket.connect()
                 socket.outputStream.use { os ->
@@ -104,8 +104,10 @@ class BluetoothPrinter {
                     os.flush()
                 }
             }
+            true
         } catch (e: Exception) {
             e.printStackTrace()
+            false
         }
     }
 
@@ -119,17 +121,40 @@ class BluetoothPrinter {
             device.createRfcommSocketToServiceRecord(uuid).use { socket ->
                 socket.connect()
                 socket.outputStream.use { os ->
-                    os.write(alignCenter)
-                    os.write(itemName.toByteArray())
-                    os.write(newLine(2))
-                    os.writeQrCode(itemCode)
-                    os.write(strip(footer))
-                    os.write(newLine(2))
+                    os.writeBarcodeLabel(itemName, itemCode)
                     os.flush()
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    // === CETAK BANYAK LABEL QR CODE DALAM SATU KONEKSI ===
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    fun printBarcodeLabels(device: BluetoothDevice, items: List<ItemResponse>): Boolean {
+        if (items.isEmpty()) return false
+
+        val uuid = device.uuids?.firstOrNull()?.uuid
+            ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
+
+        return try {
+            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
+                socket.connect()
+                socket.outputStream.use { os ->
+                    items.forEach { item ->
+                        os.writeBarcodeLabel(
+                            itemName = item.nameItem.orEmpty(),
+                            itemCode = item.codeItem.orEmpty()
+                        )
+                    }
+                    os.flush()
+                }
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 
@@ -220,6 +245,15 @@ class BluetoothPrinter {
         write(qrPrint)
         write(newLine())
         write(cleanCode.toByteArray(Charsets.UTF_8))
+        write(newLine(2))
+    }
+
+    private fun OutputStream.writeBarcodeLabel(itemName: String, itemCode: String) {
+        write(alignCenter)
+        write(itemName.ifBlank { "-" }.toByteArray(Charsets.UTF_8))
+        write(newLine(2))
+        writeQrCode(itemCode)
+        write(strip(footer))
         write(newLine(2))
     }
 }

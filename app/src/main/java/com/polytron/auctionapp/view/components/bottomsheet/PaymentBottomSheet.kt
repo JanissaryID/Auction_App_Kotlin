@@ -74,7 +74,7 @@ fun PaymentBottomSheet(
                 val isSelected = selectedMethod == method.name
 
                 Card(
-                    onClick = { selectedMethod = method.name },
+                    onClick = { if (!isSubmitting) selectedMethod = method.name },
                     modifier = Modifier
                         .weight(1f)
                         .height(96.dp) // biar seragam dan stabil
@@ -150,11 +150,15 @@ fun PaymentBottomSheet(
                 enabled = !isSubmitting
             ) {
                 if (isSubmitting) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Memproses...")
+                    }
                 } else {
                     Text("Bayar")
                 }

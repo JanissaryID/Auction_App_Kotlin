@@ -1,6 +1,8 @@
 package com.polytron.auctionapp.presentation.auction
 
 import com.polytron.auctionapp.domain.model.ItemResponse
+import com.polytron.auctionapp.test.FakeItemsRepository
+import kotlinx.coroutines.test.TestScope
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -8,7 +10,7 @@ import kotlin.test.assertTrue
 class AuctionViewModelTest {
     @Test
     fun addSelectedItemAvoidsDuplicateIds() {
-        val viewModel = AuctionViewModel()
+        val viewModel = createViewModel()
         val item = ItemResponse(id = "item-1", nameItem = "Item 1")
 
         viewModel.addSelectedItem(item)
@@ -20,7 +22,7 @@ class AuctionViewModelTest {
 
     @Test
     fun removeSelectedItemClearsEditingStateForItem() {
-        val viewModel = AuctionViewModel()
+        val viewModel = createViewModel()
         val item = ItemResponse(id = "item-1", nameItem = "Item 1")
         viewModel.addSelectedItem(item)
         viewModel.updateEditingBuyer("item-1", "Buyer")
@@ -35,7 +37,7 @@ class AuctionViewModelTest {
 
     @Test
     fun updateEditingPriceKeepsDigitsOnly() {
-        val viewModel = AuctionViewModel()
+        val viewModel = createViewModel()
 
         viewModel.updateEditingPrice("item-1", "Rp 1.234.500")
 
@@ -44,7 +46,7 @@ class AuctionViewModelTest {
 
     @Test
     fun updateEditingBuyerCapitalizesWinnerName() {
-        val viewModel = AuctionViewModel()
+        val viewModel = createViewModel()
 
         viewModel.updateEditingBuyer("item-1", "budi santoso")
 
@@ -53,7 +55,7 @@ class AuctionViewModelTest {
 
     @Test
     fun updateAllEditingPricesAppliesCleanPriceToSelectedItems() {
-        val viewModel = AuctionViewModel()
+        val viewModel = createViewModel()
         viewModel.setSelectedItems(
             listOf(
                 ItemResponse(id = "item-1"),
@@ -72,7 +74,7 @@ class AuctionViewModelTest {
 
     @Test
     fun clearSelectedItemsClearsSelectionAndEditingState() {
-        val viewModel = AuctionViewModel()
+        val viewModel = createViewModel()
         viewModel.addSelectedItem(ItemResponse(id = "item-1"))
         viewModel.updateEditingBuyer("item-1", "Buyer")
         viewModel.updateEditingPrice("item-1", "123")
@@ -82,5 +84,12 @@ class AuctionViewModelTest {
         assertTrue(viewModel.selectedItems.value.isEmpty())
         assertTrue(viewModel.editingBuyers.value.isEmpty())
         assertTrue(viewModel.editingPrices.value.isEmpty())
+    }
+
+    private fun createViewModel(): AuctionViewModel {
+        return AuctionViewModel(
+            repository = FakeItemsRepository(),
+            scope = TestScope()
+        )
     }
 }

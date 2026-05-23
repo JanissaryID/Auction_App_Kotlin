@@ -82,6 +82,7 @@ fun ScreenAuction(
     var rawAuctionPrice by remember { mutableStateOf("") }
     var auctionPrice by remember { mutableStateOf(formatCurrencyInput(rawAuctionPrice)) }
     var isSubmitting by remember { mutableStateOf(false) }
+    var submittingText by remember { mutableStateOf("Memproses...") }
     var isFabExpanded by remember { mutableStateOf(false) }
     var showNoPrinterDialog by remember { mutableStateOf(false) }
 
@@ -101,6 +102,7 @@ fun ScreenAuction(
     val isSimpanEnabled = isPriceFilledProperly && isAllBuyerFilled && !isSubmitting
 
     val onSaveData = { shouldPrint: Boolean ->
+        submittingText = if (shouldPrint) "Menyimpan & mencetak..." else "Menyimpan..."
         isSubmitting = true
         showNoPrinterDialog = false
         coroutineScope.launch {
@@ -151,6 +153,7 @@ fun ScreenAuction(
                 selectedCount = selectedItems.size,
                 buttonText = "Simpan & Cetak",
                 isSubmitting = isSubmitting,
+                submittingText = submittingText,
                 enabled = isSimpanEnabled,
                 onClick = {
                     if (printerDevice == null) showNoPrinterDialog = true else onSaveData(true)

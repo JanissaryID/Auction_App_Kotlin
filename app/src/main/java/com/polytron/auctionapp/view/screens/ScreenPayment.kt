@@ -42,8 +42,10 @@ import com.polytron.auctionapp.view.components.bottomsheet.PaymentBottomSheet
 import com.polytron.auctionapp.view.components.dialog.NoPrinterDialog
 import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.viewmodel.koinViewModel
 
 @SuppressLint("MissingPermission")
@@ -92,11 +94,21 @@ fun ScreenPayment(
                     itemsViewModel.patchItem(item.id!!, updatedItem)
                     delay(300)
                 }
-                if (shouldPrint && printerDevice != null) {
-                    BluetoothPrinter().printBarcodeReceipt(items = selectedItems, payment = paymentLabel, orderID = orderID, device = printerDevice!!)
+                val printSuccess = if (shouldPrint && printerDevice != null) {
+                    withContext(Dispatchers.IO) {
+                        BluetoothPrinter().printBarcodeReceipt(items = selectedItems, payment = paymentLabel, orderID = orderID, device = printerDevice!!)
+                    }
+                } else {
+                    true
                 }
                 auctionViewModel.clearSelectedItems()
-                snackbarHostState.showSnackbar(if (shouldPrint) "Pembayaran Berhasil & Struk Dicetak" else "Pembayaran Berhasil Disimpan")
+                snackbarHostState.showSnackbar(
+                    when {
+                        shouldPrint && printSuccess -> "Pembayaran Berhasil & Struk Dicetak"
+                        shouldPrint -> "Pembayaran tersimpan, struk gagal dicetak"
+                        else -> "Pembayaran Berhasil Disimpan"
+                    }
+                )
             } catch (e: Exception) {
                 Toast.makeText(context, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
@@ -125,6 +137,8 @@ fun ScreenPayment(
             SelectedItemsBottomBar(
                 selectedCount = selectedItems.size,
                 buttonText = "Proses Pembayaran",
+                isSubmitting = isSubmitting,
+                submittingText = "Menyimpan...",
                 enabled = selectedItems.isNotEmpty() && !isSubmitting,
                 onClick = { showSheet = true }
             )
@@ -157,6 +171,7 @@ fun ScreenPayment(
                 onPay = { paymentType ->
                     if (printerDevice == null) {
                         pendingPaymentLabel = paymentType.label
+                        showSheet = false
                         showNoPrinterDialog = true
                     } else {
                         onProcessPayment(paymentType.label, true)

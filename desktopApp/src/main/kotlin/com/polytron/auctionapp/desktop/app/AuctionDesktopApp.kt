@@ -25,6 +25,7 @@ import com.polytron.auctionapp.desktop.screens.PickupScreen
 import com.polytron.auctionapp.desktop.screens.TransactionsScreen
 import com.polytron.auctionapp.desktop.theme.DesktopTheme
 import com.polytron.auctionapp.desktop.utils.DesktopThermalPrinter
+import com.polytron.auctionapp.desktop.utils.importItemsFromExcelDesktop
 import com.polytron.auctionapp.domain.model.ItemResponse
 import com.polytron.auctionapp.domain.model.PaymentMethod
 import com.polytron.auctionapp.presentation.auction.AuctionViewModel
@@ -87,6 +88,7 @@ fun AuctionDesktopApp() {
         var selectedPrinterName by remember { mutableStateOf(initialPrinterConfig.second) }
         var pendingNoPrinterSaveOnly by remember { mutableStateOf<(() -> Unit)?>(null) }
         var showPrintOnlyNoPrinterDialog by remember { mutableStateOf(false) }
+        var isImportingExcel by remember { mutableStateOf(false) }
 
         fun refreshPrinters(): List<String> {
             val names = DesktopThermalPrinter.availablePrinterNames()
@@ -399,12 +401,75 @@ fun AuctionDesktopApp() {
                         onPrintItem = { item -> printItemLabels(listOf(item)) },
                         onBulkDelete = { ids -> navigator.showDialog(DesktopDialog.ConfirmDelete(ids)) },
                         onBulkPrint = ::printItemLabels,
+                        isImportingExcel = isImportingExcel,
+                        onImportExcel = {
+                            if (!isImportingExcel) {
+                                appScope.launch {
+                                    isImportingExcel = true
+                                    try {
+                                        val importResult = withContext(Dispatchers.IO) {
+                                            importItemsFromExcelDesktop()
+                                        }.getOrElse { error ->
+                                            val message = error.message ?: "Import gagal"
+                                            if (message != "Import dibatalkan") {
+                                                snackbarHostState.showSnackbar("Gagal import: $message")
+                                            }
+                                            return@launch
+                                        }
+
+                                        if (importResult.rows.isEmpty()) {
+                                            val skippedText = if (importResult.skippedRows.isNotEmpty()) {
+                                                " ${importResult.skippedRows.size} baris dilewati."
+                                            } else {
+                                                ""
+                                            }
+                                            snackbarHostState.showSnackbar("Tidak ada barang valid untuk diimport.$skippedText")
+                                            return@launch
+                                        }
+
+                                        var successCount = 0
+                                        val failedRows = mutableListOf<String>()
+                                        importResult.rows.forEach { row ->
+                                            val result = itemsViewModel.createItem(
+                                                row.item.copy(
+                                                    admin = "admin",
+                                                    user = idUser,
+                                                    status = 0
+                                                )
+                                            )
+                                            if (result.isSuccess) {
+                                                successCount++
+                                            } else {
+                                                failedRows += "Baris ${row.rowNumber}"
+                                            }
+                                        }
+
+                                        itemsViewModel.fetchItems()
+
+                                        val message = buildString {
+                                            append("$successCount barang berhasil diimport.")
+                                            if (importResult.skippedRows.isNotEmpty()) {
+                                                append(" ${importResult.skippedRows.size} baris dilewati.")
+                                            }
+                                            if (failedRows.isNotEmpty()) {
+                                                append(" ${failedRows.size} baris gagal disimpan.")
+                                            }
+                                        }
+                                        snackbarHostState.showSnackbar(message)
+                                    } finally {
+                                        isImportingExcel = false
+                                    }
+                                }
+                            }
+                        },
                         onExportExcel = { itemsToExport ->
                             appScope.launch {
-                                val result = exportItemsToExcelDesktop(
-                                    items = itemsToExport,
-                                    includePaymentDetails = false
-                                )
+                                val result = withContext(Dispatchers.IO) {
+                                    exportItemsToExcelDesktop(
+                                        items = itemsToExport,
+                                        includePaymentDetails = false
+                                    )
+                                }
                                 result.onSuccess { path ->
                                     snackbarHostState.showSnackbar("Berhasil: $path")
                                 }.onFailure { error ->
@@ -476,10 +541,12 @@ fun AuctionDesktopApp() {
                                     snackbarHostState.showSnackbar("Tidak ada data transaksi untuk di-export.")
                                     return@launch
                                 }
-                                val result = exportItemsToExcelDesktop(
-                                    items = transactionItems,
-                                    enableColumnFilters = true
-                                )
+                                val result = withContext(Dispatchers.IO) {
+                                    exportItemsToExcelDesktop(
+                                        items = transactionItems,
+                                        enableColumnFilters = true
+                                    )
+                                }
                                 result.onSuccess { message ->
                                     snackbarHostState.showSnackbar(message)
                                 }.onFailure { error ->

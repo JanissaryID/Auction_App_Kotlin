@@ -854,7 +854,7 @@ private fun AddEditItemDialog(
                             try {
                                 if (isEditMode) {
                                     itemsViewModel.patchItem(
-                                        id = itemToEdit!!.id!!,
+                                        id = itemToEdit.id!!,
                                         item = itemToEdit.copy(
                                             nameItem = name.trim(),
                                             codeItem = code.trim(),
@@ -1185,8 +1185,21 @@ private fun ConfirmDeleteDialog(
                     isSubmitting = true
                     scope.launch {
                         try {
+                            var successCount = 0
+                            var failedCount = 0
                             itemIds.forEach { id ->
-                                itemsViewModel.deleteItem(id)
+                                val result = itemsViewModel.deleteItem(id)
+                                if (result.isSuccess) {
+                                    successCount++
+                                } else {
+                                    failedCount++
+                                }
+                            }
+                            itemsViewModel.fetchItems()
+                            if (failedCount == 0) {
+                                itemsViewModel.showToast("$successCount barang berhasil dihapus.")
+                            } else {
+                                itemsViewModel.showToast("$successCount barang berhasil dihapus, $failedCount gagal.")
                             }
                             onDismiss()
                         } finally {
@@ -1383,7 +1396,7 @@ private fun ProfileDialog(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = userName?.firstOrNull()?.uppercase()?.toString() ?: "U",
+                            text = userName?.firstOrNull()?.uppercase() ?: "U",
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold

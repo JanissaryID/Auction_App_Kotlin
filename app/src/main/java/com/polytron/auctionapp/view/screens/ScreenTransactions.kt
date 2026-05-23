@@ -60,6 +60,7 @@ fun ScreenTransactions(
     navBack: () -> Unit
 ) {
     val items by itemsViewModel.items.collectAsState()
+    val isLoading by itemsViewModel.isLoading.collectAsState()
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedItem by remember { mutableStateOf<ItemResponse?>(null) }
@@ -83,6 +84,7 @@ fun ScreenTransactions(
                 title = "Daftar Barang Lelang",
                 onBack = { navBack() },
                 showRefresh = true,
+                isRefreshing = isLoading,
                 onRefresh = { itemsViewModel.fetchItems() },
             )
         },

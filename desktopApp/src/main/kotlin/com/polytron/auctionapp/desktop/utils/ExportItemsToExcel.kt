@@ -8,6 +8,7 @@ import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.swing.JFileChooser
+import javax.swing.SwingUtilities
 import javax.swing.filechooser.FileNameExtensionFilter
 
 fun exportItemsToExcelDesktop(
@@ -17,24 +18,29 @@ fun exportItemsToExcelDesktop(
 ): Result<String> {
     return try {
         val reportName = if (includePaymentDetails) "Laporan Unduh-Unduh" else "Laporan Barang"
-        val fileChooser = JFileChooser().apply {
-            dialogTitle = "Simpan Laporan Excel"
-            val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
-            selectedFile = File("${reportName.replace(" ", "_")}_$timestamp.xlsx")
-            fileFilter = FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx")
-        }
+        val file = chooseExcelSaveFile(reportName)
+            ?: return Result.failure(Exception("Export dibatalkan"))
 
-        val result = fileChooser.showSaveDialog(null)
-        if (result != JFileChooser.APPROVE_OPTION) {
-            return Result.failure(Exception("Export dibatalkan"))
-        }
+        writeItemsToExcelFile(
+            file = file,
+            items = items,
+            includePaymentDetails = includePaymentDetails,
+            enableColumnFilters = enableColumnFilters
+        )
 
-        var file = fileChooser.selectedFile
-        if (!file.name.endsWith(".xlsx")) {
-            file = File(file.absolutePath + ".xlsx")
-        }
+        Result.success("Excel disimpan di: ${file.absolutePath}")
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+}
 
-        val workbook = XSSFWorkbook()
+fun writeItemsToExcelFile(
+    file: File,
+    items: List<ItemResponse>,
+    includePaymentDetails: Boolean = true,
+    enableColumnFilters: Boolean = false
+) {
+    XSSFWorkbook().use { workbook ->
         val sheet = workbook.createSheet("Items")
 
         // Header style
@@ -143,11 +149,36 @@ fun exportItemsToExcelDesktop(
         file.outputStream().use { outputStream ->
             workbook.write(outputStream)
         }
-        workbook.close()
-
-        Result.success("Excel disimpan di: ${file.absolutePath}")
-    } catch (e: Exception) {
-        e.printStackTrace()
-        Result.failure(e)
     }
+}
+
+private fun chooseExcelSaveFile(reportName: String): File? {
+    var selectedFile: File? = null
+    val choose = Runnable {
+        val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+        val fileChooser = JFileChooser().apply {
+            dialogTitle = "Simpan Laporan Excel"
+            selectedFile = File("${reportName.replace(" ", "_")}_$timestamp.xlsx")
+            fileFilter = FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx")
+        }
+
+        val result = fileChooser.showSaveDialog(null)
+        if (result == JFileChooser.APPROVE_OPTION) {
+            selectedFile = fileChooser.selectedFile.let { file ->
+                if (file.name.endsWith(".xlsx", ignoreCase = true)) {
+                    file
+                } else {
+                    File(file.absolutePath + ".xlsx")
+                }
+            }
+        }
+    }
+
+    if (SwingUtilities.isEventDispatchThread()) {
+        choose.run()
+    } else {
+        SwingUtilities.invokeAndWait(choose)
+    }
+
+    return selectedFile
 }

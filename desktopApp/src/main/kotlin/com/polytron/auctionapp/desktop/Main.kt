@@ -1,6 +1,7 @@
 package com.polytron.auctionapp.desktop
 
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -27,7 +28,8 @@ fun main() {
                 exitApplication()
             },
             state = windowState,
-            title = "Auction App"
+            title = "GKJ Lelang",
+            icon = painterResource("icon_app.png")
         ) {
             LaunchedEffect(Unit) {
                 window.minimumSize = Dimension(1100, 700)

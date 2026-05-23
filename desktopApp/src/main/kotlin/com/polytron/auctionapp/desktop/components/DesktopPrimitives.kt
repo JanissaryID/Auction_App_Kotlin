@@ -55,7 +55,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.Icon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.URL
+import java.net.URI
 import javax.imageio.ImageIO
 
 object DesktopDimens {
@@ -413,20 +413,21 @@ fun DesktopAsyncImage(
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
     LaunchedEffect(model) {
-        withContext(Dispatchers.IO) {
-            try {
-                val url = URL(model)
-                val connection = url.openConnection()
+        imageBitmap = null
+        if (model.isBlank()) return@LaunchedEffect
+
+        imageBitmap = withContext(Dispatchers.IO) {
+            runCatching {
+                val url = URI(model).toURL()
+                val connection = url.openConnection().apply {
+                    connectTimeout = 5_000
+                    readTimeout = 5_000
+                }
                 connection.connect()
                 connection.getInputStream().use { input ->
-                    val bufferedImage = ImageIO.read(input)
-                    if (bufferedImage != null) {
-                        imageBitmap = bufferedImage.toComposeImageBitmap()
-                    }
+                    ImageIO.read(input)?.toComposeImageBitmap()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            }.getOrNull()
         }
     }
 

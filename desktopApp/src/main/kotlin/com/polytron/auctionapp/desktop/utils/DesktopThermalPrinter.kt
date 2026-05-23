@@ -38,7 +38,7 @@ object DesktopThermalPrinter {
             write(EscPos.fontBig)
             writeText("PRINTER OK\n")
             write(EscPos.fontNormal)
-            writeText("Auction App Desktop\n")
+            writeText("GKJ Lelang Desktop\n")
             write(EscPos.strip())
             write(EscPos.newLine(4))
         }

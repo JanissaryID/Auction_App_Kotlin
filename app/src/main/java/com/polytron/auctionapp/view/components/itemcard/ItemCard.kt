@@ -12,12 +12,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,6 +40,7 @@ import com.polytron.auctionapp.utils.formatRupiah
 fun ItemCard(
     item: ItemResponse,
     isSelected: Boolean = false,
+    isPrinting: Boolean = false,
     onClick: () -> Unit = {},
     onLongClick: () -> Unit = {},
     onPrintClick: (() -> Unit)? = null
@@ -112,16 +115,26 @@ fun ItemCard(
                     )
                 }
                 if (onPrintClick != null) {
-                    TextButton(onClick = onPrintClick,
+                    TextButton(
+                        onClick = onPrintClick,
+                        enabled = !isPrinting,
                         modifier = Modifier.padding(end = 16.dp, bottom = 8.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Print,
-                            contentDescription = "Cetak",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        if (isPrinting) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Print,
+                                contentDescription = "Cetak",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Cetak",
+                            text = if (isPrinting) "Mencetak..." else "Cetak",
                             color = MaterialTheme.colorScheme.primary
                         )
                     }

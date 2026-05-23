@@ -93,7 +93,11 @@ class ItemsViewModel(
                 _items.value = fetchItemsUseCase(page = 1, perPage = 500)
             } catch (e: Exception) {
                 if (e !is CancellationException) {
-                    logger.error(tag, "fetchItems error: ${e.message}", e)
+                    logNetworkAwareError(
+                        operation = "fetchItems",
+                        message = "Gagal mengambil data barang",
+                        throwable = e
+                    )
                 }
             } finally {
                 if (fetchItemsJob == coroutineContext[Job]) {
@@ -163,7 +167,11 @@ class ItemsViewModel(
                     throw e
                 } catch (e: Exception) {
                     _sseConnected.value = false
-                    logger.error(tag, "SSE connection error: ${e.message}. Retrying in 5s...", e)
+                    logNetworkAwareError(
+                        operation = "SSE",
+                        message = "Koneksi realtime terputus. Mencoba lagi dalam 5 detik",
+                        throwable = e
+                    )
                     delay(5000)
                 }
             }
@@ -191,5 +199,39 @@ class ItemsViewModel(
             delay(350)
             fetchItems()
         }
+    }
+
+    private fun logNetworkAwareError(operation: String, message: String, throwable: Throwable) {
+        val details = throwable.message?.takeIf { it.isNotBlank() } ?: "unknown network error"
+        if (throwable.isRecoverableNetworkDisconnect()) {
+            logger.warn(tag, "$message: $details")
+        } else {
+            logger.error(tag, "$operation error: $details", throwable)
+        }
+    }
+
+    private fun Throwable.isRecoverableNetworkDisconnect(): Boolean {
+        val transientMessages = listOf(
+            "connection reset",
+            "connection refused",
+            "connection closed",
+            "connection abort",
+            "network is unreachable",
+            "no such host",
+            "socket closed",
+            "timed out",
+            "timeout",
+            "failed to connect"
+        )
+
+        var current: Throwable? = this
+        while (current != null) {
+            val message = current.message?.lowercase().orEmpty()
+            if (transientMessages.any { it in message }) {
+                return true
+            }
+            current = current.cause
+        }
+        return false
     }
 }

@@ -201,7 +201,7 @@ fun ItemCardPayment(
                                 label = "ButtonAnimation"
                             ) { (submitting, takeScreen) ->
                                 when {
-                                    takeScreen && submitting -> {
+                                    submitting -> {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             CircularProgressIndicator(
                                                 color = MaterialTheme.colorScheme.primary,
@@ -209,7 +209,10 @@ fun ItemCardPayment(
                                                 modifier = Modifier.size(18.dp)
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
-                                            Text("Menyimpan...", color = MaterialTheme.colorScheme.primary)
+                                            Text(
+                                                text = if (takeScreen) "Menyimpan..." else "Mencetak...",
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
                                         }
                                     }
 

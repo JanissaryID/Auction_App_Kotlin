@@ -19,7 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Auction App"
+rootProject.name = "GKJ Lelang"
 include(":app")
 include(":shared")
 include(":desktopApp")

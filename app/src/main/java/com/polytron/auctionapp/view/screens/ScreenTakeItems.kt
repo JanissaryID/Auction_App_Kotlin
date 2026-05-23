@@ -1,5 +1,6 @@
 package com.polytron.auctionapp.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,7 +49,9 @@ fun ScreenTakeItems(
     ),
     navBack: () -> Unit,
 ) {
+    val context = LocalContext.current
     val items by itemsViewModel.items.collectAsState()
+    val isLoading by itemsViewModel.isLoading.collectAsState()
     val filteredItemsStatTwo = items.filter { it.status == 2 }
 
     var searchQuery by remember { mutableStateOf("") }
@@ -70,6 +73,7 @@ fun ScreenTakeItems(
                 title = "Ambil Barang",
                 onBack = { navBack() },
                 showRefresh = true,
+                isRefreshing = isLoading,
                 onRefresh = { itemsViewModel.fetchItems() },
             )
         },
@@ -83,7 +87,7 @@ fun ScreenTakeItems(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Cari berdasarkan nama atau kode") },
+                label = { Text("Cari nama, kode, atau pembeli") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 singleLine = true
@@ -116,12 +120,17 @@ fun ScreenTakeItems(
                                 onClick = {
                                     isSubmittingMap[orderId] = true
                                     coroutineScope.launch {
-                                        itemList.forEach { item ->
-                                            itemsViewModel.patchItem(item.id!!, item.copy(status = 3))
-                                            delay(300)
+                                        try {
+                                            itemList.forEach { item ->
+                                                itemsViewModel.patchItem(item.id!!, item.copy(status = 3))
+                                                delay(300)
+                                            }
+                                            itemsViewModel.fetchItems()
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Gagal menyimpan: ${e.message}", Toast.LENGTH_LONG).show()
+                                        } finally {
+                                            isSubmittingMap[orderId] = false
                                         }
-                                        isSubmittingMap[orderId] = false
-                                        itemsViewModel.fetchItems()
                                     }
                                 }
                             )
