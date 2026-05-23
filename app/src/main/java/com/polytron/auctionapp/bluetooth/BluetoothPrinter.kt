@@ -2,54 +2,28 @@ package com.polytron.auctionapp.bluetooth
 
 import android.Manifest
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothSocket
 import androidx.annotation.RequiresPermission
-import com.polytron.auctionapp.bluetooth.EscPosCommands.alignCenter
-import com.polytron.auctionapp.bluetooth.EscPosCommands.alignLeft
-import com.polytron.auctionapp.bluetooth.EscPosCommands.fontBig
-import com.polytron.auctionapp.bluetooth.EscPosCommands.fontNormal
-import com.polytron.auctionapp.bluetooth.EscPosCommands.newLine
-import com.polytron.auctionapp.bluetooth.EscPosCommands.qrErrorCorrection
-import com.polytron.auctionapp.bluetooth.EscPosCommands.qrModel
-import com.polytron.auctionapp.bluetooth.EscPosCommands.qrPrint
-import com.polytron.auctionapp.bluetooth.EscPosCommands.qrSize
-import com.polytron.auctionapp.bluetooth.EscPosCommands.qrStoreData
-import com.polytron.auctionapp.bluetooth.EscPosCommands.strip
 import com.polytron.auctionapp.domain.model.ItemResponse
+import com.polytron.auctionapp.printing.ThermalPrintFormatter
+import java.io.IOException
 import java.io.OutputStream
 import java.util.UUID
 
 class BluetoothPrinter {
 
-    private val footer = 32
-
     private companion object {
-        const val MAX_QR_CODE_CHARS = 255
+        val SERIAL_PORT_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
+        const val WRITE_CHUNK_SIZE = 256
+        const val WRITE_CHUNK_DELAY_MS = 20L
+        const val CLOSE_DELAY_MS = 250L
     }
 
-    // === CETAK TEST PRINTER ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun testPrinter(device: BluetoothDevice): Boolean {
-        val uuid = device.uuids?.firstOrNull()?.uuid
-            ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
-
-        return try {
-            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
-                socket.connect()
-                socket.outputStream.use { os ->
-                    os.write(newLine(5))
-                    os.write(alignCenter)
-                    os.write("Printer OK\n".toByteArray(Charsets.UTF_8))
-                    os.write(newLine(5))
-                    os.flush()
-                }
-            }
-            true
-        } catch (_: Exception) {
-            false
-        }
+        return printBytes(device, ThermalPrintFormatter.buildTestBytes("GKJ Lelang Android"))
     }
 
-    // === CETAK STRUK PEMBAYARAN DENGAN QR CODE ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeReceipt(
         device: BluetoothDevice,
@@ -57,108 +31,56 @@ class BluetoothPrinter {
         orderID: String,
         payment: String
     ): Boolean {
-        val uuid = device.uuids?.firstOrNull()?.uuid
-            ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
-
-        return try {
-            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
-                socket.connect()
-                socket.outputStream.use { os ->
-                    // Header nota
-                    os.write(alignCenter)
-                    os.write(fontBig)
-                    os.write("NOTA PEMBAYARAN\n".toByteArray())
-
-                    // Order ID
-                    os.write(fontNormal)
-                    os.write("\n$orderID\n\n".toByteArray())
-
-                    // Detail barang
-                    os.write(alignLeft)
-                    var total = 0
-                    items.forEach {
-                        val name = it.nameItem.orEmpty().padEnd(20, ' ').take(20)
-                        val priceInt = it.price?.toIntOrNull() ?: 0
-                        total += priceInt
-                        val price = "Rp $priceInt"
-                        os.write("%-20s %s\n".format(name, price).toByteArray())
-                    }
-
-                    // Total
-                    os.write("--------------------------------\n".toByteArray())
-                    os.write("%-20s %s\n\n".format("Total", "Rp $total").toByteArray())
-
-                    // Status pembayaran
-                    os.write(alignCenter)
-                    os.write(fontBig)
-                    os.write("LUNAS\n".toByteArray())
-                    os.write(fontNormal)
-                    os.write("$payment\n\n".toByteArray())
-
-                    // QR Code
-                    os.writeQrCode(orderID)
-
-                    // Footer
-                    os.write(strip(footer))
-                    os.write(newLine(2))
-                    os.flush()
-                }
+        return runCatching {
+            ThermalPrintFormatter.buildPaymentReceiptBytes(
+                items = items,
+                orderId = orderID,
+                paymentMethod = payment
+            )
+        }.fold(
+            onSuccess = { bytes -> printBytes(device, bytes) },
+            onFailure = { error ->
+                error.printStackTrace()
+                false
             }
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
+        )
     }
 
-    // === CETAK LABEL QR CODE SEDERHANA ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    fun printBarcodeLabel(device: BluetoothDevice, itemName: String, itemCode: String) {
-        val uuid = device.uuids?.firstOrNull()?.uuid
-            ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
-
-        try {
-            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
-                socket.connect()
-                socket.outputStream.use { os ->
-                    os.writeBarcodeLabel(itemName, itemCode)
-                    os.flush()
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+    fun printBarcodeLabel(device: BluetoothDevice, itemName: String, itemCode: String): Boolean {
+        val item = ItemResponse(nameItem = itemName, codeItem = itemCode)
+        return printBarcodeLabels(device, listOf(item))
     }
 
-    // === CETAK BANYAK LABEL QR CODE DALAM SATU KONEKSI ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeLabels(device: BluetoothDevice, items: List<ItemResponse>): Boolean {
-        if (items.isEmpty()) return false
-
-        val uuid = device.uuids?.firstOrNull()?.uuid
-            ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
-
-        return try {
-            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
-                socket.connect()
-                socket.outputStream.use { os ->
-                    items.forEach { item ->
-                        os.writeBarcodeLabel(
-                            itemName = item.nameItem.orEmpty(),
-                            itemCode = item.codeItem.orEmpty()
-                        )
-                    }
-                    os.flush()
-                }
+        return runCatching {
+            ThermalPrintFormatter.buildItemLabelBytes(items)
+        }.fold(
+            onSuccess = { bytes -> printBytes(device, bytes) },
+            onFailure = { error ->
+                error.printStackTrace()
+                false
             }
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
+        )
     }
 
-    // === CETAK QR CODE UNTUK LELANG ===
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    fun printAuctionReceipts(
+        device: BluetoothDevice,
+        receipts: List<ThermalPrintFormatter.AuctionReceiptItem>
+    ): Boolean {
+        return runCatching {
+            ThermalPrintFormatter.buildAuctionReceiptBytes(receipts)
+        }.fold(
+            onSuccess = { bytes -> printBytes(device, bytes) },
+            onFailure = { error ->
+                error.printStackTrace()
+                false
+            }
+        )
+    }
+
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeAuction(
         device: BluetoothDevice,
@@ -166,94 +88,97 @@ class BluetoothPrinter {
         price: String,
         code: String,
         itemName: String
-    ) {
-        val uuid = device.uuids?.firstOrNull()?.uuid
-            ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
-
-        try {
-            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
-                socket.connect()
-                socket.outputStream.use { os ->
-                    os.write(alignCenter)
-                    os.write(fontBig)
-                    os.write("$name\n\n".toByteArray())
-
-                    os.write(alignLeft)
-                    os.write(fontNormal)
-                    os.write("Barang : $itemName\n".toByteArray())
-                    os.write("Harga  : $price\n\n".toByteArray())
-
-                    os.write(alignCenter)
-                    os.writeQrCode(code)
-                    os.write(strip(footer))
-                    os.write(newLine(2))
-                    os.flush()
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+    ): Boolean {
+        val receipt = ThermalPrintFormatter.AuctionReceiptItem(
+            buyerName = name,
+            basePrice = null,
+            auctionPrice = normalizeRupiahInput(price),
+            itemName = itemName,
+            itemCode = code
+        )
+        return printBytes(device, ThermalPrintFormatter.buildAuctionBuyerSlipBytes(receipt))
     }
 
-    // === CETAK LABEL LELANG TANPA QR CODE ===
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBarcodeAuctionItems(
         device: BluetoothDevice,
         name: String,
         price: String,
         itemName: String
-    ) {
-        val uuid = device.uuids?.firstOrNull()?.uuid
-            ?: UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
+    ): Boolean {
+        val receipt = ThermalPrintFormatter.AuctionReceiptItem(
+            buyerName = name,
+            basePrice = null,
+            auctionPrice = normalizeRupiahInput(price),
+            itemName = itemName,
+            itemCode = ""
+        )
+        return printBytes(device, ThermalPrintFormatter.buildAuctionItemSlipBytes(receipt))
+    }
 
-        try {
-            device.createRfcommSocketToServiceRecord(uuid).use { socket ->
-                socket.connect()
-                socket.outputStream.use { os ->
-                    os.write(alignCenter)
-                    os.write(fontBig)
-                    os.write("Barang\n\n".toByteArray())
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    private fun printBytes(device: BluetoothDevice, bytes: ByteArray): Boolean {
+        if (bytes.isEmpty()) return false
 
-                    os.write(fontBig)
-                    os.write("$name\n\n".toByteArray())
-
-                    os.write(alignLeft)
-                    os.write(fontNormal)
-                    os.write("Barang : $itemName\n".toByteArray())
-                    os.write("Harga  : $price\n\n".toByteArray())
-
-                    os.write(strip(footer))
-                    os.write(newLine(2))
-                    os.flush()
+        return try {
+            device.openPrinterSocket().use { socket ->
+                socket.outputStream.use { outputStream ->
+                    outputStream.writeChunked(bytes)
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+            true
+        } catch (error: Exception) {
+            error.printStackTrace()
+            false
         }
     }
 
-    // === EXTENSION UNTUK CETAK QR CODE ===
-    private fun OutputStream.writeQrCode(code: String) {
-        val cleanCode = code.trim().ifBlank { "-" }.take(MAX_QR_CODE_CHARS)
-        val data = cleanCode.toByteArray(Charsets.UTF_8)
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    private fun BluetoothDevice.openPrinterSocket(): BluetoothSocket {
+        val uuid = printerUuid()
+        val secureSocket = createRfcommSocketToServiceRecord(uuid)
 
-        write(alignCenter)
-        write(qrModel)
-        write(qrSize())
-        write(qrErrorCorrection)
-        write(qrStoreData(data))
-        write(qrPrint)
-        write(newLine())
-        write(cleanCode.toByteArray(Charsets.UTF_8))
-        write(newLine(2))
+        return try {
+            secureSocket.connect()
+            secureSocket
+        } catch (secureError: IOException) {
+            runCatching { secureSocket.close() }
+            val insecureSocket = createInsecureRfcommSocketToServiceRecord(uuid)
+            try {
+                insecureSocket.connect()
+                insecureSocket
+            } catch (insecureError: IOException) {
+                runCatching { insecureSocket.close() }
+                secureError.addSuppressed(insecureError)
+                throw secureError
+            }
+        }
     }
 
-    private fun OutputStream.writeBarcodeLabel(itemName: String, itemCode: String) {
-        write(alignCenter)
-        write(itemName.ifBlank { "-" }.toByteArray(Charsets.UTF_8))
-        write(newLine(2))
-        writeQrCode(itemCode)
-        write(strip(footer))
-        write(newLine(2))
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    private fun BluetoothDevice.printerUuid(): UUID {
+        return uuids
+            ?.map { it.uuid }
+            ?.firstOrNull { it == SERIAL_PORT_UUID }
+            ?: SERIAL_PORT_UUID
+    }
+
+    private fun OutputStream.writeChunked(bytes: ByteArray) {
+        var offset = 0
+        while (offset < bytes.size) {
+            val length = minOf(WRITE_CHUNK_SIZE, bytes.size - offset)
+            write(bytes, offset, length)
+            flush()
+            offset += length
+            if (offset < bytes.size) {
+                Thread.sleep(WRITE_CHUNK_DELAY_MS)
+            }
+        }
+        flush()
+        Thread.sleep(CLOSE_DELAY_MS)
+    }
+
+    private fun normalizeRupiahInput(value: String): String {
+        return value.filter { char -> char.isDigit() || char == '-' }.ifBlank { value }
     }
 }

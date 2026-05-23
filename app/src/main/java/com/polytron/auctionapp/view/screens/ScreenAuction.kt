@@ -34,11 +34,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
 import com.polytron.auctionapp.bluetooth.BluetoothHelper
 import com.polytron.auctionapp.bluetooth.BluetoothPrinter
+import com.polytron.auctionapp.printing.ThermalPrintFormatter
 import com.polytron.auctionapp.ui.viewmodel.AuctionViewModel
 import com.polytron.auctionapp.ui.viewmodel.ItemsViewModel
 import com.polytron.auctionapp.ui.viewmodel.PrinterViewModel
 import com.polytron.auctionapp.utils.formatCurrencyInput
-import com.polytron.auctionapp.utils.formatRupiah
 import com.polytron.auctionapp.view.components.EmptyItemState
 import com.polytron.auctionapp.view.components.SelectedItemsBottomBar
 import com.polytron.auctionapp.view.components.TopAppBarCustom
@@ -46,8 +46,9 @@ import com.polytron.auctionapp.view.components.dialog.NoPrinterDialog
 import com.polytron.auctionapp.view.components.dialog.PrinterListDialog
 import com.polytron.auctionapp.view.components.fab.FabWithSubmenu
 import com.polytron.auctionapp.view.components.itemcard.ItemCardAuction
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.viewmodel.koinViewModel
 
 @SuppressLint("MissingPermission")
@@ -107,32 +108,61 @@ fun ScreenAuction(
         showNoPrinterDialog = false
         coroutineScope.launch {
             try {
-                val printer = BluetoothPrinter()
-                selectedItems.forEach { item ->
-                    val finalPrice = editingPrices[item.id].orEmpty().ifBlank { rawAuctionPrice }
-                    val finalBuyer = editingBuyers[item.id].orEmpty().ifBlank { item.buyer.orEmpty() }
+                val itemsToSave = selectedItems.toList()
+                val receipts = itemsToSave.mapNotNull { item ->
+                    val itemId = item.id ?: return@mapNotNull null
+                    val finalPrice = editingPrices[itemId].orEmpty().ifBlank { rawAuctionPrice }
+                    val finalBuyer = editingBuyers[itemId].orEmpty().ifBlank { item.buyer.orEmpty() }
+
+                    ThermalPrintFormatter.AuctionReceiptItem(
+                        buyerName = finalBuyer,
+                        basePrice = item.basePrice,
+                        auctionPrice = finalPrice,
+                        itemName = item.nameItem.orEmpty(),
+                        itemCode = item.codeItem.orEmpty()
+                    )
+                }
+
+                itemsToSave.forEach { item ->
+                    val itemId = item.id ?: return@forEach
+                    val finalPrice = editingPrices[itemId].orEmpty().ifBlank { rawAuctionPrice }
+                    val finalBuyer = editingBuyers[itemId].orEmpty().ifBlank { item.buyer.orEmpty() }
                     val updatedItem = item.copy(buyer = finalBuyer, price = finalPrice, status = 1)
 
-                    itemsViewModel.patchItem(item.id!!, updatedItem)
+                    itemsViewModel.patchItem(itemId, updatedItem)
+                }
 
-                    if (shouldPrint && printerDevice != null) {
-                        printer.printBarcodeAuction(device = printerDevice!!, price = formatRupiah(finalPrice), name = finalBuyer, itemName = item.nameItem ?: "", code = item.codeItem ?: "")
-                        delay(400)
-                        printer.printBarcodeAuctionItems(device = printerDevice!!, price = formatRupiah(finalPrice), name = finalBuyer, itemName = item.nameItem ?: "")
-                        delay(400)
+                val printSuccess = if (shouldPrint) {
+                    val device = printerDevice
+                    if (device != null && receipts.isNotEmpty()) {
+                        withContext(Dispatchers.IO) {
+                            BluetoothPrinter().printAuctionReceipts(device = device, receipts = receipts)
+                        }
+                    } else {
+                        false
                     }
+                } else {
+                    true
                 }
 
                 // Simpan nama pembeli baru ke database saran
-                val newBuyers = selectedItems.map { item ->
-                    editingBuyers[item.id].orEmpty().ifBlank { item.buyer.orEmpty() }
+                val newBuyers = itemsToSave.map { item ->
+                    item.id?.let { itemId ->
+                        editingBuyers[itemId].orEmpty().ifBlank { item.buyer.orEmpty() }
+                    }.orEmpty()
                 }.filter { it.isNotBlank() }
                 auctionViewModel.saveNewAuctionUsers(newBuyers, "")
 
                 auctionViewModel.clearSelectedItems()
                 rawAuctionPrice = ""
                 auctionPrice = ""
-                snackbarHostState.showSnackbar(if (shouldPrint) "Berhasil disimpan dan dicetak" else "Berhasil disimpan tanpa cetak")
+                snackbarHostState.showSnackbar(
+                    when {
+                        shouldPrint && printSuccess -> "Berhasil disimpan dan dicetak"
+                        shouldPrint -> "Berhasil disimpan, tapi nota gagal dicetak"
+                        else -> "Berhasil disimpan tanpa cetak"
+                    }
+                )
             } catch (e: Exception) {
                 Log.e("ScreenAuction", "Error: $e")
                 Toast.makeText(context, "Gagal: ${e.message}", Toast.LENGTH_LONG).show()

@@ -33,6 +33,7 @@ import com.polytron.auctionapp.presentation.auth.AuthViewModel
 import com.polytron.auctionapp.presentation.items.ItemsViewModel
 import com.polytron.auctionapp.presentation.payment.PaymentViewModel
 import com.polytron.auctionapp.presentation.pickup.PickupViewModel
+import com.polytron.auctionapp.printing.ThermalPrintFormatter
 import com.polytron.auctionapp.desktop.utils.exportItemsToExcelDesktop
 import com.polytron.auctionapp.utils.generateRandomAlphanumeric
 import kotlinx.coroutines.Dispatchers
@@ -169,14 +170,14 @@ fun AuctionDesktopApp() {
             }
         }
 
-        fun buildAuctionReceipts(itemsToPrint: List<ItemResponse>): List<DesktopThermalPrinter.AuctionReceiptItem> {
+        fun buildAuctionReceipts(itemsToPrint: List<ItemResponse>): List<ThermalPrintFormatter.AuctionReceiptItem> {
             return itemsToPrint.mapNotNull { item ->
                 val itemId = item.id ?: return@mapNotNull null
                 val buyer = editingBuyers[itemId].orEmpty().ifBlank { item.buyer.orEmpty() }
                 val auctionPrice = editingPrices[itemId].orEmpty().ifBlank { item.price.orEmpty() }
                 if (buyer.isBlank() || auctionPrice.isBlank()) return@mapNotNull null
 
-                DesktopThermalPrinter.AuctionReceiptItem(
+                ThermalPrintFormatter.AuctionReceiptItem(
                     buyerName = buyer,
                     basePrice = item.basePrice,
                     auctionPrice = auctionPrice,
@@ -187,7 +188,7 @@ fun AuctionDesktopApp() {
         }
 
         suspend fun printAuctionReceipts(
-            receipts: List<DesktopThermalPrinter.AuctionReceiptItem>
+            receipts: List<ThermalPrintFormatter.AuctionReceiptItem>
         ): Result<Unit> {
             val printerName = selectedPrinterName
                 ?: return Result.failure(IllegalStateException("Pilih printer thermal di Dashboard dulu."))
@@ -213,7 +214,7 @@ fun AuctionDesktopApp() {
             appScope.launch {
                 val result = printAuctionReceipts(receipts)
                 result.onSuccess {
-                    snackbarHostState.showSnackbar("Nota lelang Android-style dicetak 2 slip untuk ${receipts.size} barang.")
+                    snackbarHostState.showSnackbar("Nota lelang dicetak 2 slip untuk ${receipts.size} barang.")
                 }.onFailure { error ->
                     snackbarHostState.showSnackbar("Gagal cetak nota: ${error.message ?: "printer tidak merespons"}")
                 }
