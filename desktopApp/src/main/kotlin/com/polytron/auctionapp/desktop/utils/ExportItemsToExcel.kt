@@ -77,6 +77,15 @@ fun writeItemsToExcelFile(
         } else {
             null
         }
+        val paymentTotals = if (includePaymentDetails) {
+            mutableMapOf(
+                PaymentMethod.Cash.label to 0L,
+                PaymentMethod.QRIS.label to 0L,
+                PaymentMethod.Credit.label to 0L
+            )
+        } else {
+            null
+        }
 
         var rowIndex = 1
         items.forEach { item ->
@@ -101,8 +110,10 @@ fun writeItemsToExcelFile(
             totalPrice += price
 
             paymentCounts?.let { counts ->
-                val method = item.typePayment ?: ""
+                val method = item.paymentMethodLabel() ?: return@let
                 counts[method] = (counts[method] ?: 0) + 1
+                val totals = paymentTotals ?: return@let
+                totals[method] = (totals[method] ?: 0L) + price
             }
         }
         val lastItemRow = rowIndex - 1
@@ -123,9 +134,17 @@ fun writeItemsToExcelFile(
             qrisRow.createCell(0).setCellValue("Jumlah QRIS")
             qrisRow.createCell(1).setCellValue((paymentCounts[PaymentMethod.QRIS.label] ?: 0).toDouble())
 
+            val qrisTotalRow = sheet.createRow(rowIndex++)
+            qrisTotalRow.createCell(0).setCellValue("Nominal QRIS")
+            qrisTotalRow.createCell(1).setCellValue((paymentTotals?.get(PaymentMethod.QRIS.label) ?: 0L).toDouble())
+
             val cashRow = sheet.createRow(rowIndex++)
             cashRow.createCell(0).setCellValue("Jumlah Cash")
             cashRow.createCell(1).setCellValue((paymentCounts[PaymentMethod.Cash.label] ?: 0).toDouble())
+
+            val cashTotalRow = sheet.createRow(rowIndex++)
+            cashTotalRow.createCell(0).setCellValue("Nominal Cash")
+            cashTotalRow.createCell(1).setCellValue((paymentTotals?.get(PaymentMethod.Cash.label) ?: 0L).toDouble())
 
             val creditRow = sheet.createRow(rowIndex++)
             creditRow.createCell(0).setCellValue("Jumlah Kredit")
@@ -181,4 +200,11 @@ private fun chooseExcelSaveFile(reportName: String): File? {
     }
 
     return selectedFile
+}
+
+private fun ItemResponse.paymentMethodLabel(): String? {
+    val rawMethod = typePayment?.trim() ?: return null
+    return PaymentMethod.all.firstOrNull { method ->
+        rawMethod.equals(method.label, ignoreCase = true)
+    }?.label
 }

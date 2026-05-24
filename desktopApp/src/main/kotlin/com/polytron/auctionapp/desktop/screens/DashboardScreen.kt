@@ -37,6 +37,7 @@ import com.polytron.auctionapp.desktop.components.DesktopOutlinedButton as Outli
 import com.polytron.auctionapp.desktop.components.DesktopPanel
 import com.polytron.auctionapp.desktop.components.MetricTile
 import com.polytron.auctionapp.domain.model.ItemResponse
+import com.polytron.auctionapp.domain.model.PaymentMethod
 import com.polytron.auctionapp.utils.formatRupiah
 
 @Composable
@@ -54,6 +55,8 @@ fun DashboardScreen(
     val totalBaseX3 = (items.sumOf { it.basePrice?.toLongOrNull() ?: 0L } * 3).toString()
     val totalAuctionValue = items.sumOf { it.price?.toLongOrNull() ?: 0L }
     val totalAuction = totalAuctionValue.toString()
+    val totalAuctionQris = items.totalAuctionFor(PaymentMethod.QRIS).toString()
+    val totalAuctionCash = items.totalAuctionFor(PaymentMethod.Cash).toString()
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -81,6 +84,14 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            MetricTile("Nominal lelang QRIS", formatRupiah(totalAuctionQris), Modifier.weight(1f))
+            MetricTile("Nominal lelang Cash", formatRupiah(totalAuctionCash), Modifier.weight(1f))
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             MetricTile(
                 label = "Status login",
                 value = if (isLoggedIn) userName?.takeIf { it.isNotBlank() } ?: "Login" else "Belum login",
@@ -97,6 +108,15 @@ fun DashboardScreen(
         }
     }
 }
+
+private fun List<ItemResponse>.totalAuctionFor(paymentMethod: PaymentMethod): Long =
+    sumOf { item ->
+        if (item.typePayment?.trim()?.equals(paymentMethod.label, ignoreCase = true) == true) {
+            item.price?.toLongOrNull() ?: 0L
+        } else {
+            0L
+        }
+    }
 
 @Composable
 private fun PrinterSelectionPanel(
